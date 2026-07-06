@@ -1,32 +1,45 @@
-// elsewhr — v1 starter profile page
-// Drop this in: app/page.tsx  (replace everything in that file with this)
-// Then make sure the fonts + body bg are set (see app/layout.tsx snippet I gave you).
+// elsewhr — profile page (reads from Supabase database)
+// This replaces the whole app/page.tsx
 
-export default function Home() {
-  // ---- profile #1: hardcoded. This is the whole point of v1: one person, made visible. ----
-  const profile = {
-    name: "Sofia Marin",
-    headline: "Warehouse operations — 6 years. No degree. Started in fast food.",
-    location: "Rancho Cucamonga, CA",
-    artifacts: [
-      {
-        claim: "Cut mis-ships 40% with a labeling system I built",
-        image:
-          "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=900&q=80",
-        result: "40% fewer errors",
-        field: "Operations",
-        vouch: "“Sofia runs the floor better than managers twice her pay.” — site lead",
-      },
-      {
-        claim: "Trained a team of 8 pickers/packers; own the dock schedule",
-        image:
-          "https://images.unsplash.com/photo-1553413077-190dd305871c?auto=format&fit=crop&w=900&q=80",
-        result: "30+ shipments/day",
-        field: "Leadership",
-        vouch: "",
-      },
-    ],
-  };
+import { supabase } from "@/lib/supabaseClient";
+
+type Artifact = {
+  claim: string;
+  image: string;
+  result: string;
+  field: string;
+  vouch: string;
+};
+
+type Profile = {
+  id: number;
+  name: string;
+  headline: string;
+  location: string;
+  artifacts: Artifact[];
+};
+
+export default async function Home() {
+  // fetch the first profile from the database
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .order("id", { ascending: true })
+    .limit(1)
+    .single();
+
+  if (error || !data) {
+    return (
+      <main className="min-h-screen bg-[#ff5d3b] text-[#1c1410] flex items-center justify-center px-4">
+        <div className="bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-3xl p-8 max-w-md text-center">
+          <p className="font-bold text-lg mb-2">Couldn&apos;t load the profile.</p>
+          <p className="text-sm">Make sure the database is connected and has a profile. ({error?.message ?? "no data"})</p>
+        </div>
+      </main>
+    );
+  }
+
+  const profile = data as Profile;
 
   return (
     <main className="min-h-screen bg-[#ff5d3b] text-[#1c1410] flex justify-center px-4 py-10">
@@ -60,11 +73,7 @@ export default function Home() {
               className="bg-[#fff6ec] rounded-3xl overflow-hidden border-[3px] border-[#1c1410] shadow-[8px_8px_0_rgba(28,20,16,0.9)]"
             >
               <div className="relative">
-                <img
-                  src={a.image}
-                  alt={a.claim}
-                  className="w-full h-52 object-cover"
-                />
+                <img src={a.image} alt={a.claim} className="w-full h-52 object-cover" />
                 <span className="absolute top-3 left-3 font-mono text-[10px] uppercase tracking-widest bg-[#1c1410] text-[#fff6ec] px-2.5 py-1 rounded-full">
                   {a.field}
                 </span>
@@ -85,14 +94,13 @@ export default function Home() {
         </div>
 
         <p className="font-mono text-[11px] text-[#fff6ec]/80 mt-8 text-center">
-          this is profile #1. elsewhr makes one skilled person visible. that&apos;s the whole start.
+          this profile loads live from the database. real people, next.
         </p>
       </div>
     </main>
   );
 }
 
-// the bowerbird — elsewhr's mascot, inline so it just works
 function Bird() {
   return (
     <svg width="56" height="62" viewBox="0 0 300 340" xmlns="http://www.w3.org/2000/svg">
