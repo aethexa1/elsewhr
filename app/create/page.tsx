@@ -1,9 +1,8 @@
 "use client";
 
-// elsewhr — build/edit your profile, conversation-style (replaces app/create/page.tsx)
-// Loads your existing profile if you have one; publishing updates instead of duplicating.
+// elsewhr — build/edit your profile with photo uploads (replaces app/create/page.tsx)
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 
@@ -26,6 +25,7 @@ export default function CreatePage() {
   const [msg, setMsg] = useState<string | null>(null);
 
   const [name, setName] = useState("");
+  const [photo, setPhoto] = useState("");
   const [headline, setHeadline] = useState("");
   const [location, setLocation] = useState("");
   const [seeking, setSeeking] = useState("");
@@ -43,7 +43,6 @@ export default function CreatePage() {
       }
       setUserId(auth.user.id);
 
-      // load existing profile for this user, if any
       const { data: existing } = await supabase
         .from("profiles")
         .select("*")
@@ -55,6 +54,7 @@ export default function CreatePage() {
       if (existing) {
         setExistingId(existing.id);
         setName(existing.name ?? "");
+        setPhoto(existing.photo ?? "");
         setHeadline(existing.headline ?? "");
         setLocation(existing.location ?? "");
         setSeeking(existing.seeking ?? "");
@@ -79,6 +79,23 @@ export default function CreatePage() {
     setTiles((t) => t.map((tile, idx) => (idx === i ? { ...tile, [key]: value } : tile)));
   }
 
+  // upload a file to Supabase Storage, return its public URL
+  async function uploadImage(file: File): Promise<string | null> {
+    if (!userId) return null;
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `${userId}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("photos").upload(path, file, {
+      cacheControl: "3600",
+      upsert: false,
+    });
+    if (error) {
+      setMsg("Upload failed: " + error.message);
+      return null;
+    }
+    const { data } = supabase.storage.from("photos").getPublicUrl(path);
+    return data.publicUrl;
+  }
+
   async function publish() {
     const realTiles = tiles.filter((t) => t.claim.trim());
     setBusy(true);
@@ -87,6 +104,7 @@ export default function CreatePage() {
     const payload = {
       user_id: userId,
       name: name.trim(),
+      photo: photo.trim(),
       headline: headline.trim(),
       location: location.trim(),
       seeking: seeking.trim(),
@@ -117,6 +135,23 @@ export default function CreatePage() {
       valid: name.trim().length > 0,
       body: (
         <input autoFocus className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Sofia Marin" />
+      ),
+    },
+    {
+      guide: "Add a photo of yourself — people connect with faces.",
+      hint: "Take one now or pick from your gallery. Skippable, but profiles with faces get way more connection.",
+      valid: true,
+      body: (
+        <PhotoPicker
+          current={photo}
+          rounded
+          label={photo ? "Change photo" : "Add your photo"}
+          onPick={async (file) => {
+            setMsg(null);
+            const url = await uploadImage(file);
+            if (url) setPhoto(url);
+          }}
+        />
       ),
     },
     {
@@ -178,7 +213,7 @@ export default function CreatePage() {
     },
     {
       guide: "Now show me your work. Don't tell me you're good — show me ONE real thing you did.",
-      hint: "A number makes it stronger. A photo link makes it real (photo upload from your phone is coming). \u201CHardworking\u201D is a claim — \u201Ccut errors 40%\u201D is proof.",
+      hint: "A number makes it stronger. A photo makes it real — snap the actual work. \u201CHardworking\u201D is a claim — \u201Ccut errors 40%\u201D is proof.",
       valid: tiles.some((t) => t.claim.trim().length > 0),
       body: (
         <div className="flex flex-col gap-4">
@@ -189,7 +224,17 @@ export default function CreatePage() {
                 <input className={inputCls} value={tile.result} onChange={(e) => updateTile(i, "result", e.target.value)} placeholder="Result — 40% fewer errors" />
                 <input className={inputCls} value={tile.field} onChange={(e) => updateTile(i, "field", e.target.value)} placeholder="Field — Operations" />
               </div>
-              <input className={`${inputCls} mt-3`} value={tile.image} onChange={(e) => updateTile(i, "image", e.target.value)} placeholder="Photo link (optional) — https://…" />
+              <div className="mt-3">
+                <PhotoPicker
+                  current={tile.image}
+                  label={tile.image ? "Change work photo" : "Add a photo of this work"}
+                  onPick={async (file) => {
+                    setMsg(null);
+                    const url = await uploadImage(file);
+                    if (url) updateTile(i, "image", url);
+                  }}
+                />
+              </div>
               <input className={`${inputCls} mt-3`} value={tile.vouch} onChange={(e) => updateTile(i, "vouch", e.target.value)} placeholder='A vouch (optional) — "She runs the floor better than…" — site lead' />
             </div>
           ))}
@@ -210,9 +255,17 @@ export default function CreatePage() {
       valid: true,
       body: (
         <div className="bg-white/60 border-2 border-[#1c1410] rounded-2xl p-5 text-[15px] leading-relaxed">
-          <p className="font-[Syne] font-bold text-xl">{name || "—"}</p>
-          <p className="mt-1">{headline || "—"}</p>
-          {seeking && <p className="mt-2 text-[#6b4eff] font-medium">Looking for: {seeking}</p>}
+          <div className="flex items-center gap-3">
+            {photo && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photo} alt={name} className="w-14 h-14 rounded-full object-cover border-2 border-[#1c1410]" />
+            )}
+            <div>
+              <p className="font-[Syne] font-bold text-xl">{name || "—"}</p>
+              <p className="mt-0.5">{headline || "—"}</p>
+            </div>
+          </div>
+          {seeking && <p className="mt-3 text-[#6b4eff] font-medium">Looking for: {seeking}</p>}
           {mindset.length > 0 && (
             <p className="mt-2 text-[13px] font-mono uppercase tracking-wide">{mindset.join(" · ")}</p>
           )}
@@ -288,6 +341,66 @@ export default function CreatePage() {
         </p>
       </div>
     </main>
+  );
+}
+
+// file picker with preview + uploading state
+function PhotoPicker({
+  current,
+  onPick,
+  label,
+  rounded,
+}: {
+  current: string;
+  onPick: (file: File) => Promise<void>;
+  label: string;
+  rounded?: boolean;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  return (
+    <div className="flex items-center gap-4">
+      {current ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={current}
+          alt="preview"
+          className={`${rounded ? "w-24 h-24 rounded-full" : "w-28 h-20 rounded-xl"} object-cover border-2 border-[#1c1410]`}
+        />
+      ) : (
+        <div
+          className={`${rounded ? "w-24 h-24 rounded-full" : "w-28 h-20 rounded-xl"} border-2 border-dashed border-[#1c1410]/40 flex items-center justify-center text-2xl bg-white/60`}
+        >
+          {rounded ? "🙂" : "📷"}
+        </div>
+      )}
+      <div>
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="px-4 py-2.5 rounded-xl border-2 border-[#1c1410] bg-white font-bold text-sm hover:translate-y-[-2px] transition-transform disabled:opacity-50"
+        >
+          {uploading ? "Uploading…" : label}
+        </button>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              setUploading(true);
+              await onPick(file);
+              setUploading(false);
+            }
+            e.target.value = "";
+          }}
+        />
+      </div>
+    </div>
   );
 }
 
