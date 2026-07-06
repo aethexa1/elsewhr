@@ -16,6 +16,7 @@ type Artifact = {
 type Profile = {
   id: number;
   name: string;
+  photo?: string | null;
   headline: string;
   location: string;
   seeking?: string | null;
@@ -72,9 +73,18 @@ export default async function Home() {
           <section key={profile.id} className="mb-12">
             {/* header */}
             <header className="bg-[#1c1410] text-[#fff6ec] rounded-3xl p-6 border-[3px] border-[#1c1410] shadow-[8px_8px_0_rgba(28,20,16,0.35)]">
-              <h1 className="font-[Syne] font-extrabold text-3xl leading-none tracking-tight">
-                {profile.name}
-              </h1>
+              <div className="flex items-center gap-4">
+                {profile.photo && (
+                  <img
+                    src={profile.photo}
+                    alt={profile.name}
+                    className="w-16 h-16 rounded-full object-cover border-2 border-[#c8f000] flex-none"
+                  />
+                )}
+                <h1 className="font-[Syne] font-extrabold text-3xl leading-none tracking-tight">
+                  {profile.name}
+                </h1>
+              </div>
               <p className="text-[#c8f000] font-semibold mt-2">{profile.headline}</p>
               {profile.seeking && (
                 <p className="text-[14px] mt-2 text-[#fff6ec]/90">
