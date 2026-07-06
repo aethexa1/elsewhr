@@ -2,6 +2,7 @@
 
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
+import HeaderActions from "./HeaderActions";
 
 export const dynamic = "force-dynamic";
 
@@ -59,12 +60,7 @@ export default async function Home() {
             elsewhr<span className="text-[#c8f000]">.</span>
           </div>
           <div className="flex items-center gap-3">
-            <Link
-              href="/login"
-              className="px-4 py-2 rounded-xl border-2 border-[#1c1410] bg-[#c8f000] font-bold text-sm hover:translate-y-[-2px] transition-transform"
-            >
-              Join elsewhr →
-            </Link>
+            <HeaderActions />
             <Bird />
           </div>
         </div>
