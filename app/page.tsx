@@ -3,6 +3,8 @@
 
 import { supabase } from "@/lib/supabaseClient";
 
+export const dynamic = "force-dynamic";
+
 type Artifact = {
   claim: string;
   image: string;
