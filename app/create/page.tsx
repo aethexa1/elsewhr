@@ -1,6 +1,7 @@
 "use client";
 
-// elsewhr — build your profile, conversation-style (replaces app/create/page.tsx)
+// elsewhr — build/edit your profile, conversation-style (replaces app/create/page.tsx)
+// Loads your existing profile if you have one; publishing updates instead of duplicating.
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
@@ -18,6 +19,8 @@ const emptyTile: Tile = { claim: "", image: "", result: "", field: "", vouch: ""
 export default function CreatePage() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
+  const [existingId, setExistingId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -32,10 +35,38 @@ export default function CreatePage() {
   const [tiles, setTiles] = useState<Tile[]>([{ ...emptyTile }]);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) router.push("/login");
-      else setUserId(data.user.id);
-    });
+    async function init() {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) {
+        router.push("/login");
+        return;
+      }
+      setUserId(auth.user.id);
+
+      // load existing profile for this user, if any
+      const { data: existing } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", auth.user.id)
+        .order("id", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        setExistingId(existing.id);
+        setName(existing.name ?? "");
+        setHeadline(existing.headline ?? "");
+        setLocation(existing.location ?? "");
+        setSeeking(existing.seeking ?? "");
+        setMindset(Array.isArray(existing.mindset) ? existing.mindset : []);
+        setLearning(existing.learning ?? "");
+        setGoal(existing.goal ?? "");
+        const arts = Array.isArray(existing.artifacts) ? existing.artifacts : [];
+        setTiles(arts.length > 0 ? arts : [{ ...emptyTile }]);
+      }
+      setLoading(false);
+    }
+    init();
   }, [router]);
 
   function toggleMindset(tag: string) {
@@ -52,7 +83,8 @@ export default function CreatePage() {
     const realTiles = tiles.filter((t) => t.claim.trim());
     setBusy(true);
     setMsg(null);
-    const { error } = await supabase.from("profiles").insert({
+
+    const payload = {
       user_id: userId,
       name: name.trim(),
       headline: headline.trim(),
@@ -62,7 +94,12 @@ export default function CreatePage() {
       learning: learning.trim(),
       goal: goal.trim(),
       artifacts: realTiles,
-    });
+    };
+
+    const { error } = existingId
+      ? await supabase.from("profiles").update(payload).eq("id", existingId)
+      : await supabase.from("profiles").insert(payload);
+
     if (error) {
       setMsg(error.message);
       setBusy(false);
@@ -71,18 +108,19 @@ export default function CreatePage() {
     }
   }
 
-  // ---- the guided steps ----
   const steps = [
     {
-      guide: "Hey — I'm your bowerbird. I'll help you get seen. First: what's your name?",
-      hint: "The real one people call you.",
+      guide: existingId
+        ? `Welcome back${name ? ", " + name.split(" ")[0] : ""} — your profile's loaded. Walk through and change anything.`
+        : "Hey — I'm your bowerbird. I'll help you get seen. First: what's your name?",
+      hint: existingId ? "Publishing at the end UPDATES your profile — no duplicates." : "The real one people call you.",
       valid: name.trim().length > 0,
       body: (
         <input autoFocus className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Sofia Marin" />
       ),
     },
     {
-      guide: `Nice to meet you${name ? ", " + name.split(" ")[0] : ""}. Now the big one — what do you HAVE? One line.`,
+      guide: `Now the big one — what do you HAVE? One line.`,
       hint: "Skills, experience, an idea — say it plainly. \u201CWarehouse ops, 6 years, no degree\u201D beats \u201Cmotivated professional\u201D every time.",
       valid: headline.trim().length > 0,
       body: (
@@ -166,7 +204,9 @@ export default function CreatePage() {
     },
     {
       guide: `That's a real profile, ${name ? name.split(" ")[0] : "friend"}. Ready to be seen?`,
-      hint: "You own this. Edit or delete anytime. Never inflated — that's the elsewhr rule.",
+      hint: existingId
+        ? "This UPDATES your existing profile. You own this — never inflated."
+        : "You own this. Edit or delete anytime. Never inflated — that's the elsewhr rule.",
       valid: true,
       body: (
         <div className="bg-white/60 border-2 border-[#1c1410] rounded-2xl p-5 text-[15px] leading-relaxed">
@@ -187,6 +227,14 @@ export default function CreatePage() {
   const current = steps[step];
   const isLast = step === steps.length - 1;
 
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#ff5d3b] flex items-center justify-center">
+        <p className="font-mono text-sm text-[#fff6ec]">loading your profile…</p>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-[#ff5d3b] text-[#1c1410] flex justify-center px-4 py-10">
       <div className="w-full max-w-[560px]">
@@ -194,7 +242,6 @@ export default function CreatePage() {
           <div className="font-[Syne] font-extrabold text-2xl tracking-tight text-[#fff6ec]">
             elsewhr<span className="text-[#c8f000]">.</span>
           </div>
-          {/* progress dots */}
           <div className="flex gap-1.5">
             {steps.map((_, i) => (
               <span key={i} className={`w-2 h-2 rounded-full ${i <= step ? "bg-[#c8f000]" : "bg-[#fff6ec]/40"}`} />
@@ -202,7 +249,6 @@ export default function CreatePage() {
           </div>
         </div>
 
-        {/* bowerbird guide bubble */}
         <div className="flex items-start gap-3 mb-5">
           <Bird />
           <div className="bg-[#1c1410] text-[#fff6ec] rounded-2xl rounded-tl-none px-4 py-3 flex-1">
@@ -211,7 +257,6 @@ export default function CreatePage() {
           </div>
         </div>
 
-        {/* the step body */}
         <div className="bg-[#fff6ec] rounded-3xl border-[3px] border-[#1c1410] shadow-[8px_8px_0_rgba(28,20,16,0.9)] p-6">
           {current.body}
 
@@ -230,7 +275,7 @@ export default function CreatePage() {
             ) : (
               <button onClick={publish} disabled={busy}
                 className="flex-1 py-3 rounded-xl border-2 border-[#1c1410] bg-[#c8f000] font-bold text-[15px] hover:translate-y-[-2px] transition-transform disabled:opacity-50">
-                {busy ? "Publishing…" : "Publish my profile 🐦"}
+                {busy ? (existingId ? "Updating…" : "Publishing…") : existingId ? "Update my profile 🐦" : "Publish my profile 🐦"}
               </button>
             )}
           </div>
@@ -268,4 +313,3 @@ function Bird() {
     </svg>
   );
 }
-
