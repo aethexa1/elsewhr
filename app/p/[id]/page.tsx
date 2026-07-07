@@ -1,5 +1,5 @@
 // elsewhr — individual profile page
-// Create this file at: app/p/[id]/page.tsx
+// at: app/p/[id]/page.tsx
 
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
@@ -56,8 +56,17 @@ export default async function ProfilePage({
   const profile = data as Profile;
 
   return (
-    <main className="min-h-screen bg-[#ff5d3b] text-[#1c1410] flex justify-center px-4 py-8">
-      <div className="w-full max-w-[560px]">
+    <main className="relative min-h-screen bg-[#ff5d3b] text-[#1c1410] flex justify-center px-4 py-8 overflow-hidden">
+      <style>{`
+        @keyframes rise { from { opacity:0; transform:translateY(26px);} to { opacity:1; transform:none;} }
+        @keyframes drift1 { 0%,100% { transform:translate(0,0) scale(1);} 50% { transform:translate(40px,-30px) scale(1.08);} }
+        @keyframes drift2 { 0%,100% { transform:translate(0,0) scale(1);} 50% { transform:translate(-50px,25px) scale(0.94);} }
+        .rise { animation: rise .55s cubic-bezier(.2,.7,.3,1) both; }
+        @media (prefers-reduced-motion: reduce) { .rise,.blob { animation:none !important; } }
+      `}</style>
+      <div aria-hidden className="blob absolute -top-24 -right-24 w-96 h-96 rounded-full bg-[#c8f000] opacity-[0.12] blur-3xl" style={{ animation: "drift1 15s ease-in-out infinite" }} />
+      <div aria-hidden className="blob absolute bottom-10 -left-28 w-[26rem] h-[26rem] rounded-full bg-[#6b4eff] opacity-[0.13] blur-3xl" style={{ animation: "drift2 19s ease-in-out infinite" }} />
+      <div className="relative w-full max-w-[560px]">
         {/* top bar */}
         <div className="flex items-center justify-between mb-6">
           <Link
@@ -75,7 +84,7 @@ export default async function ProfilePage({
         </div>
 
         {/* header */}
-        <header className="bg-[#1c1410] text-[#fff6ec] rounded-3xl p-6 border-[3px] border-[#1c1410] shadow-[8px_8px_0_rgba(28,20,16,0.35)]">
+        <header className="rise bg-[#1c1410] text-[#fff6ec] rounded-3xl p-6 border-[3px] border-[#1c1410] shadow-[8px_8px_0_rgba(28,20,16,0.35)]">
           <div className="flex items-center gap-4">
             {profile.photo && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -127,7 +136,8 @@ export default async function ProfilePage({
               {profile.artifacts.map((a, i) => (
                 <article
                   key={i}
-                  className="bg-[#fff6ec] rounded-3xl overflow-hidden border-[3px] border-[#1c1410] shadow-[8px_8px_0_rgba(28,20,16,0.9)]"
+                  className="rise bg-[#fff6ec] rounded-3xl overflow-hidden border-[3px] border-[#1c1410] shadow-[8px_8px_0_rgba(28,20,16,0.9)]"
+                  style={{ animationDelay: `${150 + i * 110}ms` }}
                 >
                   {a.image && (
                     <div className="relative">
@@ -169,7 +179,7 @@ export default async function ProfilePage({
 
         {/* learning + goal */}
         {(profile.learning || profile.goal) && (
-          <div className="mt-4 bg-[#fff6ec] rounded-2xl border-[3px] border-[#1c1410] p-4 text-[14px]">
+          <div className="rise mt-4 bg-[#fff6ec] rounded-2xl border-[3px] border-[#1c1410] p-4 text-[14px]" style={{ animationDelay: "420ms" }}>
             {profile.learning && (
               <p>
                 <span className="font-mono text-[10px] uppercase tracking-widest text-[#b9542f]">
