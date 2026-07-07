@@ -88,7 +88,7 @@ export default async function Home() {
         </svg>
       </div>
 
-      <div className="relative w-full max-w-[560px]">
+      <div className="relative w-full max-w-[560px] md:max-w-[1080px]">
         {/* brand + action */}
         <div className="flex items-center justify-between mb-2">
           <div className="font-[Syne] font-extrabold text-2xl tracking-tight text-[#fff6ec]">
@@ -115,7 +115,7 @@ export default async function Home() {
             </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 items-start">
             {profiles.map((p) => {
               const workImage = p.artifacts?.find((a) => a.image)?.image;
               return (
