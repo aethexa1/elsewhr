@@ -26,8 +26,33 @@ export default async function Home() {
   const profiles = (data ?? []) as Profile[];
 
   return (
-    <main className="min-h-screen bg-[#ff5d3b] text-[#1c1410] flex justify-center px-4 py-8">
-      <div className="w-full max-w-[560px]">
+    <main className="relative min-h-screen bg-[#ff5d3b] text-[#1c1410] flex justify-center px-4 py-8 overflow-hidden">
+      <style>{`
+        @keyframes rise { from { opacity:0; transform:translateY(26px);} to { opacity:1; transform:none;} }
+        @keyframes drift1 { 0%,100% { transform:translate(0,0) scale(1);} 50% { transform:translate(40px,-30px) scale(1.08);} }
+        @keyframes drift2 { 0%,100% { transform:translate(0,0) scale(1);} 50% { transform:translate(-50px,25px) scale(0.94);} }
+        @keyframes bob { 0%,100% { transform:translateY(0);} 50% { transform:translateY(-7px);} }
+        @keyframes waveShift { from { transform:translateX(0);} to { transform:translateX(-50%);} }
+        .rise { animation: rise .55s cubic-bezier(.2,.7,.3,1) both; }
+        .bob { animation: bob 3.2s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) { .rise,.bob,.blob,.wave { animation:none !important; } }
+      `}</style>
+
+      {/* wind — drifting ambient blobs */}
+      <div aria-hidden className="blob absolute -top-24 -left-24 w-96 h-96 rounded-full bg-[#c8f000] opacity-[0.13] blur-3xl" style={{ animation: "drift1 14s ease-in-out infinite" }} />
+      <div aria-hidden className="blob absolute top-1/3 -right-32 w-[28rem] h-[28rem] rounded-full bg-[#6b4eff] opacity-[0.14] blur-3xl" style={{ animation: "drift2 18s ease-in-out infinite" }} />
+      <div aria-hidden className="blob absolute bottom-0 left-1/4 w-80 h-80 rounded-full bg-[#00c2d1] opacity-[0.10] blur-3xl" style={{ animation: "drift1 22s ease-in-out infinite reverse" }} />
+
+      {/* waves at the bottom */}
+      <div aria-hidden className="absolute bottom-0 left-0 w-[200%] pointer-events-none" style={{ animation: "waveShift 16s linear infinite" }}>
+        <svg viewBox="0 0 1440 70" className="w-1/2 inline-block align-bottom" preserveAspectRatio="none" height="46">
+          <path d="M0,40 C240,70 480,10 720,40 C960,70 1200,10 1440,40 L1440,70 L0,70 Z" fill="#1c1410" opacity="0.10"/>
+        </svg><svg viewBox="0 0 1440 70" className="w-1/2 inline-block align-bottom" preserveAspectRatio="none" height="46">
+          <path d="M0,40 C240,70 480,10 720,40 C960,70 1200,10 1440,40 L1440,70 L0,70 Z" fill="#1c1410" opacity="0.10"/>
+        </svg>
+      </div>
+
+      <div className="relative w-full max-w-[560px]">
         {/* brand + action */}
         <div className="flex items-center justify-between mb-2">
           <div className="font-[Syne] font-extrabold text-2xl tracking-tight text-[#fff6ec]">
@@ -35,11 +60,11 @@ export default async function Home() {
           </div>
           <div className="flex items-center gap-3">
             <HeaderActions />
-            <Bird />
+            <span className="bob inline-block"><Bird /></span>
           </div>
         </div>
 
-        <p className="text-[#fff6ec]/90 text-[15px] mb-7">
+        <p className="rise text-[#fff6ec]/90 text-[15px] mb-7" style={{ animationDelay: "60ms" }}>
           real people, shown by what they can actually do.
         </p>
 
@@ -61,7 +86,8 @@ export default async function Home() {
                 <Link
                   key={p.id}
                   href={`/p/${p.id}`}
-                  className="block bg-[#fff6ec] rounded-3xl border-[3px] border-[#1c1410] shadow-[6px_6px_0_rgba(28,20,16,0.85)] overflow-hidden hover:translate-y-[-3px] hover:shadow-[8px_10px_0_rgba(28,20,16,0.85)] transition-all"
+                  className="rise block bg-[#fff6ec] rounded-3xl border-[3px] border-[#1c1410] shadow-[6px_6px_0_rgba(28,20,16,0.85)] overflow-hidden hover:translate-y-[-4px] hover:rotate-[-0.4deg] hover:shadow-[9px_11px_0_rgba(28,20,16,0.85)] active:translate-y-0 active:shadow-[4px_4px_0_rgba(28,20,16,0.85)] transition-all duration-200"
+                  style={{ animationDelay: `${profiles.indexOf(p) * 90}ms` }}
                 >
                   <div className="p-5 flex items-center gap-4">
                     {p.photo ? (
