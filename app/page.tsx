@@ -29,26 +29,62 @@ export default async function Home() {
     <main className="relative min-h-screen bg-[#ff5d3b] text-[#1c1410] flex justify-center px-4 py-8 overflow-hidden">
       <style>{`
         @keyframes rise { from { opacity:0; transform:translateY(26px);} to { opacity:1; transform:none;} }
-        @keyframes drift1 { 0%,100% { transform:translate(0,0) scale(1);} 50% { transform:translate(40px,-30px) scale(1.08);} }
-        @keyframes drift2 { 0%,100% { transform:translate(0,0) scale(1);} 50% { transform:translate(-50px,25px) scale(0.94);} }
+        @keyframes riseView { from { opacity:0; transform:translateY(46px) scale(.985);} to { opacity:1; transform:none;} }
+        @keyframes drift1 { 0%,100% { transform:translate(0,0) scale(1);} 50% { transform:translate(60px,-45px) scale(1.12);} }
+        @keyframes drift2 { 0%,100% { transform:translate(0,0) scale(1);} 50% { transform:translate(-70px,35px) scale(0.9);} }
         @keyframes bob { 0%,100% { transform:translateY(0);} 50% { transform:translateY(-7px);} }
         @keyframes waveShift { from { transform:translateX(0);} to { transform:translateX(-50%);} }
+        @keyframes windX {
+          0%   { transform: translate(-8vw, 0) rotate(0deg); opacity:0; }
+          8%   { opacity:.7; }
+          92%  { opacity:.7; }
+          100% { transform: translate(108vw, -22vh) rotate(240deg); opacity:0; }
+        }
         .rise { animation: rise .55s cubic-bezier(.2,.7,.3,1) both; }
+        .chapter { animation: rise .55s cubic-bezier(.2,.7,.3,1) both; }
+        @supports (animation-timeline: view()) {
+          .chapter {
+            animation: riseView both cubic-bezier(.2,.7,.3,1);
+            animation-timeline: view();
+            animation-range: entry 0% entry 55%;
+          }
+        }
         .bob { animation: bob 3.2s ease-in-out infinite; }
-        @media (prefers-reduced-motion: reduce) { .rise,.bob,.blob,.wave { animation:none !important; } }
+        .leaf { position:absolute; pointer-events:none; animation: windX linear infinite; }
+        @media (prefers-reduced-motion: reduce) { .rise,.bob,.blob,.wave,.leaf,.chapter { animation:none !important; opacity:1 !important; } }
       `}</style>
 
+      {/* wind — drifting particles crossing the screen */}
+      <div aria-hidden className="leaf top-[16%]" style={{ animationDuration: "13s", animationDelay: "0s" }}>
+        <svg width="14" height="14" viewBox="0 0 20 20"><path d="M10 0 C16 6 16 14 10 20 C4 14 4 6 10 0 Z" fill="#c8f000" opacity="0.55"/></svg>
+      </div>
+      <div aria-hidden className="leaf top-[34%]" style={{ animationDuration: "19s", animationDelay: "3s" }}>
+        <svg width="10" height="10" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="#fff6ec" opacity="0.45"/></svg>
+      </div>
+      <div aria-hidden className="leaf top-[52%]" style={{ animationDuration: "16s", animationDelay: "7s" }}>
+        <svg width="12" height="12" viewBox="0 0 20 20"><path d="M10 0 C16 6 16 14 10 20 C4 14 4 6 10 0 Z" fill="#00c2d1" opacity="0.5"/></svg>
+      </div>
+      <div aria-hidden className="leaf top-[68%]" style={{ animationDuration: "22s", animationDelay: "1.5s" }}>
+        <svg width="9" height="9" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="#c8f000" opacity="0.4"/></svg>
+      </div>
+      <div aria-hidden className="leaf top-[82%]" style={{ animationDuration: "15s", animationDelay: "9s" }}>
+        <svg width="13" height="13" viewBox="0 0 20 20"><path d="M10 0 C16 6 16 14 10 20 C4 14 4 6 10 0 Z" fill="#fff6ec" opacity="0.5"/></svg>
+      </div>
+      <div aria-hidden className="leaf top-[8%]" style={{ animationDuration: "25s", animationDelay: "12s" }}>
+        <svg width="8" height="8" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="#6b4eff" opacity="0.45"/></svg>
+      </div>
+
       {/* wind — drifting ambient blobs */}
-      <div aria-hidden className="blob absolute -top-24 -left-24 w-96 h-96 rounded-full bg-[#c8f000] opacity-[0.13] blur-3xl" style={{ animation: "drift1 14s ease-in-out infinite" }} />
-      <div aria-hidden className="blob absolute top-1/3 -right-32 w-[28rem] h-[28rem] rounded-full bg-[#6b4eff] opacity-[0.14] blur-3xl" style={{ animation: "drift2 18s ease-in-out infinite" }} />
-      <div aria-hidden className="blob absolute bottom-0 left-1/4 w-80 h-80 rounded-full bg-[#00c2d1] opacity-[0.10] blur-3xl" style={{ animation: "drift1 22s ease-in-out infinite reverse" }} />
+      <div aria-hidden className="blob absolute -top-24 -left-24 w-96 h-96 rounded-full bg-[#c8f000] opacity-[0.18] blur-3xl" style={{ animation: "drift1 14s ease-in-out infinite" }} />
+      <div aria-hidden className="blob absolute top-1/3 -right-32 w-[28rem] h-[28rem] rounded-full bg-[#6b4eff] opacity-[0.19] blur-3xl" style={{ animation: "drift2 18s ease-in-out infinite" }} />
+      <div aria-hidden className="blob absolute bottom-0 left-1/4 w-80 h-80 rounded-full bg-[#00c2d1] opacity-[0.15] blur-3xl" style={{ animation: "drift1 22s ease-in-out infinite reverse" }} />
 
       {/* waves at the bottom */}
       <div aria-hidden className="absolute bottom-0 left-0 w-[200%] pointer-events-none" style={{ animation: "waveShift 16s linear infinite" }}>
-        <svg viewBox="0 0 1440 70" className="w-1/2 inline-block align-bottom" preserveAspectRatio="none" height="46">
-          <path d="M0,40 C240,70 480,10 720,40 C960,70 1200,10 1440,40 L1440,70 L0,70 Z" fill="#1c1410" opacity="0.10"/>
-        </svg><svg viewBox="0 0 1440 70" className="w-1/2 inline-block align-bottom" preserveAspectRatio="none" height="46">
-          <path d="M0,40 C240,70 480,10 720,40 C960,70 1200,10 1440,40 L1440,70 L0,70 Z" fill="#1c1410" opacity="0.10"/>
+        <svg viewBox="0 0 1440 70" className="w-1/2 inline-block align-bottom" preserveAspectRatio="none" height="64">
+          <path d="M0,40 C240,70 480,10 720,40 C960,70 1200,10 1440,40 L1440,70 L0,70 Z" fill="#1c1410" opacity="0.22"/>
+        </svg><svg viewBox="0 0 1440 70" className="w-1/2 inline-block align-bottom" preserveAspectRatio="none" height="64">
+          <path d="M0,40 C240,70 480,10 720,40 C960,70 1200,10 1440,40 L1440,70 L0,70 Z" fill="#1c1410" opacity="0.22"/>
         </svg>
       </div>
 
@@ -86,7 +122,7 @@ export default async function Home() {
                 <Link
                   key={p.id}
                   href={`/p/${p.id}`}
-                  className="rise block bg-[#fff6ec] rounded-3xl border-[3px] border-[#1c1410] shadow-[6px_6px_0_rgba(28,20,16,0.85)] overflow-hidden hover:translate-y-[-4px] hover:rotate-[-0.4deg] hover:shadow-[9px_11px_0_rgba(28,20,16,0.85)] active:translate-y-0 active:shadow-[4px_4px_0_rgba(28,20,16,0.85)] transition-all duration-200"
+                  className="chapter block bg-[#fff6ec] rounded-3xl border-[3px] border-[#1c1410] shadow-[6px_6px_0_rgba(28,20,16,0.85)] overflow-hidden hover:translate-y-[-4px] hover:rotate-[-0.4deg] hover:shadow-[9px_11px_0_rgba(28,20,16,0.85)] active:translate-y-0 active:shadow-[4px_4px_0_rgba(28,20,16,0.85)] transition-all duration-200"
                   style={{ animationDelay: `${profiles.indexOf(p) * 90}ms` }}
                 >
                   <div className="p-5 flex items-center gap-4">
