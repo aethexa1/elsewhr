@@ -79,7 +79,6 @@ export default function CreatePage() {
     setTiles((t) => t.map((tile, idx) => (idx === i ? { ...tile, [key]: value } : tile)));
   }
 
-  // upload a file to Supabase Storage, return its public URL
   async function uploadImage(file: File): Promise<string | null> {
     if (!userId) return null;
     const ext = file.name.split(".").pop() || "jpg";
@@ -186,7 +185,7 @@ export default function CreatePage() {
         <div className="flex flex-wrap gap-2">
           {MINDSET_OPTIONS.map((tag) => (
             <button key={tag} type="button" onClick={() => toggleMindset(tag)}
-              className={`px-4 py-2 rounded-full border-2 border-[#1c1410] text-[14px] font-medium transition-colors ${
+              className={`px-4 py-2 rounded-full border-2 border-[#1c1410] text-[14px] font-medium transition-all duration-150 active:scale-90 hover:scale-105 ${
                 mindset.includes(tag) ? "bg-[#6b4eff] text-[#fff6ec] border-[#6b4eff]" : "bg-white"
               }`}>
               {tag}
@@ -289,28 +288,38 @@ export default function CreatePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#ff5d3b] text-[#1c1410] flex justify-center px-4 py-10">
-      <div className="w-full max-w-[560px]">
+    <main className="relative min-h-screen bg-[#ff5d3b] text-[#1c1410] flex justify-center px-4 py-10 overflow-hidden">
+      <style>{`
+        @keyframes rise { from { opacity:0; transform:translateY(22px);} to { opacity:1; transform:none;} }
+        @keyframes drift1 { 0%,100% { transform:translate(0,0) scale(1);} 50% { transform:translate(35px,-25px) scale(1.06);} }
+        @keyframes bob { 0%,100% { transform:translateY(0);} 50% { transform:translateY(-6px);} }
+        .rise { animation: rise .45s cubic-bezier(.2,.7,.3,1) both; }
+        .bob { animation: bob 3s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) { .rise,.bob,.blob { animation:none !important; } }
+      `}</style>
+      <div aria-hidden className="blob absolute -top-20 -right-24 w-96 h-96 rounded-full bg-[#c8f000] opacity-[0.12] blur-3xl" style={{ animation: "drift1 16s ease-in-out infinite" }} />
+      <div aria-hidden className="blob absolute bottom-0 -left-28 w-[26rem] h-[26rem] rounded-full bg-[#6b4eff] opacity-[0.12] blur-3xl" style={{ animation: "drift1 21s ease-in-out infinite reverse" }} />
+      <div className="relative w-full max-w-[560px]">
         <div className="flex items-center justify-between mb-6">
           <div className="font-[Syne] font-extrabold text-2xl tracking-tight text-[#fff6ec]">
             elsewhr<span className="text-[#c8f000]">.</span>
           </div>
           <div className="flex gap-1.5">
             {steps.map((_, i) => (
-              <span key={i} className={`w-2 h-2 rounded-full ${i <= step ? "bg-[#c8f000]" : "bg-[#fff6ec]/40"}`} />
+              <span key={i} className={`w-2 h-2 rounded-full transition-all duration-300 ${i <= step ? "bg-[#c8f000] scale-110" : "bg-[#fff6ec]/40"}`} />
             ))}
           </div>
         </div>
 
         <div className="flex items-start gap-3 mb-5">
-          <Bird />
-          <div className="bg-[#1c1410] text-[#fff6ec] rounded-2xl rounded-tl-none px-4 py-3 flex-1">
+          <span className="bob inline-block"><Bird /></span>
+          <div key={`g${step}`} className="rise bg-[#1c1410] text-[#fff6ec] rounded-2xl rounded-tl-none px-4 py-3 flex-1">
             <p className="text-[15px] font-medium leading-snug">{current.guide}</p>
             <p className="text-[12px] mt-1.5 text-[#c8f000]/90">{current.hint}</p>
           </div>
         </div>
 
-        <div className="bg-[#fff6ec] rounded-3xl border-[3px] border-[#1c1410] shadow-[8px_8px_0_rgba(28,20,16,0.9)] p-6">
+        <div key={`s${step}`} className="rise bg-[#fff6ec] rounded-3xl border-[3px] border-[#1c1410] shadow-[8px_8px_0_rgba(28,20,16,0.9)] p-6" style={{ animationDelay: "70ms" }}>
           {current.body}
 
           <div className="flex gap-3 mt-6">
@@ -344,7 +353,6 @@ export default function CreatePage() {
   );
 }
 
-// file picker with preview + uploading state
 function PhotoPicker({
   current,
   onPick,
