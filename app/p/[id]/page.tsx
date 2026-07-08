@@ -4,6 +4,7 @@
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
 import OwnerBar from "./OwnerBar";
+import VouchSection from "./VouchSection";
 
 export const dynamic = "force-dynamic";
 
@@ -185,6 +186,12 @@ export default async function ProfilePage({
             </div>
           </>
         )}
+
+        <VouchSection
+          profileId={profile.id}
+          profileName={profile.name}
+          ownerUserId={profile.user_id ?? null}
+        />
 
         {/* learning + goal */}
         {(profile.learning || profile.goal) && (
