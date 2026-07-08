@@ -8,6 +8,19 @@ import { useRouter } from "next/navigation";
 
 type Tile = { claim: string; image: string; result: string; field: string; vouch: string };
 
+type ParsedProfile = {
+  name?: string;
+  headline?: string;
+  location?: string;
+  seeking?: string;
+  mindset?: string[];
+  learning?: string;
+  goal?: string;
+  work?: Partial<Tile>[];
+};
+
+type Geo = { name: string; admin1?: string; country?: string };
+
 const MINDSET_OPTIONS = [
   "builder", "curious", "ships fast", "night owl", "team player",
   "self-taught", "detail-obsessed", "big dreamer", "disciplined", "creative",
@@ -45,6 +58,7 @@ export default function CreatePage() {
   const [accent, setAccent] = useState("#6b4eff");
   const [resume, setResume] = useState("");
   const [parsing, setParsing] = useState(false);
+  const [pendingProfile, setPendingProfile] = useState<ParsedProfile | null>(null);
 
   useEffect(() => {
     async function init() {
@@ -173,42 +187,42 @@ export default function CreatePage() {
       if (!r.ok) {
         setMsg(data.error || "Couldn't read that — try again.");
       } else {
-        const p = data.profile || {};
+        const p = (data.profile || {}) as ParsedProfile;
         // the bird notices: does this resume belong to someone else?
         if (p.name && name && p.name.trim().toLowerCase() !== name.trim().toLowerCase()) {
-          const proceed = window.confirm(
-            `Heads up — this resume says "${p.name}", but your profile is "${name}". elsewhr profiles must be your own real work. Use this resume anyway?`
-          );
-          if (!proceed) {
-            setParsing(false);
-            setMsg("Okay — profile untouched. Paste your own resume when you're ready.");
-            return;
-          }
+          setPendingProfile(p);
+          setParsing(false);
+          return;
         }
-        if (p.name && !name) setName(p.name);
-        if (p.headline) setHeadline(p.headline);
-        if (p.location) setLocation(p.location);
-        if (p.seeking) setSeeking(p.seeking);
-        if (Array.isArray(p.mindset) && p.mindset.length) setMindset(p.mindset.slice(0, 5));
-        if (p.learning) setLearning(p.learning);
-        if (p.goal) setGoal(p.goal);
-        if (Array.isArray(p.work) && p.work.length) {
-          setTiles(
-            p.work.slice(0, 3).map((w: Partial<Tile>) => ({
-              claim: w.claim ?? "",
-              image: "",
-              result: w.result ?? "",
-              field: w.field ?? "",
-              vouch: "",
-            }))
-          );
-        }
-        setStep(1);
+        applyParsed(p);
       }
     } catch {
       setMsg("Something went wrong — try again.");
     }
     setParsing(false);
+  }
+
+  function applyParsed(p: ParsedProfile) {
+    if (p.name && !name) setName(p.name);
+    if (p.headline) setHeadline(p.headline);
+    if (p.location) setLocation(p.location);
+    if (p.seeking) setSeeking(p.seeking);
+    if (Array.isArray(p.mindset) && p.mindset.length) setMindset(p.mindset.slice(0, 5));
+    if (p.learning) setLearning(p.learning);
+    if (p.goal) setGoal(p.goal);
+    if (Array.isArray(p.work) && p.work.length) {
+      setTiles(
+        p.work.slice(0, 3).map((w) => ({
+          claim: w.claim ?? "",
+          image: "",
+          result: w.result ?? "",
+          field: w.field ?? "",
+          vouch: "",
+        }))
+      );
+    }
+    setPendingProfile(null);
+    setStep(1);
   }
 
   const steps = [
@@ -220,6 +234,36 @@ export default function CreatePage() {
       valid: true,
       body: (
         <div>
+          {pendingProfile ? (
+            <div className="border-[3px] border-[#b03a3a] bg-white rounded-2xl p-4">
+              <p className="font-bold text-[15px] leading-snug">
+                This resume says &ldquo;{pendingProfile.name}&rdquo; — but your profile is &ldquo;{name}&rdquo;.
+              </p>
+              <p className="text-[13px] mt-1 text-[#6b5e52]">
+                elsewhr profiles must be your own real work. Nicknames are fine — someone else&apos;s resume is not.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingProfile(null);
+                  setMsg("Good call — profile untouched.");
+                }}
+                className="w-full mt-3 py-3 rounded-xl border-2 border-[#1c1410] bg-[#c8f000] font-bold text-[15px]"
+              >
+                No — keep my profile safe
+              </button>
+              <p className="mt-2 text-center">
+                <button
+                  type="button"
+                  onClick={() => applyParsed(pendingProfile)}
+                  className="font-mono text-[11px] underline text-[#6b5e52] hover:text-[#1c1410]"
+                >
+                  yes, this is really me (nickname / name change) — use it
+                </button>
+              </p>
+            </div>
+          ) : (
+          <>
           <textarea
             value={resume}
             onChange={(e) => setResume(e.target.value)}
@@ -238,6 +282,8 @@ export default function CreatePage() {
           <p className="mt-3 text-center text-[12px] text-[#6b5e52]">
             no resume handy? just hit Next — the bird will walk you through.
           </p>
+          </>
+          )}
         </div>
       ),
     },
@@ -278,10 +324,10 @@ export default function CreatePage() {
     },
     {
       guide: "Where in the world are you?",
-      hint: "City works. This helps nearby people find you. (Skippable.)",
+      hint: "Start typing — I'll suggest cities. This helps nearby people find you. (Skippable.)",
       valid: true,
       body: (
-        <input autoFocus className={inputCls} value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Rancho Cucamonga, CA" />
+        <LocationPicker value={location} onChange={setLocation} />
       ),
     },
     {
@@ -500,6 +546,77 @@ export default function CreatePage() {
         )}
       </div>
     </main>
+  );
+}
+
+function LocationPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [q, setQ] = useState(value);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (q.trim().length < 2) {
+      setSuggestions([]);
+      setOpen(false);
+      return;
+    }
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(
+          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q.trim())}&count=6&language=en&format=json`
+        );
+        const d = await r.json();
+        const s = ((d.results ?? []) as Geo[]).map((x) =>
+          [x.name, x.admin1, x.country].filter(Boolean).join(", ")
+        );
+        setSuggestions([...new Set(s)]);
+        setOpen(true);
+      } catch {
+        setSuggestions([]);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  return (
+    <div className="relative">
+      <input
+        autoFocus
+        className={inputCls}
+        value={q}
+        onChange={(e) => {
+          setQ(e.target.value);
+          onChange(e.target.value);
+        }}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onFocus={() => suggestions.length > 0 && setOpen(true)}
+        placeholder="Start typing your city…"
+      />
+      {open && suggestions.length > 0 && (
+        <div className="absolute z-10 left-0 right-0 mt-1 bg-white border-2 border-[#1c1410] rounded-xl overflow-hidden shadow-[4px_4px_0_rgba(28,20,16,0.5)]">
+          {suggestions.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onMouseDown={() => {
+                setQ(s);
+                onChange(s);
+                setOpen(false);
+              }}
+              className="block w-full text-left px-4 py-2.5 text-[14px] hover:bg-[#c8f000]/40 border-b border-[#1c1410]/10 last:border-b-0"
+            >
+              📍 {s}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
