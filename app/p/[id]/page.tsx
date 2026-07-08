@@ -24,6 +24,7 @@ type Profile = {
   mindset?: string[] | null;
   learning?: string | null;
   goal?: string | null;
+  accent?: string | null;
   artifacts: Artifact[] | null;
 };
 
@@ -54,6 +55,7 @@ export default async function ProfilePage({
   }
 
   const profile = data as Profile;
+  const accent = profile.accent || "#6b4eff";
 
   return (
     <main className="relative min-h-screen bg-[#ff5d3b] text-[#1c1410] flex justify-center px-4 py-8 overflow-hidden">
@@ -84,21 +86,23 @@ export default async function ProfilePage({
         </div>
 
         {/* header */}
-        <header className="rise bg-[#1c1410] text-[#fff6ec] rounded-3xl p-6 border-[3px] border-[#1c1410] shadow-[8px_8px_0_rgba(28,20,16,0.35)]">
+        <header className="rise bg-[#1c1410] text-[#fff6ec] rounded-3xl overflow-hidden border-[3px] border-[#1c1410] shadow-[8px_8px_0_rgba(28,20,16,0.35)]">
+          <div style={{ background: accent }} className="h-2 w-full" />
+          <div className="p-6">
           <div className="flex items-center gap-4">
             {profile.photo && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={profile.photo}
                 alt={profile.name}
-                className="w-20 h-20 rounded-full object-cover border-2 border-[#c8f000] flex-none"
+                className="w-20 h-20 rounded-full object-cover border-[3px] flex-none" style={{ borderColor: accent }}
               />
             )}
             <div>
               <h1 className="font-[Syne] font-extrabold text-3xl leading-none tracking-tight">
                 {profile.name}
               </h1>
-              <p className="text-[#c8f000] font-semibold mt-2">{profile.headline}</p>
+              <p className="font-semibold mt-2" style={{ color: accent === "#1c1410" ? "#c8f000" : accent }}>{profile.headline}</p>
             </div>
           </div>
           {profile.seeking && (
@@ -114,7 +118,7 @@ export default async function ProfilePage({
               {profile.mindset.map((tag) => (
                 <span
                   key={tag}
-                  className="px-2.5 py-1 rounded-full bg-[#6b4eff] text-[#fff6ec] text-[11px] font-medium"
+                  className="px-2.5 py-1 rounded-full text-[#fff6ec] text-[11px] font-medium" style={{ background: accent }}
                 >
                   {tag}
                 </span>
@@ -124,6 +128,7 @@ export default async function ProfilePage({
           <p className="font-mono text-xs text-[#9a8e82] mt-3 tracking-wide">
             {profile.location || "somewhere"} · shows real work, not a résumé
           </p>
+          </div>
         </header>
 
         {/* the work */}
