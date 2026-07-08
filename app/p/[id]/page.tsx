@@ -3,6 +3,7 @@
 
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
+import OwnerBar from "./OwnerBar";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ type Artifact = {
 
 type Profile = {
   id: number;
+  user_id?: string | null;
   name: string;
   photo?: string | null;
   headline: string;
@@ -130,6 +132,8 @@ export default async function ProfilePage({
           </p>
           </div>
         </header>
+
+        <OwnerBar profileId={profile.id} ownerUserId={profile.user_id ?? null} />
 
         {/* the work */}
         {profile.artifacts && profile.artifacts.length > 0 && (
