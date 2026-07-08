@@ -15,6 +15,15 @@ const MINDSET_OPTIONS = [
 
 const emptyTile: Tile = { claim: "", image: "", result: "", field: "", vouch: "" };
 
+const ACCENTS = [
+  { name: "grape", hex: "#6b4eff" },
+  { name: "lime", hex: "#9ab800" },
+  { name: "sky", hex: "#00a8b5" },
+  { name: "coral", hex: "#e04a2a" },
+  { name: "ink", hex: "#1c1410" },
+  { name: "rose", hex: "#d94f8a" },
+];
+
 export default function CreatePage() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
@@ -33,6 +42,7 @@ export default function CreatePage() {
   const [learning, setLearning] = useState("");
   const [goal, setGoal] = useState("");
   const [tiles, setTiles] = useState<Tile[]>([{ ...emptyTile }]);
+  const [accent, setAccent] = useState("#6b4eff");
 
   useEffect(() => {
     async function init() {
@@ -61,6 +71,7 @@ export default function CreatePage() {
         setMindset(Array.isArray(existing.mindset) ? existing.mindset : []);
         setLearning(existing.learning ?? "");
         setGoal(existing.goal ?? "");
+        setAccent(existing.accent ?? "#6b4eff");
         const arts = Array.isArray(existing.artifacts) ? existing.artifacts : [];
         setTiles(arts.length > 0 ? arts : [{ ...emptyTile }]);
       }
@@ -111,6 +122,7 @@ export default function CreatePage() {
       learning: learning.trim(),
       goal: goal.trim(),
       artifacts: realTiles,
+      accent,
     };
 
     const { error } = existingId
@@ -247,6 +259,27 @@ export default function CreatePage() {
       ),
     },
     {
+      guide: "Pick your color — the one people will remember you by.",
+      hint: "Your profile wears this everywhere. \u201CThe purple one with the watches\u201D sticks in memory.",
+      valid: true,
+      body: (
+        <div className="flex flex-wrap gap-3">
+          {ACCENTS.map((c) => (
+            <button
+              key={c.hex}
+              type="button"
+              onClick={() => setAccent(c.hex)}
+              className={`w-16 h-16 rounded-2xl border-[3px] transition-all duration-150 hover:scale-105 active:scale-90 ${
+                accent === c.hex ? "border-[#1c1410] scale-110 shadow-[4px_4px_0_rgba(28,20,16,0.6)]" : "border-transparent"
+              }`}
+              style={{ background: c.hex }}
+              aria-label={c.name}
+            />
+          ))}
+        </div>
+      ),
+    },
+    {
       guide: `That's a real profile, ${name ? name.split(" ")[0] : "friend"}. Ready to be seen?`,
       hint: existingId
         ? "This UPDATES your existing profile. You own this — never inflated."
@@ -268,6 +301,9 @@ export default function CreatePage() {
           {mindset.length > 0 && (
             <p className="mt-2 text-[13px] font-mono uppercase tracking-wide">{mindset.join(" · ")}</p>
           )}
+          <div className="mt-3 flex items-center gap-2 text-[12px] font-mono">
+            <span className="w-4 h-4 rounded-full inline-block border border-[#1c1410]/30" style={{ background: accent }} /> your color
+          </div>
           <p className="mt-2 text-[13px] text-[#6b5e52]">
             {tiles.filter((t) => t.claim.trim()).length} piece(s) of work attached
           </p>
