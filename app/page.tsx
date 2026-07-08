@@ -14,13 +14,14 @@ type Profile = {
   location: string;
   seeking?: string | null;
   mindset?: string[] | null;
+  accent?: string | null;
   artifacts: { image?: string }[] | null;
 };
 
 export default async function Home() {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, name, photo, headline, location, seeking, mindset, artifacts")
+    .select("id, name, photo, headline, location, seeking, mindset, accent, artifacts")
     .order("id", { ascending: false });
 
   const profiles = (data ?? []) as Profile[];
@@ -118,6 +119,7 @@ export default async function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 items-start">
             {profiles.map((p) => {
               const workImage = p.artifacts?.find((a) => a.image)?.image;
+              const accent = p.accent || "#6b4eff";
               return (
                 <Link
                   key={p.id}
@@ -125,16 +127,17 @@ export default async function Home() {
                   className="chapter block bg-[#fff6ec] rounded-3xl border-[3px] border-[#1c1410] shadow-[6px_6px_0_rgba(28,20,16,0.85)] overflow-hidden hover:translate-y-[-4px] hover:rotate-[-0.4deg] hover:shadow-[9px_11px_0_rgba(28,20,16,0.85)] active:translate-y-0 active:shadow-[4px_4px_0_rgba(28,20,16,0.85)] transition-all duration-200"
                   style={{ animationDelay: `${profiles.indexOf(p) * 90}ms` }}
                 >
+                  <div style={{ background: accent }} className="h-2 w-full" />
                   <div className="p-5 flex items-center gap-4">
                     {p.photo ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={p.photo}
                         alt={p.name}
-                        className="w-16 h-16 rounded-full object-cover border-2 border-[#1c1410] flex-none"
+                        className="w-16 h-16 rounded-full object-cover border-[3px] flex-none" style={{ borderColor: accent }}
                       />
                     ) : (
-                      <div className="w-16 h-16 rounded-full bg-[#6b4eff] text-[#fff6ec] flex items-center justify-center font-[Syne] font-extrabold text-2xl flex-none">
+                      <div className="w-16 h-16 rounded-full text-[#fff6ec] flex items-center justify-center font-[Syne] font-extrabold text-2xl flex-none" style={{ background: accent }}>
                         {p.name?.[0] ?? "?"}
                       </div>
                     )}
@@ -150,7 +153,7 @@ export default async function Home() {
                           {p.mindset.slice(0, 3).map((tag) => (
                             <span
                               key={tag}
-                              className="px-2 py-0.5 rounded-full bg-[#6b4eff] text-[#fff6ec] text-[10.5px] font-medium"
+                              className="px-2 py-0.5 rounded-full text-[#fff6ec] text-[10.5px] font-medium" style={{ background: accent }}
                             >
                               {tag}
                             </span>
