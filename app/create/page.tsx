@@ -174,6 +174,17 @@ export default function CreatePage() {
         setMsg(data.error || "Couldn't read that — try again.");
       } else {
         const p = data.profile || {};
+        // the bird notices: does this resume belong to someone else?
+        if (p.name && name && p.name.trim().toLowerCase() !== name.trim().toLowerCase()) {
+          const proceed = window.confirm(
+            `Heads up — this resume says "${p.name}", but your profile is "${name}". elsewhr profiles must be your own real work. Use this resume anyway?`
+          );
+          if (!proceed) {
+            setParsing(false);
+            setMsg("Okay — profile untouched. Paste your own resume when you're ready.");
+            return;
+          }
+        }
         if (p.name && !name) setName(p.name);
         if (p.headline) setHeadline(p.headline);
         if (p.location) setLocation(p.location);
