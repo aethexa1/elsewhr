@@ -43,6 +43,8 @@ export default function CreatePage() {
   const [goal, setGoal] = useState("");
   const [tiles, setTiles] = useState<Tile[]>([{ ...emptyTile }]);
   const [accent, setAccent] = useState("#6b4eff");
+  const [resume, setResume] = useState("");
+  const [parsing, setParsing] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -154,7 +156,80 @@ export default function CreatePage() {
     }
   }
 
+  async function parseResume() {
+    if (resume.trim().length < 40) {
+      setMsg("Paste a bit more of your resume first.");
+      return;
+    }
+    setParsing(true);
+    setMsg(null);
+    try {
+      const r = await fetch("/api/parse-resume", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ resume }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        setMsg(data.error || "Couldn't read that — try again.");
+      } else {
+        const p = data.profile || {};
+        if (p.name && !name) setName(p.name);
+        if (p.headline) setHeadline(p.headline);
+        if (p.location) setLocation(p.location);
+        if (p.seeking) setSeeking(p.seeking);
+        if (Array.isArray(p.mindset) && p.mindset.length) setMindset(p.mindset.slice(0, 5));
+        if (p.learning) setLearning(p.learning);
+        if (p.goal) setGoal(p.goal);
+        if (Array.isArray(p.work) && p.work.length) {
+          setTiles(
+            p.work.slice(0, 3).map((w: Partial<Tile>) => ({
+              claim: w.claim ?? "",
+              image: "",
+              result: w.result ?? "",
+              field: w.field ?? "",
+              vouch: "",
+            }))
+          );
+        }
+        setStep(1);
+      }
+    } catch {
+      setMsg("Something went wrong — try again.");
+    }
+    setParsing(false);
+  }
+
   const steps = [
+    {
+      guide: existingId
+        ? `Welcome back${name ? ", " + name.split(" ")[0] : ""} — walk through and edit, or paste a resume below and I'll refresh the draft for you.`
+        : "Got a resume? Paste it here and I'll do the boring part — your whole profile, drafted in seconds. Or skip and we'll build it together.",
+      hint: "I only use what's actually in it. Never inflated — that's the rule I live by.",
+      valid: true,
+      body: (
+        <div>
+          <textarea
+            value={resume}
+            onChange={(e) => setResume(e.target.value)}
+            placeholder="Paste your resume text here… (copy it from your PDF or doc)"
+            rows={8}
+            className="w-full px-4 py-3.5 rounded-xl border-2 border-[#1c1410] bg-white outline-none focus:border-[#6b4eff] text-[14px] leading-relaxed resize-y"
+          />
+          <button
+            type="button"
+            onClick={parseResume}
+            disabled={parsing || resume.trim().length < 40}
+            className="w-full mt-3 py-3 rounded-xl border-2 border-[#1c1410] bg-[#6b4eff] text-[#fff6ec] font-bold text-[15px] hover:translate-y-[-2px] transition-transform disabled:opacity-40"
+          >
+            {parsing ? "Reading your resume… 🐦" : "Draft my profile from this ✨"}
+          </button>
+          <p className="mt-3 text-center text-[12px] text-[#6b5e52]">
+            no resume handy? just hit Next — the bird will walk you through.
+          </p>
+        </div>
+      ),
+    },
     {
       guide: existingId
         ? `Welcome back${name ? ", " + name.split(" ")[0] : ""} — your profile's loaded. Walk through and change anything.`
