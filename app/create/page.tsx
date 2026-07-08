@@ -137,6 +137,23 @@ export default function CreatePage() {
     }
   }
 
+  async function deleteProfile() {
+    if (!existingId) return;
+    const sure = window.confirm(
+      "Delete your profile from elsewhr? This removes it completely and can't be undone."
+    );
+    if (!sure) return;
+    setBusy(true);
+    const { error } = await supabase.from("profiles").delete().eq("id", existingId);
+    if (error) {
+      setMsg(error.message);
+      setBusy(false);
+    } else {
+      await supabase.auth.signOut();
+      router.push("/");
+    }
+  }
+
   const steps = [
     {
       guide: existingId
@@ -384,6 +401,17 @@ export default function CreatePage() {
         <p className="font-mono text-[11px] text-[#fff6ec]/80 mt-6 text-center">
           step {step + 1} of {steps.length} · under 5 minutes · you own everything here
         </p>
+        {existingId && isLast && (
+          <p className="mt-3 text-center">
+            <button
+              onClick={deleteProfile}
+              disabled={busy}
+              className="font-mono text-[11px] text-[#fff6ec]/60 underline hover:text-[#fff6ec]"
+            >
+              delete my profile from elsewhr
+            </button>
+          </p>
+        )}
       </div>
     </main>
   );
