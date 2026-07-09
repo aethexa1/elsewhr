@@ -178,9 +178,13 @@ export default function CreatePage() {
     setParsing(true);
     setMsg(null);
     try {
+      const { data: sess } = await supabase.auth.getSession();
       const r = await fetch("/api/parse-resume", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${sess.session?.access_token ?? ""}`,
+        },
         body: JSON.stringify({ resume }),
       });
       const data = await r.json();
