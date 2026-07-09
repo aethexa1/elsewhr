@@ -3,6 +3,7 @@
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
 import HeaderActions from "./HeaderActions";
+import WelcomeHero from "./WelcomeHero";
 
 export const dynamic = "force-dynamic";
 
@@ -55,24 +56,57 @@ export default async function Home() {
         @media (prefers-reduced-motion: reduce) { .rise,.bob,.blob,.wave,.leaf,.chapter { animation:none !important; opacity:1 !important; } }
       `}</style>
 
-      {/* side doodles — desktop only */}
-      <div aria-hidden className="hidden lg:block absolute left-6 top-40 opacity-70">
-        <svg width="70" height="70" viewBox="0 0 100 100"><path d="M50 5 L58 40 L95 50 L58 60 L50 95 L42 60 L5 50 L42 40 Z" fill="none" stroke="#fff6ec" strokeWidth="4" strokeLinejoin="round"/></svg>
+      {/* depth vignette */}
+      <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(120% 90% at 50% 20%, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0) 40%, rgba(28,20,16,0.16) 100%)" }} />
+
+      {/* side doodles — the elsewhr symbols, desktop only */}
+      {/* connection: three people, linked — the network */}
+      <div aria-hidden className="hidden lg:block absolute left-8 top-44 opacity-90">
+        <svg width="92" height="80" viewBox="0 0 120 104">
+          <path d="M24 30 L60 78 M96 30 L60 78 M24 30 L96 30" stroke="#fff6ec" strokeWidth="3.5" strokeLinecap="round" strokeDasharray="1 9" opacity="0.9"/>
+          <circle cx="24" cy="30" r="13" fill="#c8f000" stroke="#1c1410" strokeWidth="3"/>
+          <circle cx="96" cy="30" r="13" fill="#6b4eff" stroke="#1c1410" strokeWidth="3"/>
+          <circle cx="60" cy="78" r="13" fill="#fff6ec" stroke="#1c1410" strokeWidth="3"/>
+        </svg>
       </div>
-      <div aria-hidden className="hidden lg:block absolute left-10 top-[55%]" style={{ animation: "bob 4s ease-in-out infinite" }}>
-        <svg width="90" height="40" viewBox="0 0 120 50"><path d="M5 25 Q20 5 35 25 Q50 45 65 25 Q80 5 95 25 Q105 38 115 30" fill="none" stroke="#c8f000" strokeWidth="5" strokeLinecap="round"/></svg>
+      {/* the bower: an arch of collected trinkets — proof, gathered */}
+      <div aria-hidden className="hidden lg:block absolute left-10 bottom-36" style={{ animation: "bob 5s ease-in-out infinite" }}>
+        <svg width="104" height="66" viewBox="0 0 140 90">
+          <circle cx="14" cy="78" r="8" fill="#c8f000" stroke="#1c1410" strokeWidth="2.5"/>
+          <circle cx="30" cy="44" r="8" fill="#00c2d1" stroke="#1c1410" strokeWidth="2.5"/>
+          <circle cx="52" cy="20" r="8" fill="#fff6ec" stroke="#1c1410" strokeWidth="2.5"/>
+          <circle cx="78" cy="14" r="8" fill="#6b4eff" stroke="#1c1410" strokeWidth="2.5"/>
+          <circle cx="104" cy="26" r="8" fill="#c8f000" stroke="#1c1410" strokeWidth="2.5"/>
+          <circle cx="122" cy="54" r="8" fill="#fff6ec" stroke="#1c1410" strokeWidth="2.5"/>
+          <circle cx="130" cy="80" r="8" fill="#00c2d1" stroke="#1c1410" strokeWidth="2.5"/>
+        </svg>
       </div>
-      <div aria-hidden className="hidden lg:block absolute left-14 bottom-32 opacity-80">
-        <svg width="56" height="56" viewBox="0 0 100 100"><circle cx="50" cy="50" r="34" fill="none" stroke="#6b4eff" strokeWidth="6"/><circle cx="50" cy="50" r="12" fill="#c8f000"/></svg>
+      {/* the bowerbird itself */}
+      <div aria-hidden className="hidden lg:block absolute right-10 top-52" style={{ animation: "bob 3.6s ease-in-out infinite" }}>
+        <svg width="60" height="68" viewBox="0 0 300 340">
+          <path d="M150 244 L116 300 L150 282 L184 300 Z" fill="#1c1410"/>
+          <ellipse cx="150" cy="222" rx="60" ry="66" fill="#1c1410"/>
+          <ellipse cx="150" cy="238" rx="33" ry="39" fill="#c8f000"/>
+          <circle cx="150" cy="134" r="43" fill="#1c1410"/>
+          <circle cx="166" cy="128" r="13" fill="#fff6ec"/>
+          <circle cx="169" cy="130" r="6.5" fill="#1c1410"/>
+          <path d="M191 132 L217 138 L191 147 Z" fill="#c8f000"/>
+        </svg>
       </div>
-      <div aria-hidden className="hidden lg:block absolute right-8 top-56" style={{ animation: "bob 3.4s ease-in-out infinite" }}>
-        <svg width="64" height="72" viewBox="0 0 300 340"><path d="M150 244 L116 300 L150 282 L184 300 Z" fill="#1c1410"/><ellipse cx="150" cy="222" rx="60" ry="66" fill="#1c1410"/><ellipse cx="150" cy="238" rx="33" ry="39" fill="#c8f000"/><circle cx="150" cy="134" r="43" fill="#1c1410"/><circle cx="166" cy="128" r="13" fill="#fff6ec"/><circle cx="169" cy="130" r="6.5" fill="#1c1410"/><path d="M191 132 L217 138 L191 147 Z" fill="#c8f000"/></svg>
+      {/* paper plane — going elsewhr */}
+      <div aria-hidden className="hidden lg:block absolute right-12 top-[55%]" style={{ animation: "bob 4.4s ease-in-out infinite reverse" }}>
+        <svg width="120" height="84" viewBox="0 0 160 112">
+          <path d="M6 96 Q46 84 76 58 Q100 38 118 26" fill="none" stroke="#fff6ec" strokeWidth="3.5" strokeLinecap="round" strokeDasharray="2 10" opacity="0.85"/>
+          <path d="M118 8 L154 22 L124 52 L120 34 Z" fill="#c8f000" stroke="#1c1410" strokeWidth="3" strokeLinejoin="round"/>
+          <path d="M118 8 L120 34 L106 40 Z" fill="#fff6ec" stroke="#1c1410" strokeWidth="3" strokeLinejoin="round"/>
+        </svg>
       </div>
-      <div aria-hidden className="hidden lg:block absolute right-16 top-[58%] opacity-70">
-        <svg width="46" height="46" viewBox="0 0 100 100"><path d="M50 8 L60 38 L92 38 L66 57 L76 88 L50 69 L24 88 L34 57 L8 38 L40 38 Z" fill="#c8f000"/></svg>
-      </div>
-      <div aria-hidden className="hidden lg:block absolute right-10 bottom-40" style={{ animation: "bob 5s ease-in-out infinite reverse" }}>
-        <svg width="80" height="34" viewBox="0 0 120 50"><path d="M5 30 Q25 10 45 30 Q65 50 85 30 Q100 15 115 25" fill="none" stroke="#fff6ec" strokeWidth="5" strokeLinecap="round" opacity="0.8"/></svg>
+      {/* a drifting feather */}
+      <div aria-hidden className="hidden lg:block absolute right-20 bottom-32 opacity-90" style={{ animation: "bob 6s ease-in-out infinite" }}>
+        <svg width="44" height="64" viewBox="0 0 60 90">
+          <path d="M30 4 Q52 30 44 58 Q38 78 30 86 Q22 78 16 58 Q8 30 30 4 Z" fill="#6b4eff" stroke="#1c1410" strokeWidth="3" strokeLinejoin="round"/>
+          <path d="M30 12 L30 82" stroke="#fff6ec" strokeWidth="2.5" strokeLinecap="round"/>
+        </svg>
       </div>
 
       {/* wind — drifting particles crossing the screen */}
@@ -121,9 +155,11 @@ export default async function Home() {
           </div>
         </div>
 
-        <p className="rise text-[#fff6ec]/90 text-[15px] mb-7" style={{ animationDelay: "60ms" }}>
+        <p className="rise text-[#fff6ec]/90 text-[15px] mb-7 font-mono tracking-wide" style={{ animationDelay: "60ms" }}>
           real people, shown by what they can actually do.
         </p>
+
+        <WelcomeHero />
 
         {error || profiles.length === 0 ? (
           <div className="bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-3xl p-8 text-center">
@@ -144,7 +180,7 @@ export default async function Home() {
                 <Link
                   key={p.id}
                   href={`/p/${p.id}`}
-                  className="chapter block bg-[#fff6ec] rounded-3xl border-[3px] border-[#1c1410] shadow-[6px_6px_0_rgba(28,20,16,0.85)] overflow-hidden hover:translate-y-[-4px] hover:rotate-[-0.4deg] hover:shadow-[9px_11px_0_rgba(28,20,16,0.85)] active:translate-y-0 active:shadow-[4px_4px_0_rgba(28,20,16,0.85)] transition-all duration-200"
+                  className="chapter block bg-[#fff6ec] rounded-3xl border-[3px] border-[#1c1410] shadow-[7px_7px_0_#1c1410,0_22px_44px_rgba(28,20,16,0.25)] overflow-hidden hover:translate-y-[-5px] hover:rotate-[-0.4deg] hover:shadow-[10px_13px_0_#1c1410,0_30px_60px_rgba(28,20,16,0.3)] active:translate-y-0 active:shadow-[4px_4px_0_#1c1410] transition-all duration-200"
                   style={{ animationDelay: `${profiles.indexOf(p) * 90}ms` }}
                 >
                   <div style={{ background: accent }} className="h-2 w-full" />
@@ -162,7 +198,7 @@ export default async function Home() {
                       </div>
                     )}
                     <div className="min-w-0">
-                      <p className="font-[Syne] font-extrabold text-xl leading-tight truncate">
+                      <p className="font-[Syne] font-extrabold text-xl leading-tight truncate tracking-[-0.01em]">
                         {p.name}
                       </p>
                       <p className="text-[13.5px] leading-snug text-[#3a2c20] line-clamp-2">
