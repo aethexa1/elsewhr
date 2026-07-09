@@ -55,6 +55,26 @@ export default async function Home() {
         @media (prefers-reduced-motion: reduce) { .rise,.bob,.blob,.wave,.leaf,.chapter { animation:none !important; opacity:1 !important; } }
       `}</style>
 
+      {/* side doodles — desktop only */}
+      <div aria-hidden className="hidden lg:block absolute left-6 top-40 opacity-70">
+        <svg width="70" height="70" viewBox="0 0 100 100"><path d="M50 5 L58 40 L95 50 L58 60 L50 95 L42 60 L5 50 L42 40 Z" fill="none" stroke="#fff6ec" strokeWidth="4" strokeLinejoin="round"/></svg>
+      </div>
+      <div aria-hidden className="hidden lg:block absolute left-10 top-[55%]" style={{ animation: "bob 4s ease-in-out infinite" }}>
+        <svg width="90" height="40" viewBox="0 0 120 50"><path d="M5 25 Q20 5 35 25 Q50 45 65 25 Q80 5 95 25 Q105 38 115 30" fill="none" stroke="#c8f000" strokeWidth="5" strokeLinecap="round"/></svg>
+      </div>
+      <div aria-hidden className="hidden lg:block absolute left-14 bottom-32 opacity-80">
+        <svg width="56" height="56" viewBox="0 0 100 100"><circle cx="50" cy="50" r="34" fill="none" stroke="#6b4eff" strokeWidth="6"/><circle cx="50" cy="50" r="12" fill="#c8f000"/></svg>
+      </div>
+      <div aria-hidden className="hidden lg:block absolute right-8 top-56" style={{ animation: "bob 3.4s ease-in-out infinite" }}>
+        <svg width="64" height="72" viewBox="0 0 300 340"><path d="M150 244 L116 300 L150 282 L184 300 Z" fill="#1c1410"/><ellipse cx="150" cy="222" rx="60" ry="66" fill="#1c1410"/><ellipse cx="150" cy="238" rx="33" ry="39" fill="#c8f000"/><circle cx="150" cy="134" r="43" fill="#1c1410"/><circle cx="166" cy="128" r="13" fill="#fff6ec"/><circle cx="169" cy="130" r="6.5" fill="#1c1410"/><path d="M191 132 L217 138 L191 147 Z" fill="#c8f000"/></svg>
+      </div>
+      <div aria-hidden className="hidden lg:block absolute right-16 top-[58%] opacity-70">
+        <svg width="46" height="46" viewBox="0 0 100 100"><path d="M50 8 L60 38 L92 38 L66 57 L76 88 L50 69 L24 88 L34 57 L8 38 L40 38 Z" fill="#c8f000"/></svg>
+      </div>
+      <div aria-hidden className="hidden lg:block absolute right-10 bottom-40" style={{ animation: "bob 5s ease-in-out infinite reverse" }}>
+        <svg width="80" height="34" viewBox="0 0 120 50"><path d="M5 30 Q25 10 45 30 Q65 50 85 30 Q100 15 115 25" fill="none" stroke="#fff6ec" strokeWidth="5" strokeLinecap="round" opacity="0.8"/></svg>
+      </div>
+
       {/* wind — drifting particles crossing the screen */}
       <div aria-hidden className="leaf top-[16%]" style={{ animationDuration: "13s", animationDelay: "0s" }}>
         <svg width="14" height="14" viewBox="0 0 20 20"><path d="M10 0 C16 6 16 14 10 20 C4 14 4 6 10 0 Z" fill="#c8f000" opacity="0.55"/></svg>
