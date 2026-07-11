@@ -59,6 +59,7 @@ export default function CreatePage() {
   const [resume, setResume] = useState("");
   const [parsing, setParsing] = useState(false);
   const [pendingProfile, setPendingProfile] = useState<ParsedProfile | null>(null);
+  const [showExample, setShowExample] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -298,7 +299,10 @@ export default function CreatePage() {
       hint: existingId ? "Publishing at the end UPDATES your profile — no duplicates." : "The real one people call you.",
       valid: name.trim().length > 0,
       body: (
-        <input autoFocus className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Sofia Marin" />
+        <div>
+          <FieldLabel>Your name</FieldLabel>
+          <input autoFocus className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Sofia Marin" />
+        </div>
       ),
     },
     {
@@ -323,7 +327,10 @@ export default function CreatePage() {
       hint: "Skills, experience, an idea — say it plainly. \u201CWarehouse ops, 6 years, no degree\u201D beats \u201Cmotivated professional\u201D every time.",
       valid: headline.trim().length > 0,
       body: (
-        <input autoFocus className={inputCls} value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="Warehouse operations — 6 years. No degree. Started in fast food." />
+        <div>
+          <FieldLabel>Your one-line headline — what you have</FieldLabel>
+          <input autoFocus className={inputCls} value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="Warehouse operations — 6 years. No degree. Started in fast food." />
+        </div>
       ),
     },
     {
@@ -339,7 +346,10 @@ export default function CreatePage() {
       hint: "A job? A co-founder? People with your fire? Be honest — this is how the right people find you.",
       valid: true,
       body: (
-        <input autoFocus className={inputCls} value={seeking} onChange={(e) => setSeeking(e.target.value)} placeholder="A team that values ownership · same-mindset builders" />
+        <div>
+          <FieldLabel>What you&apos;re looking for</FieldLabel>
+          <input autoFocus className={inputCls} value={seeking} onChange={(e) => setSeeking(e.target.value)} placeholder="A team that values ownership · same-mindset builders" />
+        </div>
       ),
     },
     {
@@ -364,7 +374,10 @@ export default function CreatePage() {
       hint: "Growth is attractive. \u201CNothing\u201D is fine too — skip if so.",
       valid: true,
       body: (
-        <input autoFocus className={inputCls} value={learning} onChange={(e) => setLearning(e.target.value)} placeholder="Kubernetes · public speaking · Spanish" />
+        <div>
+          <FieldLabel>Currently learning (optional)</FieldLabel>
+          <input autoFocus className={inputCls} value={learning} onChange={(e) => setLearning(e.target.value)} placeholder="Kubernetes · public speaking · Spanish" />
+        </div>
       ),
     },
     {
@@ -372,7 +385,10 @@ export default function CreatePage() {
       hint: "Dream-sized is allowed.",
       valid: true,
       body: (
-        <input autoFocus className={inputCls} value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Run my own operations consultancy" />
+        <div>
+          <FieldLabel>One future goal (optional)</FieldLabel>
+          <input autoFocus className={inputCls} value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Run my own operations consultancy" />
+        </div>
       ),
     },
     {
@@ -381,14 +397,45 @@ export default function CreatePage() {
       valid: tiles.some((t) => t.claim.trim().length > 0),
       body: (
         <div className="flex flex-col gap-4">
+          <button
+            type="button"
+            onClick={() => setShowExample((s) => !s)}
+            className="self-start font-mono text-[11px] underline underline-offset-4 text-[#6b4eff]"
+          >
+            {showExample ? "hide the example" : "confused? see a finished example →"}
+          </button>
+
+          {showExample && (
+            <div className="border-2 border-[#6b4eff] bg-[#6b4eff]/5 rounded-2xl p-4 text-[13px] leading-relaxed">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-[#6b4eff] mb-2">
+                Sofia&apos;s example — copy the shape, not the words
+              </p>
+              <p><span className="font-bold">What she did:</span> Cut mis-ships 40% with a labeling system I built</p>
+              <p className="mt-1"><span className="font-bold">Result:</span> 40% fewer errors</p>
+              <p className="mt-1"><span className="font-bold">Field:</span> Operations</p>
+              <p className="mt-1"><span className="font-bold">Vouch:</span> &ldquo;Sofia runs the floor better than managers twice her pay.&rdquo; — site lead</p>
+              <p className="mt-2 text-[#6b5e52]">
+                Notice: one real thing, one number, one line from a person who saw it. That&apos;s the whole formula.
+              </p>
+            </div>
+          )}
+
           {tiles.map((tile, i) => (
             <div key={i} className="border-2 border-dashed border-[#1c1410]/40 rounded-2xl p-4 bg-white/50">
-              <input className={inputCls} value={tile.claim} onChange={(e) => updateTile(i, "claim", e.target.value)} placeholder="What did you do? — Cut mis-ships 40% with a labeling system I built" />
+              <FieldLabel>What did you do? One real thing, said plainly</FieldLabel>
+              <input className={inputCls} value={tile.claim} onChange={(e) => updateTile(i, "claim", e.target.value)} placeholder="Cut mis-ships 40% with a labeling system I built" />
               <div className="grid grid-cols-2 gap-3 mt-3">
-                <input className={inputCls} value={tile.result} onChange={(e) => updateTile(i, "result", e.target.value)} placeholder="Result — 40% fewer errors" />
-                <input className={inputCls} value={tile.field} onChange={(e) => updateTile(i, "field", e.target.value)} placeholder="Field — Operations" />
+                <div>
+                  <FieldLabel>The result — a number wins</FieldLabel>
+                  <input className={inputCls} value={tile.result} onChange={(e) => updateTile(i, "result", e.target.value)} placeholder="40% fewer errors" />
+                </div>
+                <div>
+                  <FieldLabel>Field / area of work</FieldLabel>
+                  <input className={inputCls} value={tile.field} onChange={(e) => updateTile(i, "field", e.target.value)} placeholder="Operations" />
+                </div>
               </div>
               <div className="mt-3">
+                <FieldLabel>Photo of the actual work (optional, powerful)</FieldLabel>
                 <PhotoPicker
                   current={tile.image}
                   label={tile.image ? "Change work photo" : "Add a photo of this work"}
@@ -399,7 +446,13 @@ export default function CreatePage() {
                   }}
                 />
               </div>
-              <input className={`${inputCls} mt-3`} value={tile.vouch} onChange={(e) => updateTile(i, "vouch", e.target.value)} placeholder='A vouch (optional) — "She runs the floor better than…" — site lead' />
+              <div className="mt-3">
+                <FieldLabel>A vouch — one line from someone who saw you do it (optional)</FieldLabel>
+                <input className={inputCls} value={tile.vouch} onChange={(e) => updateTile(i, "vouch", e.target.value)} placeholder='"She runs the floor better than…" — site lead' />
+                <p className="mt-1.5 text-[11px] text-[#6b5e52] leading-snug">
+                  A boss, coworker, customer, teammate — anyone who actually watched you do this work. Ask them for one honest sentence and put their role after it.
+                </p>
+              </div>
             </div>
           ))}
           {tiles.length < 3 && (
@@ -553,6 +606,14 @@ export default function CreatePage() {
   );
 }
 
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label className="block font-mono text-[10px] uppercase tracking-widest mb-1 text-[#6b5e52]">
+      {children}
+    </label>
+  );
+}
+
 function LocationPicker({
   value,
   onChange,
@@ -590,6 +651,7 @@ function LocationPicker({
 
   return (
     <div className="relative">
+      <FieldLabel>Your city (optional)</FieldLabel>
       <input
         autoFocus
         className={inputCls}
