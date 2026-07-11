@@ -31,14 +31,44 @@ export default function HomeShell({
 }) {
   const [mode, setMode] = useState<"loading" | "guest" | "member">("loading");
   const [peek, setPeek] = useState(false);
+  const [myTags, setMyTags] = useState<string[]>([]);
+  const [myProfileId, setMyProfileId] = useState<number | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setMode(data.user ? "member" : "guest");
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) {
+        setMode("guest");
+        return;
+      }
+      setMode("member");
+      const { data: mine } = await supabase
+        .from("profiles")
+        .select("id, mindset")
+        .eq("user_id", data.user.id)
+        .limit(1)
+        .maybeSingle();
+      if (mine) {
+        setMyProfileId(mine.id);
+        setMyTags(Array.isArray(mine.mindset) ? mine.mindset : []);
+      }
     });
   }, []);
 
   const showFeed = mode === "member" || (mode === "guest" && peek);
+
+  // matching-lite: people who share your mindset rise to the top
+  const shared = (p: FeedProfile) =>
+    myTags.length && Array.isArray(p.mindset)
+      ? p.mindset.filter((t) => myTags.includes(t))
+      : [];
+  const ordered =
+    mode === "member" && myTags.length
+      ? [...profiles].sort((a, b) => {
+          if (a.id === myProfileId) return 1; // your own card sits last
+          if (b.id === myProfileId) return -1;
+          return shared(b).length - shared(a).length || b.id - a.id;
+        })
+      : profiles;
 
   return (
     <main className="relative min-h-screen bg-[#ff5d3b] text-[#1c1410] flex justify-center px-4 py-8 overflow-hidden">
@@ -188,6 +218,7 @@ export default function HomeShell({
         {mode === "member" && (
           <p className="rise text-[#fff6ec]/90 text-[15px] mb-7 font-mono tracking-wide" style={{ animationDelay: "60ms" }}>
             real people, shown by what they can actually do.
+            {myTags.length > 0 && " · your kind of people first ✦"}
           </p>
         )}
 
@@ -206,9 +237,10 @@ export default function HomeShell({
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 items-start">
-                {profiles.map((p, idx) => {
+                {ordered.map((p, idx) => {
                   const workImage = p.artifacts?.find((a) => a.image)?.image;
                   const accent = p.accent || "#6b4eff";
+                  const both = p.id === myProfileId ? [] : shared(p);
                   return (
                     <Link
                       key={p.id}
@@ -253,6 +285,11 @@ export default function HomeShell({
                                 </span>
                               ))}
                             </div>
+                          )}
+                          {both.length > 0 && (
+                            <p className="mt-1.5 font-mono text-[10.5px] text-[#6b5e52]">
+                              ✦ you both: {both.slice(0, 3).join(" · ")}
+                            </p>
                           )}
                         </div>
                       </div>
