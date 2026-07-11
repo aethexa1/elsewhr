@@ -1,6 +1,6 @@
 "use client";
 
-// elsewhr — account menu: who you are, edit, sign out
+// elsewhr — account menu: who you are, edit, settings, sign out
 // Replaces app/HeaderActions.tsx
 
 import { useEffect, useState } from "react";
@@ -63,6 +63,13 @@ export default function HeaderActions() {
             className="block px-4 py-3 text-sm font-bold hover:bg-[#c8f000]/40"
           >
             ✏️ Edit my profile
+          </Link>
+          <Link
+            href="/settings"
+            onClick={() => setOpen(false)}
+            className="block px-4 py-3 text-sm font-bold hover:bg-[#c8f000]/40 border-t border-[#1c1410]/10"
+          >
+            ⚙️ Settings
           </Link>
           <button
             onClick={signOut}
