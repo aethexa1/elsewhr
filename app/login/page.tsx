@@ -6,10 +6,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
-import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [mode, setMode] = useState<"login" | "signup">("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,7 +40,20 @@ export default function LoginPage() {
         setMsgKind("error");
         setMsg(error.message);
       } else {
-        router.push("/create");
+        // has a profile → feed; brand new → build one with the bird
+        const { data: userData } = await supabase.auth.getUser();
+        let dest = "/create";
+        if (userData.user) {
+          const { data: existing } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("user_id", userData.user.id)
+            .limit(1)
+            .maybeSingle();
+          if (existing) dest = "/";
+        }
+        window.location.assign(dest);
+        return;
       }
     }
     setBusy(false);
