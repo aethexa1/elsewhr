@@ -1,9 +1,10 @@
 "use client";
 
 // elsewhr — login / signup page
-// Create this file at: app/login/page.tsx
+// Replace file at: app/login/page.tsx
 
 import { useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 
@@ -13,10 +14,12 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
+  const [msgKind, setMsgKind] = useState<"error" | "success">("error");
   const [busy, setBusy] = useState(false);
 
   async function handleSubmit() {
     if (!email || !password) {
+      setMsgKind("error");
       setMsg("Enter your email and a password.");
       return;
     }
@@ -26,14 +29,17 @@ export default function LoginPage() {
     if (mode === "signup") {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) {
+        setMsgKind("error");
         setMsg(error.message);
       } else {
+        setMsgKind("success");
         setMsg("Account created! Check your email to confirm, then log in.");
         setMode("login");
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
+        setMsgKind("error");
         setMsg(error.message);
       } else {
         router.push("/create");
@@ -82,8 +88,20 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="At least 6 characters"
-            className="w-full mb-5 px-4 py-3 rounded-xl border-2 border-[#1c1410] bg-white outline-none focus:border-[#6b4eff]"
+            className="w-full mb-2 px-4 py-3 rounded-xl border-2 border-[#1c1410] bg-white outline-none focus:border-[#6b4eff]"
           />
+
+          {mode === "login" && (
+            <div className="mb-4 text-right">
+              <Link
+                href="/reset-password"
+                className="font-mono text-[11px] underline underline-offset-4 text-[#6b4eff]"
+              >
+                Forgot password?
+              </Link>
+            </div>
+          )}
+          {mode === "signup" && <div className="mb-4" />}
 
           <button
             onClick={handleSubmit}
@@ -94,7 +112,13 @@ export default function LoginPage() {
           </button>
 
           {msg && (
-            <p className="mt-4 text-sm text-center text-[#b03a3a] font-medium">{msg}</p>
+            <p
+              className={`mt-4 text-sm text-center font-medium ${
+                msgKind === "success" ? "text-[#2e7d32]" : "text-[#b03a3a]"
+              }`}
+            >
+              {msg}
+            </p>
           )}
 
           <p className="mt-5 text-sm text-center">
