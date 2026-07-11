@@ -142,7 +142,7 @@ export default async function ProfilePage({
           {profile.website && (
             <p className="mt-3">
               
-                href={profile.website.startsWith("http") ? profile.website : `https://${profile.website}`}
+                <ahref={profile.website.startsWith("http") ? profile.website : `https://${profile.website}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-block px-3 py-1.5 rounded-xl border-2 border-[#c8f000] text-[#c8f000] font-mono text-[12px] hover:bg-[#c8f000] hover:text-[#1c1410] transition-colors"
