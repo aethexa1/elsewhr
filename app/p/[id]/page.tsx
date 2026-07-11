@@ -147,7 +147,7 @@ export default async function ProfilePage({
                 rel="noopener noreferrer"
                 className="inline-block px-3 py-1.5 rounded-xl border-2 border-[#c8f000] text-[#c8f000] font-mono text-[12px] hover:bg-[#c8f000] hover:text-[#1c1410] transition-colors"
               >
-                🔗 {profile.website.replace(/^https?:\/\//, "")}
+                🔗 {profile.website.replace("https://", "").replace("http://", "")}
               </a>
             </p>
           )}
