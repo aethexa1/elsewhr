@@ -59,6 +59,7 @@ export default async function ProfilePage({
 
   const profile = data as Profile;
   const accent = profile.accent || "#6b4eff";
+  const isSample = !profile.user_id;
 
   return (
     <main className="relative min-h-screen bg-[#ff5d3b] text-[#1c1410] flex justify-center px-4 py-8 overflow-hidden">
@@ -92,6 +93,11 @@ export default async function ProfilePage({
         <header className="rise bg-[#1c1410] text-[#fff6ec] rounded-3xl overflow-hidden border-[3px] border-[#1c1410] shadow-[8px_8px_0_rgba(28,20,16,0.35)]">
           <div style={{ background: accent }} className="h-2 w-full" />
           <div className="p-6">
+          {isSample && (
+            <span className="inline-block mb-3 px-2.5 py-1 rounded-full border-2 border-[#fff6ec]/40 bg-[#fff6ec]/10 font-mono text-[10px] uppercase tracking-widest text-[#fff6ec]/80">
+              sample profile — here to show you the shape
+            </span>
+          )}
           <div className="flex items-center gap-4">
             {profile.photo && (
               // eslint-disable-next-line @next/next/no-img-element
