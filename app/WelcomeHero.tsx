@@ -46,6 +46,12 @@ export default function WelcomeHero() {
               free · under 5 min · you own everything
             </p>
           </div>
+          <p className="mt-4 font-mono text-[12px] text-[#fff6ec]/85">
+            already on elsewhr?{" "}
+            <Link href="/login" className="underline font-bold text-[#c8f000]">
+              log in →
+            </Link>
+          </p>
         </div>
 
         {/* the crew — 2D figures */}
@@ -92,10 +98,8 @@ function Crew() {
       {/* ——— coder: waving, laptop ——— */}
       <g>
         <rect x="126" y="122" width="52" height="70" rx="16" fill="#6b4eff" stroke="#1c1410" strokeWidth="3" />
-        {/* waving arm up */}
         <path d="M178 136 Q198 122 202 100" fill="none" stroke="#6b4eff" strokeWidth="13" strokeLinecap="round" />
         <circle cx="203" cy="96" r="8" fill="#8a5a3b" stroke="#1c1410" strokeWidth="3" />
-        {/* other arm holding laptop */}
         <rect x="118" y="130" width="14" height="40" rx="7" fill="#6b4eff" stroke="#1c1410" strokeWidth="3" />
         <rect x="108" y="164" width="42" height="26" rx="4" fill="#fff6ec" stroke="#1c1410" strokeWidth="3" />
         <rect x="114" y="170" width="30" height="4" rx="2" fill="#00c2d1" />
@@ -129,7 +133,6 @@ function Crew() {
         <rect x="312" y="126" width="48" height="66" rx="15" fill="#c8f000" stroke="#1c1410" strokeWidth="3" />
         <path d="M320 130 L326 168 M352 130 L346 168" stroke="#1c1410" strokeWidth="4" strokeLinecap="round" />
         <rect x="304" y="132" width="13" height="38" rx="6.5" fill="#c8f000" stroke="#1c1410" strokeWidth="3" />
-        {/* books in arm */}
         <rect x="296" y="160" width="30" height="9" rx="2" fill="#ff5d3b" stroke="#1c1410" strokeWidth="2.5" />
         <rect x="298" y="151" width="30" height="9" rx="2" fill="#6b4eff" stroke="#1c1410" strokeWidth="2.5" />
         <rect x="322" y="188" width="13" height="26" rx="6.5" fill="#1c1410" />
