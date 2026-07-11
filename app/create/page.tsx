@@ -19,6 +19,12 @@ type ParsedProfile = {
   work?: Partial<Tile>[];
 };
 
+type Coach = {
+  example?: { claim?: string; result?: string; field?: string; vouch?: string };
+  seeking?: string[];
+  hints?: { seeking?: string; learning?: string; goal?: string; work?: string };
+};
+
 type Geo = { name: string; admin1?: string; country?: string };
 
 const MINDSET_OPTIONS = [
@@ -36,6 +42,13 @@ const ACCENTS = [
   { name: "ink", hex: "#1c1410" },
   { name: "rose", hex: "#d94f8a" },
 ];
+
+const SOFIA = {
+  claim: "Cut mis-ships 40% with a labeling system I built",
+  result: "40% fewer errors",
+  field: "Operations",
+  vouch: "\u201CSofia runs the floor better than managers twice her pay.\u201D — site lead",
+};
 
 export default function CreatePage() {
   const router = useRouter();
@@ -60,6 +73,8 @@ export default function CreatePage() {
   const [parsing, setParsing] = useState(false);
   const [pendingProfile, setPendingProfile] = useState<ParsedProfile | null>(null);
   const [showExample, setShowExample] = useState(false);
+  const [coach, setCoach] = useState<Coach | null>(null);
+  const coachedFor = useRef<string>("");
 
   useEffect(() => {
     async function init() {
@@ -105,6 +120,28 @@ export default function CreatePage() {
 
   function updateTile(i: number, key: keyof Tile, value: string) {
     setTiles((t) => t.map((tile, idx) => (idx === i ? { ...tile, [key]: value } : tile)));
+  }
+
+  // fire-and-forget: the bird studies the headline and tailors what comes next
+  async function fetchCoach() {
+    const key = headline.trim().toLowerCase();
+    if (!key || coachedFor.current === key) return;
+    coachedFor.current = key;
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const r = await fetch("/api/coach", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${sess.session?.access_token ?? ""}`,
+        },
+        body: JSON.stringify({ name, headline, location }),
+      });
+      const data = await r.json();
+      if (r.ok && data.coach) setCoach(data.coach as Coach);
+    } catch {
+      // silent — static guidance remains
+    }
   }
 
   async function uploadImage(file: File): Promise<string | null> {
@@ -230,6 +267,14 @@ export default function CreatePage() {
     setStep(1);
   }
 
+  const ex = {
+    claim: coach?.example?.claim || SOFIA.claim,
+    result: coach?.example?.result || SOFIA.result,
+    field: coach?.example?.field || SOFIA.field,
+    vouch: coach?.example?.vouch || SOFIA.vouch,
+  };
+  const exampleIsTailored = Boolean(coach?.example?.claim);
+
   const steps = [
     {
       guide: existingId
@@ -324,7 +369,7 @@ export default function CreatePage() {
     },
     {
       guide: `Now the big one — what do you HAVE? One line.`,
-      hint: "Skills, experience, an idea — say it plainly. \u201CWarehouse ops, 6 years, no degree\u201D beats \u201Cmotivated professional\u201D every time.",
+      hint: "Skills, experience, an idea — say it plainly. \u201CWarehouse ops, 6 years, no degree\u201D beats \u201Cmotivated professional\u201D every time. I read this and tailor everything after to your world.",
       valid: headline.trim().length > 0,
       body: (
         <div>
@@ -343,12 +388,35 @@ export default function CreatePage() {
     },
     {
       guide: "What are you LOOKING for?",
-      hint: "A job? A co-founder? People with your fire? Be honest — this is how the right people find you.",
+      hint:
+        coach?.hints?.seeking ||
+        "A job? A co-founder? People with your fire? Be honest — this is how the right people find you.",
       valid: true,
       body: (
         <div>
+          {coach?.seeking && coach.seeking.length > 0 && (
+            <div className="mb-3">
+              <p className="font-mono text-[10px] uppercase tracking-widest mb-2 text-[#6b4eff]">
+                people like you often look for — tap one, or write your own
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {coach.seeking.slice(0, 3).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setSeeking(s)}
+                    className={`px-4 py-2 rounded-full border-2 border-[#1c1410] text-[13px] font-medium transition-all duration-150 active:scale-90 hover:scale-105 ${
+                      seeking === s ? "bg-[#6b4eff] text-[#fff6ec] border-[#6b4eff]" : "bg-white"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <FieldLabel>What you&apos;re looking for</FieldLabel>
-          <input autoFocus className={inputCls} value={seeking} onChange={(e) => setSeeking(e.target.value)} placeholder="A team that values ownership · same-mindset builders" />
+          <input className={inputCls} value={seeking} onChange={(e) => setSeeking(e.target.value)} placeholder="A team that values ownership · same-mindset builders" />
         </div>
       ),
     },
@@ -371,7 +439,7 @@ export default function CreatePage() {
     },
     {
       guide: "What are you learning right now?",
-      hint: "Growth is attractive. \u201CNothing\u201D is fine too — skip if so.",
+      hint: coach?.hints?.learning || "Growth is attractive. \u201CNothing\u201D is fine too — skip if so.",
       valid: true,
       body: (
         <div>
@@ -382,7 +450,7 @@ export default function CreatePage() {
     },
     {
       guide: "And where are you headed? One future goal.",
-      hint: "Dream-sized is allowed.",
+      hint: coach?.hints?.goal || "Dream-sized is allowed.",
       valid: true,
       body: (
         <div>
@@ -393,7 +461,9 @@ export default function CreatePage() {
     },
     {
       guide: "Now show me your work. Don't tell me you're good — show me ONE real thing you did.",
-      hint: "A number makes it stronger. A photo makes it real — snap the actual work. \u201CHardworking\u201D is a claim — \u201Ccut errors 40%\u201D is proof.",
+      hint:
+        coach?.hints?.work ||
+        "A number makes it stronger. A photo makes it real — snap the actual work. \u201CHardworking\u201D is a claim — \u201Ccut errors 40%\u201D is proof.",
       valid: tiles.some((t) => t.claim.trim().length > 0),
       body: (
         <div className="flex flex-col gap-4">
@@ -408,12 +478,14 @@ export default function CreatePage() {
           {showExample && (
             <div className="border-2 border-[#6b4eff] bg-[#6b4eff]/5 rounded-2xl p-4 text-[13px] leading-relaxed">
               <p className="font-mono text-[10px] uppercase tracking-widest text-[#6b4eff] mb-2">
-                Sofia&apos;s example — copy the shape, not the words
+                {exampleIsTailored
+                  ? "an example from your world — copy the shape, not the words"
+                  : "Sofia's example — copy the shape, not the words"}
               </p>
-              <p><span className="font-bold">What she did:</span> Cut mis-ships 40% with a labeling system I built</p>
-              <p className="mt-1"><span className="font-bold">Result:</span> 40% fewer errors</p>
-              <p className="mt-1"><span className="font-bold">Field:</span> Operations</p>
-              <p className="mt-1"><span className="font-bold">Vouch:</span> &ldquo;Sofia runs the floor better than managers twice her pay.&rdquo; — site lead</p>
+              <p><span className="font-bold">What they did:</span> {ex.claim}</p>
+              <p className="mt-1"><span className="font-bold">Result:</span> {ex.result}</p>
+              <p className="mt-1"><span className="font-bold">Field:</span> {ex.field}</p>
+              <p className="mt-1"><span className="font-bold">Vouch:</span> {ex.vouch}</p>
               <p className="mt-2 text-[#6b5e52]">
                 Notice: one real thing, one number, one line from a person who saw it. That&apos;s the whole formula.
               </p>
@@ -423,15 +495,15 @@ export default function CreatePage() {
           {tiles.map((tile, i) => (
             <div key={i} className="border-2 border-dashed border-[#1c1410]/40 rounded-2xl p-4 bg-white/50">
               <FieldLabel>What did you do? One real thing, said plainly</FieldLabel>
-              <input className={inputCls} value={tile.claim} onChange={(e) => updateTile(i, "claim", e.target.value)} placeholder="Cut mis-ships 40% with a labeling system I built" />
+              <input className={inputCls} value={tile.claim} onChange={(e) => updateTile(i, "claim", e.target.value)} placeholder={ex.claim} />
               <div className="grid grid-cols-2 gap-3 mt-3">
                 <div>
                   <FieldLabel>The result — a number wins</FieldLabel>
-                  <input className={inputCls} value={tile.result} onChange={(e) => updateTile(i, "result", e.target.value)} placeholder="40% fewer errors" />
+                  <input className={inputCls} value={tile.result} onChange={(e) => updateTile(i, "result", e.target.value)} placeholder={ex.result} />
                 </div>
                 <div>
                   <FieldLabel>Field / area of work</FieldLabel>
-                  <input className={inputCls} value={tile.field} onChange={(e) => updateTile(i, "field", e.target.value)} placeholder="Operations" />
+                  <input className={inputCls} value={tile.field} onChange={(e) => updateTile(i, "field", e.target.value)} placeholder={ex.field} />
                 </div>
               </div>
               <div className="mt-3">
@@ -448,7 +520,7 @@ export default function CreatePage() {
               </div>
               <div className="mt-3">
                 <FieldLabel>A vouch — one line from someone who saw you do it (optional)</FieldLabel>
-                <input className={inputCls} value={tile.vouch} onChange={(e) => updateTile(i, "vouch", e.target.value)} placeholder='"She runs the floor better than…" — site lead' />
+                <input className={inputCls} value={tile.vouch} onChange={(e) => updateTile(i, "vouch", e.target.value)} placeholder={ex.vouch} />
                 <p className="mt-1.5 text-[11px] text-[#6b5e52] leading-snug">
                   A boss, coworker, customer, teammate — anyone who actually watched you do this work. Ask them for one honest sentence and put their role after it.
                 </p>
@@ -520,6 +592,13 @@ export default function CreatePage() {
 
   const current = steps[step];
   const isLast = step === steps.length - 1;
+  const HEADLINE_STEP = 3;
+
+  function goNext() {
+    if (!current.valid) return;
+    if (step === HEADLINE_STEP) fetchCoach(); // fire-and-forget; never blocks
+    setStep(step + 1);
+  }
 
   if (loading) {
     return (
@@ -572,7 +651,7 @@ export default function CreatePage() {
               </button>
             )}
             {!isLast ? (
-              <button onClick={() => current.valid && setStep(step + 1)} disabled={!current.valid}
+              <button onClick={goNext} disabled={!current.valid}
                 className="flex-1 py-3 rounded-xl border-2 border-[#1c1410] bg-[#c8f000] font-bold text-[15px] hover:translate-y-[-2px] transition-transform disabled:opacity-40">
                 Next →
               </button>
