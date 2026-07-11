@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
 import OwnerBar from "./OwnerBar";
 import VouchSection from "./VouchSection";
+import ReachOut from "./ReachOut";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ type Artifact = {
 type Profile = {
   id: number;
   user_id?: string | null;
+  website?: string | null;
   name: string;
   photo?: string | null;
   headline: string;
@@ -137,10 +139,28 @@ export default async function ProfilePage({
           <p className="font-mono text-xs text-[#9a8e82] mt-3 tracking-wide">
             {profile.location || "somewhere"} · shows real work, not a résumé
           </p>
+          {profile.website && (
+            <p className="mt-3">
+              
+                href={profile.website.startsWith("http") ? profile.website : `https://${profile.website}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block px-3 py-1.5 rounded-xl border-2 border-[#c8f000] text-[#c8f000] font-mono text-[12px] hover:bg-[#c8f000] hover:text-[#1c1410] transition-colors"
+              >
+                🔗 {profile.website.replace(/^https?:\/\//, "")}
+              </a>
+            </p>
+          )}
           </div>
         </header>
 
         <OwnerBar profileId={profile.id} ownerUserId={profile.user_id ?? null} />
+
+        <ReachOut
+          profileId={profile.id}
+          profileName={profile.name}
+          ownerUserId={profile.user_id ?? null}
+        />
 
         {/* the work */}
         {profile.artifacts && profile.artifacts.length > 0 && (
