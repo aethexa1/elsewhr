@@ -5,11 +5,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function HeaderActions() {
-  const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
   const [open, setOpen] = useState(false);
@@ -25,7 +23,7 @@ export default function HeaderActions() {
     await supabase.auth.signOut();
     setEmail(null);
     setOpen(false);
-    router.refresh();
+    window.location.assign("/");
   }
 
   if (!checked || !email) {
