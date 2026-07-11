@@ -11,6 +11,7 @@ import WelcomeHero from "./WelcomeHero";
 
 export type FeedProfile = {
   id: number;
+  user_id?: string | null;
   name: string;
   photo?: string | null;
   headline: string;
@@ -230,6 +231,11 @@ export default function HomeShell({
                           </div>
                         )}
                         <div className="min-w-0">
+                          {!p.user_id && (
+                            <span className="inline-block mb-1 px-2 py-0.5 rounded-full border border-[#1c1410]/40 bg-white font-mono text-[9.5px] uppercase tracking-wider text-[#6b5e52]">
+                              sample profile
+                            </span>
+                          )}
                           <p className="font-[Syne] font-extrabold text-xl leading-tight truncate tracking-[-0.01em]">
                             {p.name}
                           </p>
