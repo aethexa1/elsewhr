@@ -22,8 +22,11 @@ type ParsedProfile = {
 type Coach = {
   example?: { claim?: string; result?: string; field?: string; vouch?: string };
   seeking?: string[];
-  hints?: { seeking?: string; learning?: string; goal?: string; work?: string };
+  mindsetLikely?: string[];
+  hints?: { photo?: string; seeking?: string; learning?: string; goal?: string; work?: string };
 };
+
+type Review = { strongest?: string; gaps?: string[]; verdict?: string };
 
 type Geo = { name: string; admin1?: string; country?: string };
 
@@ -75,6 +78,8 @@ export default function CreatePage() {
   const [showExample, setShowExample] = useState(false);
   const [coach, setCoach] = useState<Coach | null>(null);
   const coachedFor = useRef<string>("");
+  const [review, setReview] = useState<Review | null>(null);
+  const [reviewBusy, setReviewBusy] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -142,6 +147,53 @@ export default function CreatePage() {
     } catch {
       // silent — static guidance remains
     }
+  }
+
+  // the bird's final read — advice only; the human decides
+  async function fetchReview() {
+    setReviewBusy(true);
+    setReview(null);
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const r = await fetch("/api/coach", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${sess.session?.access_token ?? ""}`,
+        },
+        body: JSON.stringify({
+          mode: "review",
+          profile: {
+            name,
+            headline,
+            location,
+            seeking,
+            mindset,
+            learning,
+            goal,
+            hasPhoto: Boolean(photo),
+            work: tiles
+              .filter((t) => t.claim.trim())
+              .map((t) => ({
+                claim: t.claim,
+                result: t.result,
+                field: t.field,
+                vouch: t.vouch,
+                hasImage: Boolean(t.image),
+              })),
+          },
+        }),
+      });
+      const data = await r.json();
+      if (r.ok && data.review) {
+        setReview(data.review as Review);
+      } else {
+        setReview({ verdict: "The bird is resting — publish when you feel ready." });
+      }
+    } catch {
+      setReview({ verdict: "The bird is resting — publish when you feel ready." });
+    }
+    setReviewBusy(false);
   }
 
   async function uploadImage(file: File): Promise<string | null> {
@@ -275,6 +327,10 @@ export default function CreatePage() {
   };
   const exampleIsTailored = Boolean(coach?.example?.claim);
 
+  // likely-you tags float to the front of the list; the vocabulary never changes
+  const likely = (coach?.mindsetLikely ?? []).filter((t) => MINDSET_OPTIONS.includes(t));
+  const orderedMindset = [...likely, ...MINDSET_OPTIONS.filter((t) => !likely.includes(t))];
+
   const steps = [
     {
       guide: existingId
@@ -351,8 +407,21 @@ export default function CreatePage() {
       ),
     },
     {
+      guide: `Now the big one — what do you HAVE? One line.`,
+      hint: "Skills, experience, an idea — say it plainly. \u201CWarehouse ops, 6 years, no degree\u201D beats \u201Cmotivated professional\u201D every time. I read this and tailor everything after to your world.",
+      valid: headline.trim().length > 0,
+      body: (
+        <div>
+          <FieldLabel>Your one-line headline — what you have</FieldLabel>
+          <input autoFocus className={inputCls} value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="Warehouse operations — 6 years. No degree. Started in fast food." />
+        </div>
+      ),
+    },
+    {
       guide: "Add a photo of yourself — people connect with faces.",
-      hint: "Take one now or pick from your gallery. Skippable, but profiles with faces get way more connection.",
+      hint:
+        coach?.hints?.photo ||
+        "Take one now or pick from your gallery. Skippable, but profiles with faces get way more connection.",
       valid: true,
       body: (
         <PhotoPicker
@@ -365,17 +434,6 @@ export default function CreatePage() {
             if (url) setPhoto(url);
           }}
         />
-      ),
-    },
-    {
-      guide: `Now the big one — what do you HAVE? One line.`,
-      hint: "Skills, experience, an idea — say it plainly. \u201CWarehouse ops, 6 years, no degree\u201D beats \u201Cmotivated professional\u201D every time. I read this and tailor everything after to your world.",
-      valid: headline.trim().length > 0,
-      body: (
-        <div>
-          <FieldLabel>Your one-line headline — what you have</FieldLabel>
-          <input autoFocus className={inputCls} value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="Warehouse operations — 6 years. No degree. Started in fast food." />
-        </div>
       ),
     },
     {
@@ -422,16 +480,22 @@ export default function CreatePage() {
     },
     {
       guide: "Pick your mindset — up to 5 that are really you.",
-      hint: "This is how same-mindset people match with you. No wrong answers, only honest ones.",
+      hint: likely.length
+        ? "I starred the ones that often fit people with your background — but you know you best."
+        : "This is how same-mindset people match with you. No wrong answers, only honest ones.",
       valid: true,
       body: (
         <div className="flex flex-wrap gap-2">
-          {MINDSET_OPTIONS.map((tag) => (
+          {orderedMindset.map((tag) => (
             <button key={tag} type="button" onClick={() => toggleMindset(tag)}
-              className={`px-4 py-2 rounded-full border-2 border-[#1c1410] text-[14px] font-medium transition-all duration-150 active:scale-90 hover:scale-105 ${
-                mindset.includes(tag) ? "bg-[#6b4eff] text-[#fff6ec] border-[#6b4eff]" : "bg-white"
+              className={`px-4 py-2 rounded-full border-2 text-[14px] font-medium transition-all duration-150 active:scale-90 hover:scale-105 ${
+                mindset.includes(tag)
+                  ? "bg-[#6b4eff] text-[#fff6ec] border-[#6b4eff]"
+                  : likely.includes(tag)
+                  ? "bg-white border-[#6b4eff]"
+                  : "bg-white border-[#1c1410]"
               }`}>
-              {tag}
+              {likely.includes(tag) && !mindset.includes(tag) ? "★ " : ""}{tag}
             </button>
           ))}
         </div>
@@ -560,31 +624,80 @@ export default function CreatePage() {
     {
       guide: `That's a real profile, ${name ? name.split(" ")[0] : "friend"}. Ready to be seen?`,
       hint: existingId
-        ? "This UPDATES your existing profile. You own this — never inflated."
-        : "You own this. Edit or delete anytime. Never inflated — that's the elsewhr rule.",
+        ? "This UPDATES your existing profile. Want my honest read first? Your call — you decide what publishes."
+        : "You own this. Edit or delete anytime. Want my honest read first? Your call — you decide what publishes.",
       valid: true,
       body: (
-        <div className="bg-white/60 border-2 border-[#1c1410] rounded-2xl p-5 text-[15px] leading-relaxed">
-          <div className="flex items-center gap-3">
-            {photo && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={photo} alt={name} className="w-14 h-14 rounded-full object-cover border-2 border-[#1c1410]" />
-            )}
-            <div>
-              <p className="font-[Syne] font-bold text-xl">{name || "—"}</p>
-              <p className="mt-0.5">{headline || "—"}</p>
+        <div>
+          <div className="bg-white/60 border-2 border-[#1c1410] rounded-2xl p-5 text-[15px] leading-relaxed">
+            <div className="flex items-center gap-3">
+              {photo && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={photo} alt={name} className="w-14 h-14 rounded-full object-cover border-2 border-[#1c1410]" />
+              )}
+              <div>
+                <p className="font-[Syne] font-bold text-xl">{name || "—"}</p>
+                <p className="mt-0.5">{headline || "—"}</p>
+              </div>
             </div>
+            {seeking && <p className="mt-3 text-[#6b4eff] font-medium">Looking for: {seeking}</p>}
+            {mindset.length > 0 && (
+              <p className="mt-2 text-[13px] font-mono uppercase tracking-wide">{mindset.join(" · ")}</p>
+            )}
+            <div className="mt-3 flex items-center gap-2 text-[12px] font-mono">
+              <span className="w-4 h-4 rounded-full inline-block border border-[#1c1410]/30" style={{ background: accent }} /> your color
+            </div>
+            <p className="mt-2 text-[13px] text-[#6b5e52]">
+              {tiles.filter((t) => t.claim.trim()).length} piece(s) of work attached
+            </p>
           </div>
-          {seeking && <p className="mt-3 text-[#6b4eff] font-medium">Looking for: {seeking}</p>}
-          {mindset.length > 0 && (
-            <p className="mt-2 text-[13px] font-mono uppercase tracking-wide">{mindset.join(" · ")}</p>
+
+          {!review && (
+            <button
+              type="button"
+              onClick={fetchReview}
+              disabled={reviewBusy}
+              className="w-full mt-4 py-3 rounded-xl border-2 border-[#1c1410] bg-[#6b4eff] text-[#fff6ec] font-bold text-[15px] hover:translate-y-[-2px] transition-transform disabled:opacity-50"
+            >
+              {reviewBusy ? "Reading your profile… 🐦" : "Ask the bird for a final read 🐦"}
+            </button>
           )}
-          <div className="mt-3 flex items-center gap-2 text-[12px] font-mono">
-            <span className="w-4 h-4 rounded-full inline-block border border-[#1c1410]/30" style={{ background: accent }} /> your color
-          </div>
-          <p className="mt-2 text-[13px] text-[#6b5e52]">
-            {tiles.filter((t) => t.claim.trim()).length} piece(s) of work attached
-          </p>
+
+          {review && (
+            <div className="mt-4 border-2 border-[#6b4eff] bg-[#6b4eff]/5 rounded-2xl p-4 text-[13px] leading-relaxed">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-[#6b4eff] mb-2">
+                the bird&apos;s honest read — you decide what to do with it
+              </p>
+              {review.strongest && (
+                <p><span className="font-bold">Strongest:</span> {review.strongest}</p>
+              )}
+              {Array.isArray(review.gaps) && review.gaps.length > 0 && (
+                <div className="mt-2">
+                  <p className="font-bold">Worth a look:</p>
+                  {review.gaps.map((g, i) => (
+                    <p key={i} className="mt-1">• {g}</p>
+                  ))}
+                </div>
+              )}
+              {review.verdict && <p className="mt-2 text-[#6b5e52]">{review.verdict}</p>}
+              <div className="flex gap-2 mt-3">
+                <button
+                  type="button"
+                  onClick={() => { setReview(null); setStep(0); }}
+                  className="flex-1 py-2.5 rounded-xl border-2 border-[#1c1410] bg-white font-bold text-[13px]"
+                >
+                  ← Go improve it
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReview(null)}
+                  className="flex-1 py-2.5 rounded-xl border-2 border-[#1c1410] bg-white font-bold text-[13px]"
+                >
+                  Dismiss — I&apos;m happy
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ),
     },
@@ -592,7 +705,7 @@ export default function CreatePage() {
 
   const current = steps[step];
   const isLast = step === steps.length - 1;
-  const HEADLINE_STEP = 3;
+  const HEADLINE_STEP = 2;
 
   function goNext() {
     if (!current.valid) return;
