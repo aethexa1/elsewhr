@@ -17,12 +17,13 @@ type Profile = {
   mindset?: string[] | null;
   accent?: string | null;
   artifacts: { image?: string }[] | null;
+  user_id?: string | null;
 };
 
 export default async function Home() {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, name, photo, headline, location, seeking, mindset, accent, artifacts")
+    .select("id, name, photo, headline, location, seeking, mindset, accent, artifacts, user_id")
     .order("id", { ascending: false });
 
   const profiles = (data ?? []) as Profile[];
@@ -176,14 +177,20 @@ export default async function Home() {
             {profiles.map((p) => {
               const workImage = p.artifacts?.find((a) => a.image)?.image;
               const accent = p.accent || "#6b4eff";
+              const isSample = !p.user_id;
               return (
                 <Link
                   key={p.id}
                   href={`/p/${p.id}`}
-                  className="chapter block bg-[#fff6ec] rounded-3xl border-[3px] border-[#1c1410] shadow-[7px_7px_0_#1c1410,0_22px_44px_rgba(28,20,16,0.25)] overflow-hidden hover:translate-y-[-5px] hover:rotate-[-0.4deg] hover:shadow-[10px_13px_0_#1c1410,0_30px_60px_rgba(28,20,16,0.3)] active:translate-y-0 active:shadow-[4px_4px_0_#1c1410] transition-all duration-200"
+                  className="chapter relative block bg-[#fff6ec] rounded-3xl border-[3px] border-[#1c1410] shadow-[7px_7px_0_#1c1410,0_22px_44px_rgba(28,20,16,0.25)] overflow-hidden hover:translate-y-[-5px] hover:rotate-[-0.4deg] hover:shadow-[10px_13px_0_#1c1410,0_30px_60px_rgba(28,20,16,0.3)] active:translate-y-0 active:shadow-[4px_4px_0_#1c1410] transition-all duration-200"
                   style={{ animationDelay: `${profiles.indexOf(p) * 90}ms` }}
                 >
                   <div style={{ background: accent }} className="h-2 w-full" />
+                  {isSample && (
+                    <span className="absolute top-4 right-4 px-2.5 py-1 rounded-full border-2 border-[#1c1410] bg-[#fff6ec] font-mono text-[10px] uppercase tracking-widest text-[#6b5e52]">
+                      sample profile
+                    </span>
+                  )}
                   <div className="p-5 flex items-center gap-4">
                     {p.photo ? (
                       // eslint-disable-next-line @next/next/no-img-element
