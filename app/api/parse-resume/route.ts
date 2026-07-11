@@ -1,7 +1,8 @@
 // elsewhr — resume parsing API route
-// Create this file at: app/api/parse-resume/route.ts
+// Replace file at: app/api/parse-resume/route.ts
 
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -25,6 +26,21 @@ Respond with ONLY valid JSON, no markdown fences, exactly this shape:
 
 export async function POST(req: Request) {
   try {
+    // ---- auth: verify the caller is a logged-in elsewhr user ----
+    const authHeader = req.headers.get("authorization") ?? "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+    if (!token) {
+      return NextResponse.json({ error: "Not logged in." }, { status: 401 });
+    }
+    const supabaseAuth = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data: userData, error: userErr } = await supabaseAuth.auth.getUser(token);
+    if (userErr || !userData.user) {
+      return NextResponse.json({ error: "Not logged in." }, { status: 401 });
+    }
+
     const { resume } = await req.json();
 
     if (!resume || typeof resume !== "string" || resume.trim().length < 40) {
