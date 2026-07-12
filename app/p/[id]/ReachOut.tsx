@@ -1,10 +1,11 @@
 "use client";
 
 // elsewhr — reach out: message a person, addresses stay private
-// Create this file at: app/p/[id]/ReachOut.tsx
+// Replaces app/p/[id]/ReachOut.tsx
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { useLang, t } from "@/lib/i18n";
 
 export default function ReachOut({
   profileId,
@@ -15,6 +16,7 @@ export default function ReachOut({
   profileName: string;
   ownerUserId: string | null;
 }) {
+  const { lang } = useLang();
   const [viewerId, setViewerId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
@@ -44,7 +46,7 @@ export default function ReachOut({
           "content-type": "application/json",
           authorization: `Bearer ${sess.session?.access_token ?? ""}`,
         },
-        body: JSON.stringify({ profileId }),
+        body: JSON.stringify({ profileId, lang }),
       });
       if (r.ok) {
         const data = await r.json();
@@ -57,7 +59,7 @@ export default function ReachOut({
 
   async function send() {
     if (text.trim().length < 10) {
-      setMsg("Say a little more — a real sentence or two.");
+      setMsg(t(lang, "reach.short"));
       return;
     }
     setBusy(true);
@@ -74,14 +76,14 @@ export default function ReachOut({
       });
       const data = await r.json();
       if (!r.ok) {
-        setMsg(data.error || "Couldn't send — try again.");
+        setMsg(data.error || t(lang, "reach.failed"));
       } else {
         setDone(true);
         setOpen(false);
         setText("");
       }
     } catch {
-      setMsg("Something went wrong — try again.");
+      setMsg(t(lang, "reach.failed"));
     }
     setBusy(false);
   }
@@ -93,8 +95,7 @@ export default function ReachOut({
       {done ? (
         <div className="bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-2xl px-4 py-3">
           <p className="text-[14px] font-medium">
-            🐦 Sent. {first} got your message by email — replies come straight
-            back to your inbox.
+            {t(lang, "reach.sent", { name: first })}
           </p>
         </div>
       ) : !open ? (
@@ -105,19 +106,17 @@ export default function ReachOut({
           }}
           className="w-full py-3 rounded-2xl border-[3px] border-[#1c1410] bg-[#c8f000] font-bold text-[15px] shadow-[5px_5px_0_#1c1410] hover:translate-y-[-2px] hover:shadow-[7px_8px_0_#1c1410] active:translate-y-0 active:shadow-[3px_3px_0_#1c1410] transition-all"
         >
-          ✉️ Reach out to {first}
+          {t(lang, "reach.button")} {first}
         </button>
       ) : (
         <div className="bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-2xl p-4">
           <p className="text-[13px] mb-2 text-[#6b5e52]">
-            The bird delivers this to {first} by email, with your profile
-            attached. Neither of you sees the other&apos;s address — replies
-            just work.
+            {t(lang, "reach.explain", { name: first })}
           </p>
           {sparks.length > 0 && (
             <div className="mb-3">
               <p className="font-mono text-[10px] uppercase tracking-widest text-[#6b5e52] mb-1.5">
-                🐦 the bird noticed — tap to start:
+                {t(lang, "reach.sparks")}
               </p>
               <div className="flex flex-col gap-1.5">
                 {sparks.map((s) => (
@@ -138,7 +137,7 @@ export default function ReachOut({
             onChange={(e) => setText(e.target.value)}
             rows={3}
             maxLength={1000}
-            placeholder={`Hey ${first} — saw your work on elsewhr and…`}
+            placeholder={t(lang, "reach.placeholder", { name: first })}
             className="w-full px-4 py-3 rounded-xl border-2 border-[#1c1410] bg-white outline-none focus:border-[#6b4eff] text-[14px]"
           />
           <div className="flex gap-2 mt-3">
@@ -147,7 +146,7 @@ export default function ReachOut({
               disabled={busy}
               className="flex-1 py-2.5 rounded-xl border-2 border-[#1c1410] bg-[#c8f000] font-bold text-sm disabled:opacity-50"
             >
-              {busy ? "Sending…" : "Send it 🐦"}
+              {busy ? t(lang, "reach.sending") : t(lang, "reach.send")}
             </button>
             <button
               onClick={() => {
@@ -156,7 +155,7 @@ export default function ReachOut({
               }}
               className="px-4 py-2.5 rounded-xl border-2 border-[#1c1410] bg-white font-bold text-sm"
             >
-              Cancel
+              {t(lang, "reach.cancel")}
             </button>
           </div>
           {msg && (
