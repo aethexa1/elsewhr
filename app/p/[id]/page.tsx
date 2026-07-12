@@ -6,6 +6,17 @@ import Link from "next/link";
 import OwnerBar from "./OwnerBar";
 import VouchSection from "./VouchSection";
 import ReachOut from "./ReachOut";
+import {
+  BackLink,
+  SampleBadge,
+  LookingForLabel,
+  LocationLine,
+  WorkHeading,
+  LearningLabel,
+  GoalLabel,
+  LivingFooter,
+  NotFound,
+} from "./ProfileLabels";
 
 export const dynamic = "force-dynamic";
 
@@ -49,12 +60,7 @@ export default async function ProfilePage({
   if (error || !data) {
     return (
       <main className="min-h-screen bg-[#ff5d3b] text-[#1c1410] flex items-center justify-center px-4">
-        <div className="bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-3xl p-8 max-w-md text-center">
-          <p className="font-bold text-lg mb-2">Profile not found.</p>
-          <Link href="/" className="underline font-bold text-[#6b4eff]">
-            ← back to elsewhr
-          </Link>
-        </div>
+        <NotFound />
       </main>
     );
   }
@@ -83,23 +89,14 @@ export default async function ProfilePage({
           >
             elsewhr<span className="text-[#c8f000]">.</span>
           </Link>
-          <Link
-            href="/"
-            className="px-4 py-2 rounded-xl border-2 border-[#1c1410] bg-[#fff6ec] font-bold text-sm hover:translate-y-[-2px] transition-transform"
-          >
-            ← everyone
-          </Link>
+          <BackLink />
         </div>
 
         {/* header */}
         <header className="rise bg-[#1c1410] text-[#fff6ec] rounded-3xl overflow-hidden border-[3px] border-[#1c1410] shadow-[8px_8px_0_rgba(28,20,16,0.35)]">
           <div style={{ background: accent }} className="h-2 w-full" />
           <div className="p-6">
-          {isSample && (
-            <span className="inline-block mb-3 px-2.5 py-1 rounded-full border-2 border-[#fff6ec]/40 bg-[#fff6ec]/10 font-mono text-[10px] uppercase tracking-widest text-[#fff6ec]/80">
-              sample profile — here to show you the shape
-            </span>
-          )}
+          {isSample && <SampleBadge />}
           <div className="flex items-center gap-4">
             {profile.photo && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -118,9 +115,7 @@ export default async function ProfilePage({
           </div>
           {profile.seeking && (
             <p className="text-[14px] mt-3 text-[#fff6ec]/90">
-              <span className="font-mono text-[10px] uppercase tracking-widest text-[#00c2d1]">
-                looking for ·{" "}
-              </span>
+              <LookingForLabel />
               {profile.seeking}
             </p>
           )}
@@ -136,13 +131,10 @@ export default async function ProfilePage({
               ))}
             </div>
           )}
-          <p className="font-mono text-xs text-[#9a8e82] mt-3 tracking-wide">
-            {profile.location || "somewhere"} · shows real work, not a résumé
-          </p>
+          <LocationLine location={profile.location} />
           {profile.website && (
             <p className="mt-3">
-              
-                <a href={profile.website.startsWith("http") ? profile.website : `https://${profile.website}`}
+              <a href={profile.website.startsWith("http") ? profile.website : `https://${profile.website}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-block px-3 py-1.5 rounded-xl border-2 border-[#c8f000] text-[#c8f000] font-mono text-[12px] hover:bg-[#c8f000] hover:text-[#1c1410] transition-colors"
@@ -165,9 +157,7 @@ export default async function ProfilePage({
         {/* the work */}
         {profile.artifacts && profile.artifacts.length > 0 && (
           <>
-            <h2 className="font-[Syne] font-bold text-lg mt-6 mb-3 text-[#fff6ec]">
-              The work
-            </h2>
+            <WorkHeading />
             <div className="flex flex-col gap-4">
               {profile.artifacts.map((a, i) => (
                 <article
@@ -224,29 +214,20 @@ export default async function ProfilePage({
           <div className="rise mt-4 bg-[#fff6ec] rounded-2xl border-[3px] border-[#1c1410] p-4 text-[14px]" style={{ animationDelay: "420ms" }}>
             {profile.learning && (
               <p>
-                <span className="font-mono text-[10px] uppercase tracking-widest text-[#b9542f]">
-                  now learning ·{" "}
-                </span>
+                <LearningLabel />
                 {profile.learning}
               </p>
             )}
             {profile.goal && (
               <p className="mt-1">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-[#6b4eff]">
-                  future goal ·{" "}
-                </span>
+                <GoalLabel />
                 {profile.goal}
               </p>
             )}
           </div>
         )}
 
-        <p className="font-mono text-[11px] text-[#fff6ec]/80 mt-8 text-center">
-          this is a living profile on elsewhr ·{" "}
-          <Link href="/login" className="underline">
-            make yours
-          </Link>
-        </p>
+        <LivingFooter />
       </div>
     </main>
   );
