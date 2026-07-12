@@ -1,11 +1,12 @@
 "use client";
 
 // elsewhr — vouching: accounts vouching for accounts (Trust Layer 2)
-// Create this file at: app/p/[id]/VouchSection.tsx
+// Replaces app/p/[id]/VouchSection.tsx
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { useLang, t } from "@/lib/i18n";
 
 type Vouch = {
   id: number;
@@ -30,6 +31,7 @@ export default function VouchSection({
   profileName: string;
   ownerUserId: string | null;
 }) {
+  const { lang } = useLang();
   const [vouches, setVouches] = useState<Vouch[]>([]);
   const [vouchers, setVouchers] = useState<Record<number, VoucherInfo>>({});
   const [viewerId, setViewerId] = useState<string | null>(null);
@@ -62,18 +64,20 @@ export default function VouchSection({
   }, [profileId]);
 
   useEffect(() => {
-    load();
     supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) return;
-      setViewerId(data.user.id);
-      const { data: mine } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", data.user.id)
-        .limit(1)
-        .maybeSingle();
-      if (mine) setViewerProfileId(mine.id);
+      const uid = data.user?.id ?? null;
+      setViewerId(uid);
+      if (uid) {
+        const { data: mine } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("user_id", uid)
+          .limit(1)
+          .maybeSingle();
+        if (mine) setViewerProfileId(mine.id);
+      }
     });
+    load();
   }, [load]);
 
   const alreadyVouched = vouches.some((v) => v.voucher_user_id === viewerId);
@@ -81,18 +85,24 @@ export default function VouchSection({
   const canVouch = !!viewerId && !!viewerProfileId && !isOwner && !alreadyVouched;
 
   async function submitVouch() {
-    if (text.trim().length < 8) {
-      setMsg("Say a little more — one honest sentence.");
+    if (text.trim().length < 10) {
+      setMsg(t(lang, "vouch.short"));
+      return;
+    }
+    if (!viewerId || !viewerProfileId) {
+      setMsg(t(lang, "vouch.signIn"));
       return;
     }
     setBusy(true);
     setMsg(null);
+
     const { error } = await supabase.from("vouches").insert({
       profile_id: profileId,
       voucher_profile_id: viewerProfileId,
       voucher_user_id: viewerId,
       text: text.trim(),
     });
+
     if (error) {
       setMsg(error.message);
     } else {
@@ -104,7 +114,7 @@ export default function VouchSection({
   }
 
   async function deleteMyVouch(id: number) {
-    const sure = window.confirm("Remove your vouch?");
+    const sure = window.confirm(t(lang, "vouch.confirmRemove"));
     if (!sure) return;
     await supabase.from("vouches").delete().eq("id", id);
     await load();
@@ -114,14 +124,14 @@ export default function VouchSection({
     <section className="mt-6">
       <div className="flex items-center justify-between mb-3">
         <h2 className="font-[Syne] font-bold text-lg text-[#fff6ec]">
-          Vouched by
+          {t(lang, "vouch.title")}
         </h2>
         {canVouch && !formOpen && (
           <button
             onClick={() => setFormOpen(true)}
             className="px-4 py-2 rounded-xl border-2 border-[#1c1410] bg-[#c8f000] font-bold text-sm hover:translate-y-[-2px] transition-transform"
           >
-            🐦 Vouch for {profileName.split(" ")[0]}
+            {t(lang, "vouch.button", { name: profileName.split(" ")[0] })}
           </button>
         )}
       </div>
@@ -129,14 +139,13 @@ export default function VouchSection({
       {formOpen && (
         <div className="bg-[#fff6ec] rounded-2xl border-[3px] border-[#1c1410] p-4 mb-4">
           <p className="text-[13px] mb-2 text-[#6b5e52]">
-            One honest sentence about their work or how they show up. Your name
-            and face go on this — vouch only for what you&apos;ve actually seen.
+            {t(lang, "vouch.explain")}
           </p>
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={2}
-            placeholder={`"${profileName.split(" ")[0]} actually ships — I've watched them build."`}
+            placeholder={t(lang, "vouch.placeholder", { name: profileName.split(" ")[0] })}
             className="w-full px-4 py-3 rounded-xl border-2 border-[#1c1410] bg-white outline-none focus:border-[#6b4eff] text-[14px]"
           />
           <div className="flex gap-2 mt-3">
@@ -145,7 +154,7 @@ export default function VouchSection({
               disabled={busy}
               className="flex-1 py-2.5 rounded-xl border-2 border-[#1c1410] bg-[#c8f000] font-bold text-sm disabled:opacity-50"
             >
-              {busy ? "Vouching…" : "Put my name on it"}
+              {busy ? t(lang, "vouch.submitting") : t(lang, "vouch.submit")}
             </button>
             <button
               onClick={() => {
@@ -154,7 +163,7 @@ export default function VouchSection({
               }}
               className="px-4 py-2.5 rounded-xl border-2 border-[#1c1410] bg-white font-bold text-sm"
             >
-              Cancel
+              {t(lang, "vouch.cancel")}
             </button>
           </div>
           {msg && (
@@ -165,8 +174,7 @@ export default function VouchSection({
 
       {vouches.length === 0 && !formOpen ? (
         <p className="font-mono text-[12px] text-[#fff6ec]/70">
-          no vouches yet — vouches here come from real elsewhr profiles, name
-          and face attached.
+          {t(lang, "vouch.none")}
         </p>
       ) : (
         <div className="flex flex-col gap-3">
@@ -209,9 +217,9 @@ export default function VouchSection({
                         {who.name}
                       </Link>
                     ) : (
-                      <span className="font-bold">an elsewhr member</span>
+                      <span className="font-bold">{t(lang, "vouch.member")}</span>
                     )}
-                    <span className="text-[#6b5e52]"> · real profile, staked on this</span>
+                    <span className="text-[#6b5e52]">{t(lang, "vouch.staked")}</span>
                     {v.voucher_user_id === viewerId && (
                       <>
                         {" · "}
@@ -219,7 +227,7 @@ export default function VouchSection({
                           onClick={() => deleteMyVouch(v.id)}
                           className="font-mono text-[11px] underline text-[#6b5e52] hover:text-[#b03a3a]"
                         >
-                          remove
+                          {t(lang, "vouch.remove")}
                         </button>
                       </>
                     )}
