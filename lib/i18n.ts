@@ -1,5 +1,5 @@
 // elsewhr — languages: the door opens in your own words
-// Create this file at: lib/i18n.ts
+// Replaces lib/i18n.ts
 
 "use client";
 
@@ -71,6 +71,23 @@ const en: Dict = {
   "profile.notFound": "Profile not found.",
   "profile.back": "← back to elsewhr",
 
+  "vouch.title": "Vouched by",
+  "vouch.button": "🐦 Vouch for {name}",
+  "vouch.explain":
+    "One honest sentence about their work or how they show up. Your name and face go on this — vouch only for what you've actually seen.",
+  "vouch.placeholder": "\"{name} actually ships — I've watched them build.\"",
+  "vouch.submit": "Put my name on it",
+  "vouch.submitting": "Vouching…",
+  "vouch.cancel": "Cancel",
+  "vouch.none":
+    "no vouches yet — vouches here come from real elsewhr profiles, name and face attached.",
+  "vouch.staked": " · real profile, staked on this",
+  "vouch.member": "an elsewhr member",
+  "vouch.remove": "remove",
+  "vouch.confirmRemove": "Remove your vouch?",
+  "vouch.short": "Say a little more — one honest sentence.",
+  "vouch.signIn": "Log in to vouch for someone.",
+
   "reach.button": "✉️ Reach out to",
   "reach.explain":
     "The bird delivers this to {name} by email, with your profile attached. Neither of you sees the other's address — replies just work.",
@@ -79,7 +96,8 @@ const en: Dict = {
   "reach.send": "Send it 🐦",
   "reach.sending": "Sending…",
   "reach.cancel": "Cancel",
-  "reach.sent": "🐦 Sent. {name} got your message by email — replies come straight back to your inbox.",
+  "reach.sent":
+    "🐦 Sent. {name} got your message by email — replies come straight back to your inbox.",
   "reach.short": "Say a little more — a real sentence or two.",
   "reach.failed": "Something went wrong — try again.",
 };
@@ -128,6 +146,23 @@ const es: Dict = {
   "profile.notFound": "Perfil no encontrado.",
   "profile.back": "← volver a elsewhr",
 
+  "vouch.title": "Respaldado por",
+  "vouch.button": "🐦 Respaldar a {name}",
+  "vouch.explain":
+    "Una frase honesta sobre su trabajo o cómo se presenta. Tu nombre y tu cara van aquí — respalda solo lo que realmente has visto.",
+  "vouch.placeholder": "\"{name} de verdad cumple — lo he visto trabajar.\"",
+  "vouch.submit": "Pongo mi nombre",
+  "vouch.submitting": "Respaldando…",
+  "vouch.cancel": "Cancelar",
+  "vouch.none":
+    "aún no hay respaldos — los respaldos aquí vienen de perfiles reales de elsewhr, con nombre y cara.",
+  "vouch.staked": " · perfil real, se juega su nombre",
+  "vouch.member": "un miembro de elsewhr",
+  "vouch.remove": "quitar",
+  "vouch.confirmRemove": "¿Quitar tu respaldo?",
+  "vouch.short": "Escribe un poco más — una frase honesta.",
+  "vouch.signIn": "Inicia sesión para respaldar a alguien.",
+
   "reach.button": "✉️ Escríbele a",
   "reach.explain":
     "El pájaro le entrega esto a {name} por correo, con tu perfil adjunto. Ninguno ve la dirección del otro — las respuestas simplemente funcionan.",
@@ -136,7 +171,8 @@ const es: Dict = {
   "reach.send": "Enviar 🐦",
   "reach.sending": "Enviando…",
   "reach.cancel": "Cancelar",
-  "reach.sent": "🐦 Enviado. {name} recibió tu mensaje por correo — las respuestas llegan directo a tu bandeja.",
+  "reach.sent":
+    "🐦 Enviado. {name} recibió tu mensaje por correo — las respuestas llegan directo a tu bandeja.",
   "reach.short": "Escribe un poco más — una o dos frases reales.",
   "reach.failed": "Algo salió mal — inténtalo de nuevo.",
 };
@@ -185,6 +221,23 @@ const pt: Dict = {
   "profile.notFound": "Perfil não encontrado.",
   "profile.back": "← voltar ao elsewhr",
 
+  "vouch.title": "Recomendado por",
+  "vouch.button": "🐦 Recomendar {name}",
+  "vouch.explain":
+    "Uma frase honesta sobre o trabalho dessa pessoa. Seu nome e seu rosto vão junto — recomende só o que você realmente viu.",
+  "vouch.placeholder": "\"{name} entrega de verdade — já vi trabalhando.\"",
+  "vouch.submit": "Assino embaixo",
+  "vouch.submitting": "Recomendando…",
+  "vouch.cancel": "Cancelar",
+  "vouch.none":
+    "ainda não há recomendações — elas vêm de perfis reais do elsewhr, com nome e rosto.",
+  "vouch.staked": " · perfil real, colocou o nome em jogo",
+  "vouch.member": "um membro do elsewhr",
+  "vouch.remove": "remover",
+  "vouch.confirmRemove": "Remover sua recomendação?",
+  "vouch.short": "Escreva um pouco mais — uma frase honesta.",
+  "vouch.signIn": "Entre para recomendar alguém.",
+
   "reach.button": "✉️ Fale com",
   "reach.explain":
     "O pássaro entrega isto a {name} por e-mail, com seu perfil anexado. Nenhum de vocês vê o endereço do outro — as respostas simplesmente funcionam.",
@@ -193,7 +246,8 @@ const pt: Dict = {
   "reach.send": "Enviar 🐦",
   "reach.sending": "Enviando…",
   "reach.cancel": "Cancelar",
-  "reach.sent": "🐦 Enviado. {name} recebeu sua mensagem por e-mail — as respostas voltam direto pra sua caixa.",
+  "reach.sent":
+    "🐦 Enviado. {name} recebeu sua mensagem por e-mail — as respostas voltam direto pra sua caixa.",
   "reach.short": "Escreva um pouco mais — uma ou duas frases reais.",
   "reach.failed": "Algo deu errado — tente de novo.",
 };
@@ -242,6 +296,23 @@ const hi: Dict = {
   "profile.notFound": "प्रोफ़ाइल नहीं मिली।",
   "profile.back": "← elsewhr पर वापस",
 
+  "vouch.title": "किसने भरोसा जताया",
+  "vouch.button": "🐦 {name} के लिए भरोसा जताएँ",
+  "vouch.explain":
+    "उनके काम के बारे में एक ईमानदार वाक्य। आपका नाम और चेहरा इसके साथ जुड़ेगा — सिर्फ़ वही कहिए जो आपने सच में देखा है।",
+  "vouch.placeholder": "\"{name} सच में काम पूरा करते हैं — मैंने खुद देखा है।\"",
+  "vouch.submit": "मेरा नाम लगाइए",
+  "vouch.submitting": "भरोसा जता रहे हैं…",
+  "vouch.cancel": "रद्द करें",
+  "vouch.none":
+    "अभी कोई भरोसा नहीं — यहाँ भरोसा असली elsewhr प्रोफ़ाइल से आता है, नाम और चेहरे के साथ।",
+  "vouch.staked": " · असली प्रोफ़ाइल, अपना नाम लगाया है",
+  "vouch.member": "एक elsewhr सदस्य",
+  "vouch.remove": "हटाएँ",
+  "vouch.confirmRemove": "अपना भरोसा हटाएँ?",
+  "vouch.short": "थोड़ा और लिखिए — एक ईमानदार वाक्य।",
+  "vouch.signIn": "किसी के लिए भरोसा जताने हेतु लॉग इन करें।",
+
   "reach.button": "✉️ संदेश भेजें",
   "reach.explain":
     "चिड़िया यह {name} को ईमेल से पहुँचाएगी, आपकी प्रोफ़ाइल के साथ। कोई भी दूसरे का पता नहीं देखता — जवाब बस काम करते हैं।",
@@ -250,7 +321,8 @@ const hi: Dict = {
   "reach.send": "भेजें 🐦",
   "reach.sending": "भेज रहे हैं…",
   "reach.cancel": "रद्द करें",
-  "reach.sent": "🐦 भेज दिया। {name} को आपका संदेश ईमेल से मिल गया — जवाब सीधे आपके इनबॉक्स में आएंगे।",
+  "reach.sent":
+    "🐦 भेज दिया। {name} को आपका संदेश ईमेल से मिल गया — जवाब सीधे आपके इनबॉक्स में आएंगे।",
   "reach.short": "थोड़ा और लिखिए — एक-दो असली वाक्य।",
   "reach.failed": "कुछ गड़बड़ हो गई — फिर कोशिश करें।",
 };
@@ -299,6 +371,23 @@ const pl: Dict = {
   "profile.notFound": "Nie znaleziono profilu.",
   "profile.back": "← wróć do elsewhr",
 
+  "vouch.title": "Poręczyli za niego",
+  "vouch.button": "🐦 Poręcz za {name}",
+  "vouch.explain":
+    "Jedno szczere zdanie o ich pracy. Twoje imię i twarz idą razem z tym — poręczaj tylko za to, co naprawdę widziałeś.",
+  "vouch.placeholder": "\"{name} naprawdę dowozi — widziałem, jak pracuje.\"",
+  "vouch.submit": "Podpisuję się pod tym",
+  "vouch.submitting": "Poręczanie…",
+  "vouch.cancel": "Anuluj",
+  "vouch.none":
+    "jeszcze nikt nie poręczył — poręczenia pochodzą z prawdziwych profili elsewhr, z imieniem i twarzą.",
+  "vouch.staked": " · prawdziwy profil, stawia swoje imię",
+  "vouch.member": "członek elsewhr",
+  "vouch.remove": "usuń",
+  "vouch.confirmRemove": "Usunąć twoje poręczenie?",
+  "vouch.short": "Napisz trochę więcej — jedno szczere zdanie.",
+  "vouch.signIn": "Zaloguj się, aby za kogoś poręczyć.",
+
   "reach.button": "✉️ Napisz do",
   "reach.explain":
     "Ptak dostarczy to do {name} e-mailem, z twoim profilem w załączniku. Żadne z was nie widzi adresu drugiej osoby — odpowiedzi po prostu działają.",
@@ -307,7 +396,8 @@ const pl: Dict = {
   "reach.send": "Wyślij 🐦",
   "reach.sending": "Wysyłanie…",
   "reach.cancel": "Anuluj",
-  "reach.sent": "🐦 Wysłane. {name} dostał twoją wiadomość e-mailem — odpowiedzi wrócą prosto do twojej skrzynki.",
+  "reach.sent":
+    "🐦 Wysłane. {name} dostał twoją wiadomość e-mailem — odpowiedzi wrócą prosto do twojej skrzynki.",
   "reach.short": "Napisz trochę więcej — jedno, dwa prawdziwe zdania.",
   "reach.failed": "Coś poszło nie tak — spróbuj ponownie.",
 };
@@ -356,6 +446,23 @@ const fr: Dict = {
   "profile.notFound": "Profil introuvable.",
   "profile.back": "← retour à elsewhr",
 
+  "vouch.title": "Recommandé par",
+  "vouch.button": "🐦 Recommander {name}",
+  "vouch.explain":
+    "Une phrase honnête sur leur travail. Ton nom et ton visage y sont attachés — ne recommande que ce que tu as vraiment vu.",
+  "vouch.placeholder": "\"{name} livre pour de vrai — je l'ai vu travailler.\"",
+  "vouch.submit": "J'y mets mon nom",
+  "vouch.submitting": "Recommandation…",
+  "vouch.cancel": "Annuler",
+  "vouch.none":
+    "pas encore de recommandations — elles viennent de vrais profils elsewhr, avec nom et visage.",
+  "vouch.staked": " · vrai profil, engage son nom",
+  "vouch.member": "un membre d'elsewhr",
+  "vouch.remove": "retirer",
+  "vouch.confirmRemove": "Retirer ta recommandation ?",
+  "vouch.short": "Écris un peu plus — une phrase honnête.",
+  "vouch.signIn": "Connecte-toi pour recommander quelqu'un.",
+
   "reach.button": "✉️ Écrire à",
   "reach.explain":
     "L'oiseau livre ceci à {name} par e-mail, avec ton profil joint. Aucun de vous ne voit l'adresse de l'autre — les réponses fonctionnent simplement.",
@@ -364,7 +471,8 @@ const fr: Dict = {
   "reach.send": "Envoyer 🐦",
   "reach.sending": "Envoi…",
   "reach.cancel": "Annuler",
-  "reach.sent": "🐦 Envoyé. {name} a reçu ton message par e-mail — les réponses reviennent directement dans ta boîte.",
+  "reach.sent":
+    "🐦 Envoyé. {name} a reçu ton message par e-mail — les réponses reviennent directement dans ta boîte.",
   "reach.short": "Écris un peu plus — une vraie phrase ou deux.",
   "reach.failed": "Un problème est survenu — réessaie.",
 };
