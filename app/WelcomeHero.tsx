@@ -6,8 +6,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { useLang, t } from "@/lib/i18n";
 
 export default function WelcomeHero() {
+  const { lang } = useLang();
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -24,32 +26,33 @@ export default function WelcomeHero() {
         {/* words */}
         <div className="md:flex-1">
           <p className="font-mono text-[12px] tracking-[0.18em] uppercase text-[#c8f000] mb-3">
-            hey, you found us 👋
+            {t(lang, "hero.eyebrow")}
           </p>
           <h1 className="font-[Syne] font-extrabold text-[#fff6ec] text-4xl md:text-[52px] leading-[0.98] tracking-tight max-w-[16ch]">
-            Where what you <span className="text-[#c8f000]">have</span> finds
-            who <span className="text-[#c8f000]">needs</span> it.
+            {t(lang, "hero.title1")}{" "}
+            <span className="text-[#c8f000]">{t(lang, "hero.have")}</span>{" "}
+            {t(lang, "hero.title2")}{" "}
+            <span className="text-[#c8f000]">{t(lang, "hero.needs")}</span>
+            {t(lang, "hero.title3")}
           </h1>
           <p className="mt-4 text-[#fff6ec]/90 text-[16px] md:text-[17px] max-w-[46ch] leading-relaxed">
-            Welders, coders, bakers, students — everyone with real skills and no
-            network to show them to. Your work, shown not claimed. The bird even
-            drafts your profile for you.
+            {t(lang, "hero.body")}
           </p>
           <div className="mt-6 flex items-center gap-4 flex-wrap">
             <Link
               href="/login"
               className="px-6 py-3.5 rounded-2xl border-[3px] border-[#1c1410] bg-[#c8f000] font-bold text-[16px] shadow-[5px_5px_0_#1c1410] hover:translate-y-[-2px] hover:shadow-[7px_8px_0_#1c1410] active:translate-y-0 active:shadow-[3px_3px_0_#1c1410] transition-all"
             >
-              Make my profile →
+              {t(lang, "hero.cta")}
             </Link>
             <p className="font-mono text-[11px] text-[#fff6ec]/75 tracking-wide">
-              free · under 5 min · you own everything
+              {t(lang, "hero.free")}
             </p>
           </div>
           <p className="mt-4 font-mono text-[12px] text-[#fff6ec]/85">
-            already on elsewhr?{" "}
+            {t(lang, "hero.already")}{" "}
             <Link href="/login" className="underline font-bold text-[#c8f000]">
-              log in →
+              {t(lang, "hero.login")}
             </Link>
           </p>
         </div>
