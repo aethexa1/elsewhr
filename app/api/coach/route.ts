@@ -10,6 +10,22 @@ export const maxDuration = 30;
 const MINDSET_LIST =
   "builder, curious, ships fast, night owl, team player, self-taught, detail-obsessed, big dreamer, disciplined, creative";
 
+// the bird meets people in their own language
+const LANG_NAMES: Record<string, string> = {
+  en: "English",
+  es: "Spanish (español)",
+  pt: "Brazilian Portuguese (português)",
+  hi: "Hindi (हिन्दी)",
+  pl: "Polish (polski)",
+  fr: "French (français)",
+};
+
+function languageRule(lang: string): string {
+  const name = LANG_NAMES[lang] || "English";
+  if (name === "English") return "";
+  return `\n\nLANGUAGE — ABSOLUTE: Write every string in your JSON response in ${name}. Natural, warm, native ${name} — not translated-sounding. Field names and JSON keys stay in English; only the VALUES are in ${name}. The mindsetLikely tags are the ONE exception: copy those verbatim in English from the list, because they are database values.`;
+}
+
 const COACH_SYSTEM = `You are the elsewhr profile coach. Given a person's name, one-line headline, and location, you produce tailored examples and hints for the rest of their profile.
 
 elsewhr is a network where people show what they can actually DO — evidence, not résumés. NEVER inflated.
@@ -40,16 +56,16 @@ Rules — absolute:
 - Plain human language, no buzzwords, no emoji. Keep every string short.
 
 Respond with ONLY valid JSON, no markdown fences, exactly this shape:
-{"strongest":"","gaps":[""],"verdict":""}`;
+{"strongest":"","gaps":["",""],"verdict":""}`;
 
 export async function POST(req: Request) {
   try {
-    // ---- auth: verify the caller is a logged-in elsewhr user ----
-    const authHeader = req.headers.get("authorization") ?? "";
+    const authHeader = req.headers.get("authorization") || "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
     if (!token) {
       return NextResponse.json({ error: "Not logged in." }, { status: 401 });
     }
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -61,6 +77,7 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const mode = body.mode === "review" ? "review" : "coach";
+    const lang = typeof body.lang === "string" ? body.lang : "en";
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
@@ -72,7 +89,7 @@ export async function POST(req: Request) {
 
     if (mode === "review") {
       const profile = body.profile ?? {};
-      system = REVIEW_SYSTEM;
+      system = REVIEW_SYSTEM + languageRule(lang);
       userContent = `Here is the draft profile as JSON:\n\n${JSON.stringify(profile).slice(
         0,
         6000
@@ -82,7 +99,7 @@ export async function POST(req: Request) {
       if (!headline || typeof headline !== "string" || headline.trim().length < 3) {
         return NextResponse.json({ error: "No headline yet." }, { status: 400 });
       }
-      system = COACH_SYSTEM;
+      system = COACH_SYSTEM + languageRule(lang);
       userContent = `Name: ${String(name ?? "").slice(0, 100)}\nHeadline: ${String(
         headline
       ).slice(0, 300)}\nLocation: ${String(location ?? "").slice(0, 100)}`;
