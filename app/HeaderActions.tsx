@@ -6,16 +6,28 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { useLang, t } from "@/lib/i18n";
 
 export default function HeaderActions() {
+  const { lang } = useLang();
   const [email, setEmail] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
   const [open, setOpen] = useState(false);
+  const [myId, setMyId] = useState<number | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       setEmail(data.user?.email ?? null);
       setChecked(true);
+      if (data.user) {
+        const { data: mine } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("user_id", data.user.id)
+          .limit(1)
+          .maybeSingle();
+        if (mine) setMyId(mine.id);
+      }
     });
   }, []);
 
@@ -32,7 +44,7 @@ export default function HeaderActions() {
         href="/login"
         className="px-4 py-2 rounded-xl border-2 border-[#1c1410] bg-[#c8f000] font-bold text-sm hover:translate-y-[-2px] transition-transform"
       >
-        Join elsewhr →
+        {t(lang, "nav.join")}
       </Link>
     );
   }
@@ -46,7 +58,7 @@ export default function HeaderActions() {
         <span className="w-5 h-5 rounded-full bg-[#6b4eff] text-[#fff6ec] flex items-center justify-center text-[11px] font-extrabold">
           {email[0].toUpperCase()}
         </span>
-        me
+        {t(lang, "nav.me")}
         <span className={`text-[10px] transition-transform ${open ? "rotate-180" : ""}`}>▾</span>
       </button>
 
@@ -55,25 +67,34 @@ export default function HeaderActions() {
           <p className="px-4 pt-3 pb-2 font-mono text-[10px] text-[#6b5e52] truncate border-b border-[#1c1410]/10">
             {email}
           </p>
+          {myId && (
+            <Link
+              href={`/p/${myId}`}
+              onClick={() => setOpen(false)}
+              className="block px-4 py-3 text-sm font-bold hover:bg-[#c8f000]/40"
+            >
+              {t(lang, "nav.myProfile")}
+            </Link>
+          )}
           <Link
             href="/create"
             onClick={() => setOpen(false)}
-            className="block px-4 py-3 text-sm font-bold hover:bg-[#c8f000]/40"
+            className="block px-4 py-3 text-sm font-bold hover:bg-[#c8f000]/40 border-t border-[#1c1410]/10"
           >
-            ✏️ Edit my profile
+            {t(lang, "nav.edit")}
           </Link>
           <Link
             href="/settings"
             onClick={() => setOpen(false)}
             className="block px-4 py-3 text-sm font-bold hover:bg-[#c8f000]/40 border-t border-[#1c1410]/10"
           >
-            ⚙️ Settings
+            {t(lang, "nav.settings")}
           </Link>
           <button
             onClick={signOut}
             className="block w-full text-left px-4 py-3 text-sm font-bold hover:bg-[#ff5d3b]/20 border-t border-[#1c1410]/10"
           >
-            👋 Sign out
+            {t(lang, "nav.signout")}
           </button>
         </div>
       )}
