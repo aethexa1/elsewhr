@@ -1,5 +1,5 @@
 // elsewhr — sparks: the bird suggests openers grounded in both profiles
-// Create this file at: app/api/spark/route.ts
+// Replaces app/api/spark/route.ts
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
@@ -21,6 +21,21 @@ Rules — absolute:
 - Write in the sender's casual first-person voice. Warm, specific, human. Each opener 1–2 sentences, under 160 characters.
 - If the profiles share almost nothing, ground openers in the recipient's own work alone.
 - Respond with ONLY valid JSON, no markdown fences: {"sparks":["...","...","..."]}`;
+
+const LANG_NAMES: Record<string, string> = {
+  en: "English",
+  es: "Spanish (español)",
+  pt: "Brazilian Portuguese (português)",
+  hi: "Hindi (हिन्दी)",
+  pl: "Polish (polski)",
+  fr: "French (français)",
+};
+
+function languageRule(lang: string): string {
+  const name = LANG_NAMES[lang] || "English";
+  if (name === "English") return "";
+  return `\n\nLANGUAGE — ABSOLUTE: Write every opener in ${name}. Natural, warm, native ${name} — the way a real person from that culture would actually write a first message. Not translated-sounding.`;
+}
 
 export async function POST(req: Request) {
   try {
@@ -46,7 +61,9 @@ export async function POST(req: Request) {
     calls.push(now);
     recent.set(uid, calls);
 
-    const { profileId } = await req.json();
+    const bodyJson = await req.json();
+    const profileId = bodyJson.profileId;
+    const lang = typeof bodyJson.lang === "string" ? bodyJson.lang : "en";
     if (!profileId) return NextResponse.json({ sparks: [] });
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -87,7 +104,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model: "claude-haiku-4-5",
         max_tokens: 500,
-        system: SYSTEM,
+        system: SYSTEM + languageRule(lang),
         messages: [
           {
             role: "user",
