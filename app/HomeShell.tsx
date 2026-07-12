@@ -1,13 +1,15 @@
 "use client";
 
 // elsewhr — home shell: welcome screen for guests, feed for members
-// Create this file at: app/HomeShell.tsx
+// Replaces app/HomeShell.tsx
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import HeaderActions from "./HeaderActions";
 import WelcomeHero from "./WelcomeHero";
+import LangPicker from "./LangPicker";
+import { useLang, t } from "@/lib/i18n";
 
 export type FeedProfile = {
   id: number;
@@ -29,6 +31,7 @@ export default function HomeShell({
   profiles: FeedProfile[];
   hadError: boolean;
 }) {
+  const { lang } = useLang();
   const [mode, setMode] = useState<"loading" | "guest" | "member">("loading");
   const [peek, setPeek] = useState(false);
   const [myTags, setMyTags] = useState<string[]>([]);
@@ -61,20 +64,23 @@ export default function HomeShell({
     myTags.length && Array.isArray(p.mindset)
       ? p.mindset.filter((t) => myTags.includes(t))
       : [];
+
+  // your own card lives under "me ▾ → My profile", not in the feed
+  const others =
+    mode === "member" && myProfileId
+      ? profiles.filter((p) => p.id !== myProfileId)
+      : profiles;
   const ordered =
     mode === "member" && myTags.length
-      ? [...profiles].sort((a, b) => {
-          if (a.id === myProfileId) return 1; // your own card sits last
-          if (b.id === myProfileId) return -1;
-          return shared(b).length - shared(a).length || b.id - a.id;
-        })
-      : profiles;
+      ? [...others].sort(
+          (a, b) => shared(b).length - shared(a).length || b.id - a.id
+        )
+      : others;
 
   return (
     <main className="relative min-h-screen bg-[#ff5d3b] text-[#1c1410] flex justify-center px-4 py-8 overflow-hidden">
       <style>{`
         @keyframes rise { from { opacity:0; transform:translateY(26px);} to { opacity:1; transform:none;} }
-        @keyframes riseView { from { opacity:0; transform:translateY(46px) scale(.985);} to { opacity:1; transform:none;} }
         @keyframes drift1 { 0%,100% { transform:translate(0,0) scale(1);} 50% { transform:translate(60px,-45px) scale(1.12);} }
         @keyframes drift2 { 0%,100% { transform:translate(0,0) scale(1);} 50% { transform:translate(-70px,35px) scale(0.9);} }
         @keyframes bob { 0%,100% { transform:translateY(0);} 50% { transform:translateY(-7px);} }
@@ -180,7 +186,8 @@ export default function HomeShell({
           <div className="font-[Syne] font-extrabold text-2xl tracking-tight text-[#fff6ec]">
             elsewhr<span className="text-[#c8f000]">.</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
+            <LangPicker />
             <HeaderActions />
             <span className="bob inline-block"><Bird /></span>
           </div>
@@ -202,13 +209,13 @@ export default function HomeShell({
                   onClick={() => setPeek(true)}
                   className="px-5 py-3 rounded-2xl border-[3px] border-[#fff6ec]/70 text-[#fff6ec] font-bold text-[15px] hover:bg-[#fff6ec]/10 transition-colors"
                 >
-                  peek at who&apos;s already here ↓
+                  {t(lang, "home.peek")}
                 </button>
               </div>
             )}
             {peek && (
               <h2 className="rise font-[Syne] font-bold text-2xl text-[#fff6ec] mb-5">
-                people already on elsewhr ↓
+                {t(lang, "home.alreadyHere")}
               </h2>
             )}
           </>
@@ -217,21 +224,21 @@ export default function HomeShell({
         {/* MEMBER greeting */}
         {mode === "member" && (
           <p className="rise text-[#fff6ec]/90 text-[15px] mb-7 font-mono tracking-wide" style={{ animationDelay: "60ms" }}>
-            real people, shown by what they can actually do.
-            {myTags.length > 0 && " · your kind of people first ✦"}
+            {t(lang, "home.tagline")}
+            {myTags.length > 0 && t(lang, "home.yourPeople")}
           </p>
         )}
 
         {/* THE FEED */}
         {showFeed && (
           <>
-            {hadError || profiles.length === 0 ? (
+            {hadError || ordered.length === 0 ? (
               <div className="bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-3xl p-8 text-center">
-                <p className="font-bold text-lg mb-2">No profiles yet.</p>
+                <p className="font-bold text-lg mb-2">{t(lang, "home.noProfiles")}</p>
                 <p className="text-sm">
-                  Be the first —{" "}
+                  {t(lang, "home.beFirst")}{" "}
                   <Link href="/login" className="underline font-bold text-[#6b4eff]">
-                    join elsewhr
+                    {t(lang, "home.join")}
                   </Link>
                 </p>
               </div>
@@ -265,7 +272,7 @@ export default function HomeShell({
                         <div className="min-w-0">
                           {!p.user_id && (
                             <span className="inline-block mb-1 px-2 py-0.5 rounded-full border border-[#1c1410]/40 bg-white font-mono text-[9.5px] uppercase tracking-wider text-[#6b5e52]">
-                              sample profile
+                              {t(lang, "sample.badge")}
                             </span>
                           )}
                           <p className="font-[Syne] font-extrabold text-xl leading-tight truncate tracking-[-0.01em]">
@@ -288,7 +295,7 @@ export default function HomeShell({
                           )}
                           {both.length > 0 && (
                             <p className="mt-1.5 font-mono text-[10.5px] text-[#6b5e52]">
-                              ✦ you both: {both.slice(0, 3).join(" · ")}
+                              {t(lang, "home.youBoth")} {both.slice(0, 3).join(" · ")}
                             </p>
                           )}
                         </div>
@@ -304,7 +311,7 @@ export default function HomeShell({
             )}
 
             <p className="font-mono text-[11px] text-[#fff6ec]/80 mt-8 text-center">
-              tap anyone to see their work · real people · live
+              {t(lang, "home.tapAnyone")}
             </p>
           </>
         )}
