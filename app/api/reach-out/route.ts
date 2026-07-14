@@ -1,5 +1,5 @@
-// elsewhr — reach out: server-side mail delivery, addresses never exposed
-// Create this file at: app/api/reach-out/route.ts
+// elsewhr — reach out: the knock. Nothing is delivered without consent.
+// Replaces app/api/reach-out/route.ts
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
@@ -7,14 +7,21 @@ import { createClient } from "@supabase/supabase-js";
 export const runtime = "nodejs";
 export const maxDuration = 15;
 
-// per-sender rate limit (per server instance)
-const recent = new Map<string, number[]>();
-const LIMIT = 5;
-const WINDOW_MS = 60 * 60 * 1000; // 5 messages per hour
+const DAILY_LIMIT = 5;
+const SITE = "https://elsewhr.vercel.app";
+
+// html-escape without regex (paste-gremlin rule: plain string ops only)
+function esc(s: string): string {
+  return s
+    .split("&").join("&amp;")
+    .split("<").join("&lt;")
+    .split(">").join("&gt;")
+    .split("\n").join("<br/>");
+}
 
 export async function POST(req: Request) {
   try {
-    // --- who is sending? ---
+    // --- who is knocking? ---
     const authHeader = req.headers.get("authorization") || "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
     if (!token) {
@@ -31,16 +38,6 @@ export async function POST(req: Request) {
     }
     const sender = userData.user;
 
-    // --- rate limit ---
-    const now = Date.now();
-    const calls = (recent.get(sender.id) ?? []).filter((t) => now - t < WINDOW_MS);
-    if (calls.length >= LIMIT) {
-      return NextResponse.json(
-        { error: "The bird can only carry 5 messages an hour — try again soon." },
-        { status: 429 }
-      );
-    }
-
     const { profileId, message } = await req.json();
     if (!profileId || typeof message !== "string" || message.trim().length < 10) {
       return NextResponse.json({ error: "Write a real message first." }, { status: 400 });
@@ -52,13 +49,23 @@ export async function POST(req: Request) {
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const resendKey = process.env.RESEND_API_KEY;
     if (!serviceKey || !resendKey) {
+      return NextResponse.json({ error: "Messaging isn't configured yet." }, { status: 500 });
+    }
+    const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
+
+    // --- you knock as somebody: a profile is required ---
+    const { data: senderProfile } = await admin
+      .from("profiles")
+      .select("id, name, headline")
+      .eq("user_id", sender.id)
+      .limit(1)
+      .maybeSingle();
+    if (!senderProfile) {
       return NextResponse.json(
-        { error: "Messaging isn't configured yet." },
-        { status: 500 }
+        { error: "Build your page first — that's how people know who's knocking." },
+        { status: 400 }
       );
     }
-
-    const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
 
     // --- recipient ---
     const { data: target } = await admin
@@ -72,30 +79,76 @@ export async function POST(req: Request) {
     if (target.user_id === sender.id) {
       return NextResponse.json({ error: "That's your own profile." }, { status: 400 });
     }
+
+    // --- blocks: if they've blocked you, the knock silently evaporates ---
+    // (an error here would teach a harasser they've been blocked)
+    const { data: blockRow } = await admin
+      .from("blocks")
+      .select("blocked_profile_id")
+      .eq("blocker_user_id", target.user_id)
+      .eq("blocked_profile_id", senderProfile.id)
+      .maybeSingle();
+    if (blockRow) {
+      return NextResponse.json({ ok: true });
+    }
+
+    // --- rate limit with teeth: counted in the database, 5 knocks a day ---
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count } = await admin
+      .from("reach_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("sender_user_id", sender.id)
+      .gte("created_at", dayAgo);
+    if ((count ?? 0) >= DAILY_LIMIT) {
+      return NextResponse.json(
+        { error: "The bird carries 5 knocks a day — yours are spent. Try tomorrow." },
+        { status: 429 }
+      );
+    }
+
+    // --- one pending knock per door ---
+    const { data: existing } = await admin
+      .from("reach_requests")
+      .select("id")
+      .eq("sender_user_id", sender.id)
+      .eq("recipient_profile_id", target.id)
+      .eq("status", "pending")
+      .maybeSingle();
+    if (existing) {
+      return NextResponse.json(
+        { error: "You've already knocked — give them time to answer." },
+        { status: 400 }
+      );
+    }
+
+    // --- store the knock ---
+    const { data: knock, error: insertError } = await admin
+      .from("reach_requests")
+      .insert({
+        sender_user_id: sender.id,
+        sender_profile_id: senderProfile.id,
+        recipient_profile_id: target.id,
+        recipient_user_id: target.user_id,
+        message: message.trim(),
+      })
+      .select("accept_token")
+      .single();
+    if (insertError || !knock) {
+      console.error("reach_requests insert:", insertError);
+      return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+    }
+
+    // --- the knock email: no reply path, two doors ---
     const { data: targetUser } = await admin.auth.admin.getUserById(target.user_id);
     const recipientEmail = targetUser?.user?.email;
     if (!recipientEmail) {
       return NextResponse.json({ error: "That person can't be reached right now." }, { status: 400 });
     }
 
-    // --- sender context (their profile makes the message credible) ---
-    const { data: senderProfile } = await admin
-      .from("profiles")
-      .select("id, name, headline")
-      .eq("user_id", sender.id)
-      .limit(1)
-      .maybeSingle();
-
-    const senderName = senderProfile?.name || "Someone on elsewhr";
-    const senderLink = senderProfile
-      ? `https://elsewhr.vercel.app/p/${senderProfile.id}`
-      : "https://elsewhr.vercel.app";
-
-    const safeMsg = message
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/\n/g, "<br/>");
+    const senderName = esc(senderProfile.name);
+    const senderLink = SITE + "/p/" + String(senderProfile.id);
+    const acceptUrl = SITE + "/api/knock?token=" + knock.accept_token + "&action=accept";
+    const ignoreUrl = SITE + "/api/knock?token=" + knock.accept_token + "&action=ignore";
 
     const html = `
       <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;border:3px solid #1c1410;border-radius:16px;overflow:hidden">
@@ -103,13 +156,17 @@ export async function POST(req: Request) {
           <span style="font-size:20px;font-weight:800;color:#fff6ec">elsewhr<span style="color:#c8f000">.</span></span>
         </div>
         <div style="padding:20px;background:#fff6ec;color:#1c1410">
-          <p style="margin:0 0 6px;font-size:15px"><strong>${senderName}</strong> reached out to you on elsewhr:</p>
-          ${senderProfile?.headline ? `<p style="margin:0 0 14px;font-size:12px;color:#6b5e52">${senderProfile.headline}</p>` : ""}
-          <div style="background:#ffffff;border:2px solid #1c1410;border-radius:12px;padding:14px;font-size:14px;line-height:1.5">${safeMsg}</div>
-          <p style="margin:16px 0 0;font-size:13px">
-            <a href="${senderLink}" style="color:#6b4eff;font-weight:bold">See ${senderName}&#39;s real work →</a>
+          <p style="margin:0 0 6px;font-size:15px"><strong>${senderName}</strong> wants to reach out to you on elsewhr:</p>
+          ${senderProfile.headline ? `<p style="margin:0 0 14px;font-size:12px;color:#6b5e52">${esc(senderProfile.headline)}</p>` : ""}
+          <div style="background:#ffffff;border:2px solid #1c1410;border-radius:12px;padding:14px;font-size:14px;line-height:1.5">${esc(message.trim())}</div>
+          <p style="margin:14px 0 0;font-size:13px">
+            <a href="${senderLink}" style="color:#6b4eff;font-weight:bold">See ${senderName}&#39;s real work &#8594;</a>
           </p>
-          <p style="margin:14px 0 0;font-size:11px;color:#6b5e52">Reply to this email and it goes straight to them. The bird never shares your address. 🐦</p>
+          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:18px 0 0"><tr>
+            <td><a href="${acceptUrl}" style="display:inline-block;background:#c8f000;color:#1c1410;font-weight:800;font-size:14px;text-decoration:none;border:2px solid #1c1410;border-radius:12px;padding:12px 18px">accept — open the thread</a></td>
+            <td style="padding-left:10px"><a href="${ignoreUrl}" style="display:inline-block;background:#ffffff;color:#1c1410;font-weight:700;font-size:14px;text-decoration:none;border:2px solid #1c1410;border-radius:12px;padding:12px 18px">ignore</a></td>
+          </tr></table>
+          <p style="margin:16px 0 0;font-size:11px;color:#6b5e52">Nothing is shared unless you accept. If you ignore this, ${senderName} will never know. The bird never shares your address. &#128038;</p>
         </div>
       </div>`;
 
@@ -122,8 +179,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         from: "elsewhr bird <onboarding@resend.dev>",
         to: [recipientEmail],
-        reply_to: sender.email,
-        subject: `${senderName} reached out to you on elsewhr 🐦`,
+        subject: `${senderProfile.name} wants to reach out on elsewhr 🐦`,
         html,
       }),
     });
@@ -131,14 +187,16 @@ export async function POST(req: Request) {
     if (!r.ok) {
       const detail = await r.text();
       console.error("Resend error:", detail);
+      // knock stays stored; recipient just didn't get the email — mark expired so sender can retry later
+      await admin
+        .from("reach_requests")
+        .update({ status: "expired", responded_at: new Date().toISOString() })
+        .eq("accept_token", knock.accept_token);
       return NextResponse.json(
         { error: "The bird couldn't deliver that — try again in a bit." },
         { status: 502 }
       );
     }
-
-    calls.push(now);
-    recent.set(sender.id, calls);
 
     return NextResponse.json({ ok: true });
   } catch (e) {
