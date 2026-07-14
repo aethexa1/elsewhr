@@ -1,11 +1,38 @@
 "use client";
 
-// elsewhr — reach out: message a person, addresses stay private
+// elsewhr — reach out: a knock, not a DM. Nothing lands without consent.
 // Replaces app/p/[id]/ReachOut.tsx
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useLang, t } from "@/lib/i18n";
+
+const CONSENT_STRINGS: Record<string, { explain: string; sent: string }> = {
+  en: {
+    explain: "this arrives as a knock, not a DM — {name} chooses to accept it. addresses stay private.",
+    sent: "your knock is with {name}. if they accept, your message lands in their inbox.",
+  },
+  es: {
+    explain: "esto llega como una solicitud, no un DM — {name} decide aceptarla. las direcciones quedan privadas.",
+    sent: "tu solicitud llegó a {name}. si acepta, tu mensaje aterriza en su correo.",
+  },
+  pt: {
+    explain: "isso chega como um pedido, não uma DM — {name} decide aceitar. os endereços ficam privados.",
+    sent: "seu pedido chegou a {name}. se aceitar, sua mensagem cai na caixa de entrada.",
+  },
+  hi: {
+    explain: "यह एक अनुरोध की तरह पहुँचता है, DM नहीं — {name} इसे स्वीकार करना चुनते हैं। ईमेल पते निजी रहते हैं।",
+    sent: "आपकी दस्तक {name} तक पहुँच गई। अगर वे स्वीकार करते हैं, तो आपका संदेश उनके इनबॉक्स में पहुँचेगा।",
+  },
+  pl: {
+    explain: "to dociera jako prośba, nie DM — {name} decyduje, czy przyjąć. adresy pozostają prywatne.",
+    sent: "twoje pukanie dotarło do {name}. jeśli zaakceptuje, wiadomość trafi do skrzynki.",
+  },
+  fr: {
+    explain: "ça arrive comme une demande, pas un DM — {name} choisit d'accepter. les adresses restent privées.",
+    sent: "ta demande est chez {name}. s'il accepte, ton message arrive dans sa boîte.",
+  },
+};
 
 export default function ReachOut({
   profileId,
@@ -17,6 +44,7 @@ export default function ReachOut({
   ownerUserId: string | null;
 }) {
   const { lang } = useLang();
+  const cs = CONSENT_STRINGS[lang] || CONSENT_STRINGS.en;
   const [viewerId, setViewerId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
@@ -95,7 +123,7 @@ export default function ReachOut({
       {done ? (
         <div className="bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-2xl px-4 py-3">
           <p className="text-[14px] font-medium">
-            {t(lang, "reach.sent", { name: first })}
+            {cs.sent.replace("{name}", first)} 🐦
           </p>
         </div>
       ) : !open ? (
@@ -111,7 +139,7 @@ export default function ReachOut({
       ) : (
         <div className="bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-2xl p-4">
           <p className="text-[13px] mb-2 text-[#6b5e52]">
-            {t(lang, "reach.explain", { name: first })}
+            {cs.explain.replace("{name}", first)}
           </p>
           {sparks.length > 0 && (
             <div className="mb-3">
