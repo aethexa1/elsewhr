@@ -4,7 +4,7 @@
 // Replaces app/WelcomeHero.tsx
 // Self-contained: strings for all six languages live in this file.
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useLang } from "@/lib/i18n";
 
@@ -16,6 +16,7 @@ type HeroStrings = {
   sub: string;
   cta: string;
   whisper: string;
+  loginLine: string;
   vouched: string;
   dayOne: string;
 };
@@ -29,6 +30,7 @@ const STRINGS: Record<string, HeroStrings> = {
     sub: "photos of real work. real numbers. people who vouch for you — by name.",
     cta: "build your page — it's free",
     whisper: "starting from zero counts here. that's day one.",
+    loginLine: "already have a page? log in →",
     vouched: "vouched",
     dayOne: "day one",
   },
@@ -40,6 +42,7 @@ const STRINGS: Record<string, HeroStrings> = {
     sub: "fotos de trabajo real. números reales. gente que responde por ti — con nombre y cara.",
     cta: "crea tu página — es gratis",
     whisper: "empezar desde cero cuenta aquí. eso es el día uno.",
+    loginLine: "¿ya tienes tu página? inicia sesión →",
     vouched: "avalado",
     dayOne: "día uno",
   },
@@ -51,6 +54,7 @@ const STRINGS: Record<string, HeroStrings> = {
     sub: "fotos de trabalho real. números reais. pessoas que respondem por você — com nome e rosto.",
     cta: "crie sua página — é grátis",
     whisper: "começar do zero conta aqui. isso é o dia um.",
+    loginLine: "já tem sua página? entrar →",
     vouched: "endossado",
     dayOne: "dia um",
   },
@@ -62,6 +66,7 @@ const STRINGS: Record<string, HeroStrings> = {
     sub: "असली काम की तस्वीरें। असली आँकड़े। लोग जो आपके लिए ज़मानत देते हैं — नाम के साथ।",
     cta: "अपना पेज बनाइए — मुफ़्त है",
     whisper: "शून्य से शुरुआत यहाँ मायने रखती है। यही है दिन एक।",
+    loginLine: "पहले से पेज है? लॉग इन करें →",
     vouched: "ज़मानत",
     dayOne: "दिन एक",
   },
@@ -73,6 +78,7 @@ const STRINGS: Record<string, HeroStrings> = {
     sub: "zdjęcia prawdziwej pracy. prawdziwe liczby. ludzie, którzy za ciebie ręczą — z imienia.",
     cta: "stwórz swoją stronę — za darmo",
     whisper: "start od zera tu się liczy. to jest dzień pierwszy.",
+    loginLine: "masz już swoją stronę? zaloguj się →",
     vouched: "poręczone",
     dayOne: "dzień 1",
   },
@@ -84,6 +90,7 @@ const STRINGS: Record<string, HeroStrings> = {
     sub: "des photos de vrai travail. de vrais chiffres. des gens qui se portent garants — avec leur nom.",
     cta: "crée ta page — c'est gratuit",
     whisper: "partir de zéro compte ici. c'est le jour un.",
+    loginLine: "tu as déjà ta page ? connecte-toi →",
     vouched: "garanti",
     dayOne: "jour un",
   },
@@ -93,6 +100,25 @@ export default function WelcomeHero() {
   const { lang } = useLang();
   const s = STRINGS[lang] || STRINGS.en;
   const [idx, setIdx] = useState(0);
+  const [curtain, setCurtain] = useState(true);
+  const [delayed, setDelayed] = useState(true);
+
+  useEffect(() => {
+    let seen = false;
+    try {
+      seen = sessionStorage.getItem("wh_curtain_seen") === "1";
+      if (!seen) sessionStorage.setItem("wh_curtain_seen", "1");
+    } catch {
+      seen = false;
+    }
+    if (seen) {
+      setCurtain(false);
+      setDelayed(false);
+      return;
+    }
+    const done = setTimeout(() => setCurtain(false), 1600);
+    return () => clearTimeout(done);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -107,32 +133,74 @@ export default function WelcomeHero() {
   };
 
   return (
-    <section className="w-full grid grid-cols-1 md:grid-cols-[1.15fr_1fr] gap-8 md:gap-6 items-center">
+    <section className="w-full grid grid-cols-1 md:grid-cols-[1.15fr_1fr] gap-8 md:gap-6 items-center" style={{ "--wh-base": delayed ? "820ms" : "0ms" } as CSSProperties}>
       <style>{`
         @keyframes whSway { 0%,100% { transform: rotate(-3deg);} 50% { transform: rotate(3deg);} }
         @keyframes whRise { from { opacity:0; transform: translateY(22px);} to { opacity:1; transform:none;} }
         @keyframes whSettle { from { opacity:0; transform: translateY(-14px);} to { opacity:1; transform:none;} }
+        @keyframes whPartL { 0%,28% { transform: translateX(0);} 100% { transform: translateX(-102%);} }
+        @keyframes whPartR { 0%,28% { transform: translateX(0);} 100% { transform: translateX(102%);} }
+        @keyframes whMarkOut { 0%,30% { opacity:1; transform: scale(1);} 55% { opacity:0; transform: scale(1.06);} 100% { opacity:0;} }
+        @keyframes whGust {
+          0%, 30% { transform: translateX(-12vw) rotate(0deg); opacity:0; }
+          42% { opacity:.9; }
+          88% { opacity:.9; }
+          100% { transform: translateX(112vw) rotate(300deg); opacity:0; }
+        }
         .whSway { animation: whSway 4.5s ease-in-out infinite; transform-origin: top center; }
-        .whRise { animation: whRise .6s cubic-bezier(.2,.7,.3,1) both; }
+        .whRise { animation: whRise .6s cubic-bezier(.2,.7,.3,1) both; animation-delay: calc(var(--wh-base, 0ms) + var(--wh-d, 0ms)); }
         .whSettle { animation: whSettle .45s cubic-bezier(.2,.7,.3,1) both; }
+        .whCurtain { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
+        .whPanel { position: absolute; top: 0; bottom: 0; width: 51%; background: #1c1410; }
+        .whPanel.l { left: 0; animation: whPartL 1.5s cubic-bezier(.75,0,.2,1) both; }
+        .whPanel.r { right: 0; animation: whPartR 1.5s cubic-bezier(.75,0,.2,1) both; }
+        .whMark { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; animation: whMarkOut 1.5s ease both; }
+        .whGustLeaf { position: absolute; animation: whGust 1.5s cubic-bezier(.6,.1,.3,1) both; }
         @media (prefers-reduced-motion: reduce) {
           .whSway, .whRise, .whSettle { animation: none !important; opacity: 1 !important; transform: none !important; }
+          .whCurtain { display: none !important; }
         }
       `}</style>
 
+      {curtain && (
+        <div className="whCurtain" aria-hidden>
+          <div className="whPanel l" />
+          <div className="whPanel r" />
+          <div className="whMark">
+            <div className="text-center">
+              <p className="font-[Syne] font-extrabold text-4xl md:text-5xl tracking-tight text-[#fff6ec]">
+                elsewhr<span className="text-[#c8f000]">.</span>
+              </p>
+            </div>
+          </div>
+          <div className="whGustLeaf" style={{ top: "22%", animationDelay: "0.05s" }}>
+            <svg width="18" height="18" viewBox="0 0 20 20"><path d="M10 0 C16 6 16 14 10 20 C4 14 4 6 10 0 Z" fill="#c8f000" opacity="0.85" /></svg>
+          </div>
+          <div className="whGustLeaf" style={{ top: "45%", animationDelay: "0.14s" }}>
+            <svg width="12" height="12" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="#fff6ec" opacity="0.7" /></svg>
+          </div>
+          <div className="whGustLeaf" style={{ top: "62%", animationDelay: "0.08s" }}>
+            <svg width="15" height="15" viewBox="0 0 20 20"><path d="M10 0 C16 6 16 14 10 20 C4 14 4 6 10 0 Z" fill="#00c2d1" opacity="0.8" /></svg>
+          </div>
+          <div className="whGustLeaf" style={{ top: "78%", animationDelay: "0.2s" }}>
+            <svg width="11" height="11" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="#6b4eff" opacity="0.75" /></svg>
+          </div>
+        </div>
+      )}
+
       {/* words */}
       <div className="text-center md:text-left">
-        <p className="whRise font-mono text-[12px] uppercase tracking-[0.22em] text-[#fff6ec]/80 mb-4" style={{ animationDelay: "40ms" }}>
+        <p className="whRise font-mono text-[12px] uppercase tracking-[0.22em] text-[#fff6ec]/80 mb-4" style={{ "--wh-d": "40ms" } as CSSProperties}>
           {s.kicker}
         </p>
-        <h1 className="whRise font-[Syne] font-extrabold text-[#fff6ec] leading-[0.98] tracking-[-0.02em] text-5xl sm:text-6xl md:text-7xl" style={{ animationDelay: "120ms" }}>
+        <h1 className="whRise font-[Syne] font-extrabold text-[#fff6ec] leading-[0.98] tracking-[-0.02em] text-5xl sm:text-6xl md:text-7xl" style={{ "--wh-d": "120ms" } as CSSProperties}>
           {s.h1a}
           <br />
           <span className="text-[#c8f000]">{s.h1b}</span>
         </h1>
 
         {/* rotating audience line, destination-switcher style */}
-        <div className="whRise mt-5 flex items-center justify-center md:justify-start gap-3" style={{ animationDelay: "220ms" }}>
+        <div className="whRise mt-5 flex items-center justify-center md:justify-start gap-3" style={{ "--wh-d": "220ms" } as CSSProperties}>
           <button type="button" onClick={() => step(-1)} aria-label="previous" className="w-9 h-9 rounded-full border-[3px] border-[#fff6ec]/70 text-[#fff6ec] font-bold leading-none hover:bg-[#fff6ec]/10 transition-colors">
             ‹
           </button>
@@ -144,23 +212,29 @@ export default function WelcomeHero() {
           </button>
         </div>
 
-        <p className="whRise mt-5 text-[16px] md:text-[17px] leading-relaxed text-[#fff6ec]/95 max-w-md mx-auto md:mx-0" style={{ animationDelay: "320ms" }}>
+        <p className="whRise mt-5 text-[16px] md:text-[17px] leading-relaxed text-[#fff6ec]/95 max-w-md mx-auto md:mx-0" style={{ "--wh-d": "320ms" } as CSSProperties}>
           {s.sub}
         </p>
 
-        <div className="whRise mt-7" style={{ animationDelay: "420ms" }}>
+        <div className="whRise mt-7" style={{ "--wh-d": "420ms" } as CSSProperties}>
           <Link href="/login" className="inline-block px-7 py-4 rounded-2xl bg-[#c8f000] text-[#1c1410] font-[Syne] font-extrabold text-[17px] border-[3px] border-[#1c1410] shadow-[6px_6px_0_#1c1410] hover:translate-y-[-3px] hover:shadow-[8px_9px_0_#1c1410] active:translate-y-0 active:shadow-[3px_3px_0_#1c1410] transition-all duration-150">
             {s.cta}
           </Link>
         </div>
 
-        <p className="whRise mt-6 font-mono text-[11.5px] tracking-wide text-[#fff6ec]/75" style={{ animationDelay: "520ms" }}>
+        <p className="whRise mt-4" style={{ "--wh-d": "480ms" } as CSSProperties}>
+          <Link href="/login" className="inline-block font-mono text-[13px] font-bold text-[#fff6ec] underline underline-offset-4 decoration-2 decoration-[#c8f000] hover:text-[#c8f000] transition-colors">
+            {s.loginLine}
+          </Link>
+        </p>
+
+        <p className="whRise mt-5 font-mono text-[11.5px] tracking-wide text-[#fff6ec]/75" style={{ "--wh-d": "560ms" } as CSSProperties}>
           {s.whisper}
         </p>
       </div>
 
       {/* the nest: the bird on its collection, evidence hanging beneath */}
-      <div className="whRise relative mx-auto w-full max-w-[380px]" style={{ animationDelay: "260ms" }} aria-hidden>
+      <div className="whRise relative mx-auto w-full max-w-[380px]" style={{ "--wh-d": "260ms" } as CSSProperties} aria-hidden>
         <div className="relative z-10 flex justify-center">
           <HeroBird />
         </div>
