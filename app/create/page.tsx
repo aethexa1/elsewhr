@@ -57,6 +57,106 @@ const DAYONE_STRINGS: Record<string, { badge: string; title: string; sub: string
   fr: { badge: "jour un", title: "rien de construit encore ? c'est le jour un.", sub: "dis-moi ton premier pas — ici, ça compte comme preuve.", ph: "ce mois-ci je vais …", preview: "JOUR UN — premier pas :" },
 };
 
+const DEST_STRINGS: Record<string, {
+  guide: string; hint: string;
+  placeLabel: string; placePh: string;
+  programLabel: string; programPh: string;
+  termLabel: string; termPh: string;
+  statusLabel: string;
+  statuses: { key: string; label: string }[];
+}> = {
+  en: {
+    guide: "heading somewhere? new school, new city — tell me where, and I'll introduce you to people arriving with you.",
+    hint: "totally skippable — if you're settled where you are, just hit Next.",
+    placeLabel: "where you're headed", placePh: "UC Riverside · Chaffey College · a new city",
+    programLabel: "program / field", programPh: "computer science · nursing · trade school",
+    termLabel: "when", termPh: "fall 2026",
+    statusLabel: "where you are in the journey",
+    statuses: [
+      { key: "applied", label: "applied" },
+      { key: "accepted", label: "accepted" },
+      { key: "arriving", label: "arriving" },
+      { key: "current", label: "already there" },
+      { key: "graduated", label: "graduated" },
+    ],
+  },
+  es: {
+    guide: "¿vas a algún lugar? nueva escuela, nueva ciudad — dime dónde y te presentaré a gente que llega contigo.",
+    hint: "totalmente opcional — si ya estás establecido, dale a Siguiente.",
+    placeLabel: "a dónde vas", placePh: "UC Riverside · Chaffey College · una nueva ciudad",
+    programLabel: "programa / campo", programPh: "informática · enfermería · escuela técnica",
+    termLabel: "cuándo", termPh: "otoño 2026",
+    statusLabel: "en qué punto del camino estás",
+    statuses: [
+      { key: "applied", label: "apliqué" },
+      { key: "accepted", label: "aceptado" },
+      { key: "arriving", label: "llegando" },
+      { key: "current", label: "ya estoy ahí" },
+      { key: "graduated", label: "graduado" },
+    ],
+  },
+  pt: {
+    guide: "indo para algum lugar? nova escola, nova cidade — me diz onde e eu te apresento pessoas chegando com você.",
+    hint: "totalmente opcional — se você já está estabelecido, é só clicar em Próximo.",
+    placeLabel: "para onde você vai", placePh: "UC Riverside · Chaffey College · uma nova cidade",
+    programLabel: "programa / área", programPh: "computação · enfermagem · escola técnica",
+    termLabel: "quando", termPh: "outono 2026",
+    statusLabel: "em que ponto da jornada você está",
+    statuses: [
+      { key: "applied", label: "apliquei" },
+      { key: "accepted", label: "aceito" },
+      { key: "arriving", label: "chegando" },
+      { key: "current", label: "já estou lá" },
+      { key: "graduated", label: "formado" },
+    ],
+  },
+  hi: {
+    guide: "कहीं जा रहे हो? नया स्कूल, नया शहर — मुझे बताओ कहाँ, और मैं तुम्हें उन लोगों से मिलाऊँगा जो तुम्हारे साथ पहुँच रहे हैं।",
+    hint: "पूरी तरह वैकल्पिक — अगर तुम जहाँ हो वहीं ठीक हो, तो बस Next दबाओ।",
+    placeLabel: "कहाँ जा रहे हो", placePh: "UC Riverside · Chaffey College · एक नया शहर",
+    programLabel: "प्रोग्राम / क्षेत्र", programPh: "कंप्यूटर साइंस · नर्सिंग · ट्रेड स्कूल",
+    termLabel: "कब", termPh: "फ़ॉल 2026",
+    statusLabel: "सफ़र में कहाँ हो",
+    statuses: [
+      { key: "applied", label: "आवेदन किया" },
+      { key: "accepted", label: "स्वीकृत" },
+      { key: "arriving", label: "पहुँच रहा हूँ" },
+      { key: "current", label: "पहले से वहाँ हूँ" },
+      { key: "graduated", label: "स्नातक" },
+    ],
+  },
+  pl: {
+    guide: "wybierasz się gdzieś? nowa szkoła, nowe miasto — powiedz mi gdzie, a przedstawię ci ludzi, którzy przybywają razem z tobą.",
+    hint: "całkowicie opcjonalne — jeśli jesteś już na miejscu, po prostu kliknij Dalej.",
+    placeLabel: "dokąd zmierzasz", placePh: "UC Riverside · Chaffey College · nowe miasto",
+    programLabel: "kierunek / dziedzina", programPh: "informatyka · pielęgniarstwo · szkoła zawodowa",
+    termLabel: "kiedy", termPh: "jesień 2026",
+    statusLabel: "gdzie jesteś w tej podróży",
+    statuses: [
+      { key: "applied", label: "aplikowałem" },
+      { key: "accepted", label: "przyjęty" },
+      { key: "arriving", label: "przybywam" },
+      { key: "current", label: "już tam jestem" },
+      { key: "graduated", label: "absolwent" },
+    ],
+  },
+  fr: {
+    guide: "tu pars quelque part ? nouvelle école, nouvelle ville — dis-moi où, et je te présenterai ceux qui arrivent avec toi.",
+    hint: "totalement facultatif — si tu es déjà installé, clique simplement sur Suivant.",
+    placeLabel: "où tu vas", placePh: "UC Riverside · Chaffey College · une nouvelle ville",
+    programLabel: "programme / domaine", programPh: "informatique · soins infirmiers · école de métiers",
+    termLabel: "quand", termPh: "automne 2026",
+    statusLabel: "où tu en es dans le parcours",
+    statuses: [
+      { key: "applied", label: "candidature envoyée" },
+      { key: "accepted", label: "accepté" },
+      { key: "arriving", label: "j'arrive" },
+      { key: "current", label: "déjà sur place" },
+      { key: "graduated", label: "diplômé" },
+    ],
+  },
+};
+
 const SOFIA = {
   claim: "Cut mis-ships 40% with a labeling system I built",
   result: "40% fewer errors",
@@ -85,6 +185,10 @@ export default function CreatePage() {
   const [goal, setGoal] = useState("");
   const [tiles, setTiles] = useState<Tile[]>([{ ...emptyTile }]);
   const [dayOne, setDayOne] = useState("");
+  const [destPlace, setDestPlace] = useState("");
+  const [destProgram, setDestProgram] = useState("");
+  const [destTerm, setDestTerm] = useState("");
+  const [destStatus, setDestStatus] = useState("");
   const [accent, setAccent] = useState("#6b4eff");
   const [resume, setResume] = useState("");
   const [parsing, setParsing] = useState(false);
@@ -125,6 +229,10 @@ export default function CreatePage() {
         setGoal(existing.goal ?? "");
         setAccent(existing.accent ?? "#6b4eff");
         setDayOne(existing.day_one ?? "");
+        setDestPlace(existing.dest_place ?? "");
+        setDestProgram(existing.dest_program ?? "");
+        setDestTerm(existing.dest_term ?? "");
+        setDestStatus(existing.dest_status ?? "");
         const arts = Array.isArray(existing.artifacts) ? existing.artifacts : [];
         setTiles(arts.length > 0 ? arts : [{ ...emptyTile }]);
       }
@@ -190,6 +298,9 @@ export default function CreatePage() {
             goal,
             hasPhoto: Boolean(photo),
             dayOne: dayOne.trim(),
+            destination: destPlace.trim()
+              ? { place: destPlace.trim(), program: destProgram.trim(), term: destTerm.trim(), status: destStatus }
+              : null,
             work: tiles
               .filter((t) => t.claim.trim())
               .map((t) => ({
@@ -249,6 +360,10 @@ export default function CreatePage() {
       artifacts: realTiles,
       accent,
       day_one: dayOne.trim(),
+      dest_place: destPlace.trim() || null,
+      dest_program: destProgram.trim() || null,
+      dest_term: destTerm.trim() || null,
+      dest_status: destStatus || null,
     };
 
     const { error } = existingId
@@ -340,6 +455,7 @@ export default function CreatePage() {
   }
 
   const ds = DAYONE_STRINGS[lang] || DAYONE_STRINGS.en;
+  const dst = DEST_STRINGS[lang] || DEST_STRINGS.en;
 
   const ex = {
     claim: coach?.example?.claim || SOFIA.claim,
@@ -474,6 +590,46 @@ export default function CreatePage() {
               placeholder="yoursite.com · github.com/you · linkedin.com/in/you"
             />
           </div>
+        </div>
+      ),
+    },
+    {
+      guide: dst.guide,
+      hint: dst.hint,
+      valid: true,
+      body: (
+        <div>
+          <FieldLabel>{dst.placeLabel}</FieldLabel>
+          <input autoFocus className={inputCls} value={destPlace} onChange={(e) => setDestPlace(e.target.value)} placeholder={dst.placePh} />
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            <div>
+              <FieldLabel>{dst.programLabel}</FieldLabel>
+              <input className={inputCls} value={destProgram} onChange={(e) => setDestProgram(e.target.value)} placeholder={dst.programPh} />
+            </div>
+            <div>
+              <FieldLabel>{dst.termLabel}</FieldLabel>
+              <input className={inputCls} value={destTerm} onChange={(e) => setDestTerm(e.target.value)} placeholder={dst.termPh} />
+            </div>
+          </div>
+          {destPlace.trim().length > 0 && (
+            <div className="mt-4">
+              <FieldLabel>{dst.statusLabel}</FieldLabel>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {dst.statuses.map((s) => (
+                  <button
+                    key={s.key}
+                    type="button"
+                    onClick={() => setDestStatus(destStatus === s.key ? "" : s.key)}
+                    className={`px-4 py-2 rounded-full border-2 text-[13px] font-medium transition-all duration-150 active:scale-90 hover:scale-105 ${
+                      destStatus === s.key ? "bg-[#6b4eff] text-[#fff6ec] border-[#6b4eff]" : "bg-white border-[#1c1410]"
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ),
     },
@@ -690,6 +846,11 @@ export default function CreatePage() {
                 <p className="mt-0.5">{headline || "—"}</p>
               </div>
             </div>
+            {destPlace.trim() && (
+              <p className="mt-3 text-[13px] font-mono text-[#6b4eff]">
+                → {destPlace.trim()}{destProgram.trim() ? " · " + destProgram.trim() : ""}{destTerm.trim() ? " · " + destTerm.trim() : ""}{destStatus ? " · " + destStatus : ""}
+              </p>
+            )}
             {seeking && <p className="mt-3 text-[#6b4eff] font-medium">Looking for: {seeking}</p>}
             {mindset.length > 0 && (
               <p className="mt-2 text-[13px] font-mono uppercase tracking-wide">{mindset.join(" · ")}</p>
