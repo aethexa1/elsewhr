@@ -24,6 +24,15 @@ export type FeedProfile = {
   artifacts: { image?: string }[] | null;
 };
 
+const PEEK_STRINGS: Record<string, { cta: string; reveal: string; stats: string; youd: string }> = {
+  en: { cta: "show me the proof", reveal: "the proof, so far —", stats: "real people: {n} · résumés: 0", youd: "you'd be" },
+  es: { cta: "muéstrame las pruebas", reveal: "las pruebas, hasta ahora —", stats: "personas reales: {n} · currículums: 0", youd: "serías" },
+  pt: { cta: "me mostra as provas", reveal: "as provas, até agora —", stats: "pessoas reais: {n} · currículos: 0", youd: "você seria" },
+  hi: { cta: "मुझे सबूत दिखाओ", reveal: "अब तक के सबूत —", stats: "असली लोग: {n} · रिज़्यूमे: 0", youd: "आप होंगे" },
+  pl: { cta: "pokaż mi dowody", reveal: "dowody, jak dotąd —", stats: "prawdziwi ludzie: {n} · CV: 0", youd: "będziesz" },
+  fr: { cta: "montre-moi les preuves", reveal: "les preuves, jusqu'ici —", stats: "vraies personnes : {n} · CV : 0", youd: "tu serais" },
+};
+
 export default function HomeShell({
   profiles,
   hadError,
@@ -32,6 +41,7 @@ export default function HomeShell({
   hadError: boolean;
 }) {
   const { lang } = useLang();
+  const pk = PEEK_STRINGS[lang] || PEEK_STRINGS.en;
   const [mode, setMode] = useState<"loading" | "guest" | "member">("loading");
   const [peek, setPeek] = useState(false);
   const [myTags, setMyTags] = useState<string[]>([]);
@@ -67,6 +77,9 @@ export default function HomeShell({
   }, []);
 
   const showFeed = mode === "member" || (mode === "guest" && peek);
+
+  // never-inflate applies to counting too: only real accounts count
+  const realCount = profiles.filter((p) => !!p.user_id).length;
 
   // matching-lite: people who share your mindset rise to the top
   const shared = (p: FeedProfile) =>
@@ -217,15 +230,25 @@ export default function HomeShell({
               <div className="text-center mb-16">
                 <button
                   onClick={() => setPeek(true)}
-                  className="px-5 py-3 rounded-2xl border-[3px] border-[#fff6ec]/70 text-[#fff6ec] font-bold text-[15px] hover:bg-[#fff6ec]/10 transition-colors"
+                  className="group px-6 py-3.5 rounded-2xl border-[3px] border-[#fff6ec]/80 text-[#fff6ec] font-[Syne] font-bold text-[16px] hover:bg-[#fff6ec] hover:text-[#ff5d3b] transition-colors"
                 >
-                  {t(lang, "home.peek")}
+                  {pk.cta} <span className="bob inline-block ml-1">↓</span>
                 </button>
+                {realCount > 0 && (
+                  <div className="mt-4">
+                    <p className="font-mono text-[12px] tracking-wide text-[#fff6ec]/85">
+                      {pk.stats.replace("{n}", String(realCount))}
+                    </p>
+                    <p className="font-mono text-[12px] tracking-wide text-[#fff6ec]/85 mt-1">
+                      {pk.youd} <span className="font-bold text-[#c8f000]">#{realCount + 1}</span>
+                    </p>
+                  </div>
+                )}
               </div>
             )}
             {peek && (
               <h2 className="rise font-[Syne] font-bold text-2xl text-[#fff6ec] mb-5">
-                {t(lang, "home.alreadyHere")}
+                {pk.reveal}
               </h2>
             )}
           </>
