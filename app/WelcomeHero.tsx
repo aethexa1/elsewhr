@@ -100,147 +100,117 @@ export default function WelcomeHero() {
   const { lang } = useLang();
   const s = STRINGS[lang] || STRINGS.en;
   const [idx, setIdx] = useState(0);
-  const [curtain, setCurtain] = useState(true);
-  const [delayed, setDelayed] = useState(true);
+  const [phase, setPhase] = useState<"in" | "out">("in");
+  const [animating, setAnimating] = useState(false);
 
-  useEffect(() => {
-    let seen = false;
-    try {
-      seen = sessionStorage.getItem("wh_curtain_seen") === "1";
-      if (!seen) sessionStorage.setItem("wh_curtain_seen", "1");
-    } catch {
-      seen = false;
-    }
-    if (seen) {
-      setCurtain(false);
-      setDelayed(false);
-      return;
-    }
-    const done = setTimeout(() => setCurtain(false), 1600);
-    return () => clearTimeout(done);
-  }, []);
+  // the pick: threads retract into the nest, the word swaps, everything pours back down
+  const cycle = (dir: number) => {
+    if (animating) return;
+    setAnimating(true);
+    setPhase("out");
+    setTimeout(() => {
+      const n = STRINGS.en.audiences.length;
+      setIdx((i) => (i + dir + n) % n);
+      setPhase("in");
+      setTimeout(() => setAnimating(false), 950);
+    }, 480);
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setIdx((i) => (i + 1) % STRINGS.en.audiences.length);
-    }, 3200);
+      cycle(1);
+    }, 5200);
     return () => clearInterval(timer);
-  }, []);
-
-  const step = (dir: number) => {
-    const n = s.audiences.length;
-    setIdx((i) => (i + dir + n) % n);
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animating]);
 
   return (
-    <section className="w-full grid grid-cols-1 md:grid-cols-[1.15fr_1fr] gap-8 md:gap-6 items-center" style={{ "--wh-base": delayed ? "820ms" : "0ms" } as CSSProperties}>
+    <section className="w-full grid grid-cols-1 md:grid-cols-[1.15fr_1fr] gap-8 md:gap-6 items-center">
       <style>{`
         @keyframes whSway { 0%,100% { transform: rotate(-3deg);} 50% { transform: rotate(3deg);} }
-        @keyframes whRise { from { opacity:0; transform: translateY(22px);} to { opacity:1; transform:none;} }
-        @keyframes whSettle { from { opacity:0; transform: translateY(-14px);} to { opacity:1; transform:none;} }
-        @keyframes whPartL { 0%,28% { transform: translateX(0);} 100% { transform: translateX(-102%);} }
-        @keyframes whPartR { 0%,28% { transform: translateX(0);} 100% { transform: translateX(102%);} }
-        @keyframes whMarkOut { 0%,30% { opacity:1; transform: scale(1);} 55% { opacity:0; transform: scale(1.06);} 100% { opacity:0;} }
-        @keyframes whGust {
-          0%, 30% { transform: translateX(-12vw) rotate(0deg); opacity:0; }
-          42% { opacity:.9; }
-          88% { opacity:.9; }
-          100% { transform: translateX(112vw) rotate(300deg); opacity:0; }
+        @keyframes whRise { from { opacity:0; transform: translateY(26px);} to { opacity:1; transform:none;} }
+        @keyframes whPour {
+          0% { opacity:0; transform: translateY(-96px); }
+          70% { opacity:1; transform: translateY(7px); }
+          100% { opacity:1; transform: translateY(0); }
+        }
+        @keyframes whRetract { from { opacity:1; transform: translateY(0);} to { opacity:0; transform: translateY(-96px);} }
+        @keyframes whWordDrop {
+          0% { opacity:0; transform: translateY(-24px); }
+          70% { opacity:1; transform: translateY(4px); }
+          100% { opacity:1; transform: translateY(0); }
+        }
+        @keyframes whWordUp { from { opacity:1; transform: translateY(0);} to { opacity:0; transform: translateY(-20px);} }
+        @keyframes whSettleBird {
+          0% { opacity:0; transform: translateY(-56px); }
+          65% { opacity:1; transform: translateY(6px); }
+          100% { opacity:1; transform: translateY(0); }
         }
         .whSway { animation: whSway 4.5s ease-in-out infinite; transform-origin: top center; }
-        .whRise { animation: whRise .6s cubic-bezier(.2,.7,.3,1) both; animation-delay: calc(var(--wh-base, 0ms) + var(--wh-d, 0ms)); }
-        .whSettle { animation: whSettle .45s cubic-bezier(.2,.7,.3,1) both; }
-        .whCurtain { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
-        .whPanel { position: absolute; top: 0; bottom: 0; width: 51%; background: #1c1410; }
-        .whPanel.l { left: 0; animation: whPartL 1.5s cubic-bezier(.75,0,.2,1) both; }
-        .whPanel.r { right: 0; animation: whPartR 1.5s cubic-bezier(.75,0,.2,1) both; }
-        .whMark { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; animation: whMarkOut 1.5s ease both; }
-        .whGustLeaf { position: absolute; animation: whGust 1.5s cubic-bezier(.6,.1,.3,1) both; }
+        .whRise { animation: whRise .85s cubic-bezier(.22,.61,.36,1) both; animation-delay: var(--wh-d, 0ms); }
+        .whPour { animation: whPour .95s cubic-bezier(.3,1,.4,1) both; animation-delay: var(--wh-d, 0ms); }
+        .whRetract { animation: whRetract .45s cubic-bezier(.5,0,.8,.4) both; animation-delay: var(--wh-r, 0ms); }
+        .whWordDrop { animation: whWordDrop .6s cubic-bezier(.3,1,.4,1) both; }
+        .whWordUp { animation: whWordUp .4s ease-in both; }
+        .whBirdIn { animation: whSettleBird 1s cubic-bezier(.3,1,.4,1) both; animation-delay: 150ms; }
         @media (prefers-reduced-motion: reduce) {
-          .whSway, .whRise, .whSettle { animation: none !important; opacity: 1 !important; transform: none !important; }
-          .whCurtain { display: none !important; }
+          .whSway, .whRise, .whPour, .whRetract, .whWordDrop, .whWordUp, .whBirdIn { animation: none !important; opacity: 1 !important; transform: none !important; }
         }
       `}</style>
 
-      {curtain && (
-        <div className="whCurtain" aria-hidden>
-          <div className="whPanel l" />
-          <div className="whPanel r" />
-          <div className="whMark">
-            <div className="text-center">
-              <p className="font-[Syne] font-extrabold text-4xl md:text-5xl tracking-tight text-[#fff6ec]">
-                elsewhr<span className="text-[#c8f000]">.</span>
-              </p>
-            </div>
-          </div>
-          <div className="whGustLeaf" style={{ top: "22%", animationDelay: "0.05s" }}>
-            <svg width="18" height="18" viewBox="0 0 20 20"><path d="M10 0 C16 6 16 14 10 20 C4 14 4 6 10 0 Z" fill="#c8f000" opacity="0.85" /></svg>
-          </div>
-          <div className="whGustLeaf" style={{ top: "45%", animationDelay: "0.14s" }}>
-            <svg width="12" height="12" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="#fff6ec" opacity="0.7" /></svg>
-          </div>
-          <div className="whGustLeaf" style={{ top: "62%", animationDelay: "0.08s" }}>
-            <svg width="15" height="15" viewBox="0 0 20 20"><path d="M10 0 C16 6 16 14 10 20 C4 14 4 6 10 0 Z" fill="#00c2d1" opacity="0.8" /></svg>
-          </div>
-          <div className="whGustLeaf" style={{ top: "78%", animationDelay: "0.2s" }}>
-            <svg width="11" height="11" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="#6b4eff" opacity="0.75" /></svg>
-          </div>
-        </div>
-      )}
-
       {/* words */}
       <div className="text-center md:text-left">
-        <p className="whRise font-mono text-[12px] uppercase tracking-[0.22em] text-[#fff6ec]/80 mb-4" style={{ "--wh-d": "40ms" } as CSSProperties}>
+        <p className="whRise font-mono text-[12px] uppercase tracking-[0.22em] text-[#fff6ec]/80 mb-4" style={{ "--wh-d": "250ms" } as CSSProperties}>
           {s.kicker}
         </p>
-        <h1 className="whRise font-[Syne] font-extrabold text-[#fff6ec] leading-[0.98] tracking-[-0.02em] text-5xl sm:text-6xl md:text-7xl" style={{ "--wh-d": "120ms" } as CSSProperties}>
+        <h1 className="whRise font-[Syne] font-extrabold text-[#fff6ec] leading-[0.98] tracking-[-0.02em] text-5xl sm:text-6xl md:text-7xl" style={{ "--wh-d": "450ms" } as CSSProperties}>
           {s.h1a}
           <br />
           <span className="text-[#c8f000]">{s.h1b}</span>
         </h1>
 
         {/* rotating audience line, destination-switcher style */}
-        <div className="whRise mt-5 flex items-center justify-center md:justify-start gap-3" style={{ "--wh-d": "220ms" } as CSSProperties}>
-          <button type="button" onClick={() => step(-1)} aria-label="previous" className="w-9 h-9 rounded-full border-[3px] border-[#fff6ec]/70 text-[#fff6ec] font-bold leading-none hover:bg-[#fff6ec]/10 transition-colors">
+        <div className="whRise mt-5 flex items-center justify-center md:justify-start gap-3" style={{ "--wh-d": "900ms" } as CSSProperties}>
+          <button type="button" onClick={() => cycle(-1)} aria-label="previous" className="w-9 h-9 rounded-full border-[3px] border-[#fff6ec]/70 text-[#fff6ec] font-bold leading-none hover:bg-[#fff6ec]/10 transition-colors">
             ‹
           </button>
-          <span key={idx} className="whSettle inline-block min-w-[220px] text-center md:text-left font-[Syne] font-bold text-xl md:text-2xl text-[#fff6ec]">
+          <span key={String(idx) + phase} className={(phase === "in" ? "whWordDrop" : "whWordUp") + " inline-block min-w-[220px] text-center md:text-left font-[Syne] font-bold text-xl md:text-2xl text-[#fff6ec]"}>
             {s.audiences[idx]}
           </span>
-          <button type="button" onClick={() => step(1)} aria-label="next" className="w-9 h-9 rounded-full border-[3px] border-[#fff6ec]/70 text-[#fff6ec] font-bold leading-none hover:bg-[#fff6ec]/10 transition-colors">
+          <button type="button" onClick={() => cycle(1)} aria-label="next" className="w-9 h-9 rounded-full border-[3px] border-[#fff6ec]/70 text-[#fff6ec] font-bold leading-none hover:bg-[#fff6ec]/10 transition-colors">
             ›
           </button>
         </div>
 
-        <p className="whRise mt-5 text-[16px] md:text-[17px] leading-relaxed text-[#fff6ec]/95 max-w-md mx-auto md:mx-0" style={{ "--wh-d": "320ms" } as CSSProperties}>
+        <p className="whRise mt-5 text-[16px] md:text-[17px] leading-relaxed text-[#fff6ec]/95 max-w-md mx-auto md:mx-0" style={{ "--wh-d": "1250ms" } as CSSProperties}>
           {s.sub}
         </p>
 
-        <div className="whRise mt-7" style={{ "--wh-d": "420ms" } as CSSProperties}>
+        <div className="whRise mt-7" style={{ "--wh-d": "1550ms" } as CSSProperties}>
           <Link href="/login" className="inline-block px-7 py-4 rounded-2xl bg-[#c8f000] text-[#1c1410] font-[Syne] font-extrabold text-[17px] border-[3px] border-[#1c1410] shadow-[6px_6px_0_#1c1410] hover:translate-y-[-3px] hover:shadow-[8px_9px_0_#1c1410] active:translate-y-0 active:shadow-[3px_3px_0_#1c1410] transition-all duration-150">
             {s.cta}
           </Link>
         </div>
 
-        <p className="whRise mt-4" style={{ "--wh-d": "480ms" } as CSSProperties}>
+        <p className="whRise mt-4" style={{ "--wh-d": "1800ms" } as CSSProperties}>
           <Link href="/login" className="inline-block font-mono text-[13px] font-bold text-[#fff6ec] underline underline-offset-4 decoration-2 decoration-[#c8f000] hover:text-[#c8f000] transition-colors">
             {s.loginLine}
           </Link>
         </p>
 
-        <p className="whRise mt-5 font-mono text-[11.5px] tracking-wide text-[#fff6ec]/75" style={{ "--wh-d": "560ms" } as CSSProperties}>
+        <p className="whRise mt-5 font-mono text-[11.5px] tracking-wide text-[#fff6ec]/75" style={{ "--wh-d": "2050ms" } as CSSProperties}>
           {s.whisper}
         </p>
       </div>
 
       {/* the nest: the bird on its collection, evidence hanging beneath */}
-      <div className="whRise relative mx-auto w-full max-w-[380px]" style={{ "--wh-d": "260ms" } as CSSProperties} aria-hidden>
-        <div className="relative z-10 flex justify-center">
+      <div className="relative mx-auto w-full max-w-[380px]" aria-hidden>
+        <div className="whBirdIn relative z-10 flex justify-center">
           <HeroBird />
         </div>
 
         {/* woven nest arc */}
-        <div className="relative z-10 -mt-3 flex justify-center">
+        <div className="whRise relative z-10 -mt-3 flex justify-center" style={{ "--wh-d": "350ms" } as CSSProperties}>
           <svg width="300" height="64" viewBox="0 0 300 64">
             <path d="M10 14 Q150 74 290 14" fill="none" stroke="#1c1410" strokeWidth="10" strokeLinecap="round" />
             <path d="M26 10 Q150 60 274 10" fill="none" stroke="#fff6ec" strokeWidth="4" strokeLinecap="round" strokeDasharray="14 10" opacity="0.9" />
@@ -249,8 +219,9 @@ export default function WelcomeHero() {
         </div>
 
         {/* hanging evidence threads */}
-        <div className="relative z-0 -mt-2 flex justify-center items-start gap-5 sm:gap-7">
-          <div className="whSway flex flex-col items-center" style={{ animationDelay: "0s", animationDuration: "4.2s" }}>
+        <div key={"drape-" + String(idx) + phase} className="relative z-0 -mt-2 flex justify-center items-start gap-5 sm:gap-7">
+          <div className={phase === "in" ? "whPour" : "whRetract"} style={{ "--wh-d": "700ms", "--wh-r": "90ms" } as CSSProperties}>
+            <div className="whSway flex flex-col items-center" style={{ animationDelay: "0s", animationDuration: "4.2s" }}>
             <div className="w-px h-14 border-l-2 border-dashed border-[#fff6ec]/80" />
             <div className="w-16 h-16 rounded-xl bg-[#fff6ec] border-[3px] border-[#1c1410] shadow-[4px_4px_0_#1c1410] flex items-center justify-center overflow-hidden">
               <svg width="34" height="34" viewBox="0 0 40 40">
@@ -259,26 +230,33 @@ export default function WelcomeHero() {
                 <circle cx="20" cy="23" r="7" fill="#fff6ec" stroke="#1c1410" strokeWidth="2.5" />
               </svg>
             </div>
+            </div>
           </div>
 
-          <div className="whSway flex flex-col items-center pt-4" style={{ animationDelay: "0.7s", animationDuration: "5.1s" }}>
+          <div className={phase === "in" ? "whPour" : "whRetract"} style={{ "--wh-d": "850ms", "--wh-r": "0ms" } as CSSProperties}>
+            <div className="whSway flex flex-col items-center pt-4" style={{ animationDelay: "0.7s", animationDuration: "5.1s" }}>
             <div className="w-px h-20 border-l-2 border-dashed border-[#fff6ec]/80" />
             <div className="px-3 py-2 rounded-xl bg-[#fff6ec] border-[3px] border-[#1c1410] shadow-[4px_4px_0_#1c1410] font-mono text-[12px] font-bold text-[#1c1410] whitespace-nowrap">
               3,000 ▲
             </div>
+            </div>
           </div>
 
-          <div className="whSway flex flex-col items-center" style={{ animationDelay: "1.4s", animationDuration: "4.7s" }}>
+          <div className={phase === "in" ? "whPour" : "whRetract"} style={{ "--wh-d": "1000ms", "--wh-r": "140ms" } as CSSProperties}>
+            <div className="whSway flex flex-col items-center" style={{ animationDelay: "1.4s", animationDuration: "4.7s" }}>
             <div className="w-px h-10 border-l-2 border-dashed border-[#fff6ec]/80" />
             <div className="px-3 py-2 rounded-xl bg-[#c8f000] border-[3px] border-[#1c1410] shadow-[4px_4px_0_#1c1410] font-mono text-[12px] font-bold text-[#1c1410] whitespace-nowrap">
               ✓ {s.vouched}
             </div>
+            </div>
           </div>
 
-          <div className="whSway flex flex-col items-center pt-6" style={{ animationDelay: "0.3s", animationDuration: "5.6s" }}>
+          <div className={phase === "in" ? "whPour" : "whRetract"} style={{ "--wh-d": "1150ms", "--wh-r": "50ms" } as CSSProperties}>
+            <div className="whSway flex flex-col items-center pt-6" style={{ animationDelay: "0.3s", animationDuration: "5.6s" }}>
             <div className="w-px h-16 border-l-2 border-dashed border-[#fff6ec]/80" />
             <div className="px-3 py-2 rounded-xl bg-[#6b4eff] border-[3px] border-[#1c1410] shadow-[4px_4px_0_#1c1410] font-mono text-[12px] font-bold text-[#fff6ec] whitespace-nowrap">
               {s.dayOne} ◦
+            </div>
             </div>
           </div>
         </div>
