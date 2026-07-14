@@ -24,13 +24,13 @@ export type FeedProfile = {
   artifacts: { image?: string }[] | null;
 };
 
-const PEEK_STRINGS: Record<string, { cta: string; reveal: string; stats: string; youd: string }> = {
-  en: { cta: "show me the proof", reveal: "the proof, so far —", stats: "real people: {n} · résumés: 0", youd: "you'd be" },
-  es: { cta: "muéstrame las pruebas", reveal: "las pruebas, hasta ahora —", stats: "personas reales: {n} · currículums: 0", youd: "serías" },
-  pt: { cta: "me mostra as provas", reveal: "as provas, até agora —", stats: "pessoas reais: {n} · currículos: 0", youd: "você seria" },
-  hi: { cta: "मुझे सबूत दिखाओ", reveal: "अब तक के सबूत —", stats: "असली लोग: {n} · रिज़्यूमे: 0", youd: "आप होंगे" },
-  pl: { cta: "pokaż mi dowody", reveal: "dowody, jak dotąd —", stats: "prawdziwi ludzie: {n} · CV: 0", youd: "będziesz" },
-  fr: { cta: "montre-moi les preuves", reveal: "les preuves, jusqu'ici —", stats: "vraies personnes : {n} · CV : 0", youd: "tu serais" },
+const PEEK_STRINGS: Record<string, { cta: string; reveal: string; stats: string; youd: string; lock: string; joinAll: string }> = {
+  en: { cta: "show me the proof", reveal: "the proof, so far —", stats: "real people: {n} · résumés: 0", youd: "you'd be", lock: "join to see their proof", joinAll: "see it all — it's free" },
+  es: { cta: "muéstrame las pruebas", reveal: "las pruebas, hasta ahora —", stats: "personas reales: {n} · currículums: 0", youd: "serías", lock: "únete para ver sus pruebas", joinAll: "míralo todo — es gratis" },
+  pt: { cta: "me mostra as provas", reveal: "as provas, até agora —", stats: "pessoas reais: {n} · currículos: 0", youd: "você seria", lock: "entre para ver as provas", joinAll: "veja tudo — é grátis" },
+  hi: { cta: "मुझे सबूत दिखाओ", reveal: "अब तक के सबूत —", stats: "असली लोग: {n} · रिज़्यूमे: 0", youd: "आप होंगे", lock: "सबूत देखने के लिए जुड़ें", joinAll: "सब देखें — मुफ़्त है" },
+  pl: { cta: "pokaż mi dowody", reveal: "dowody, jak dotąd —", stats: "prawdziwi ludzie: {n} · CV: 0", youd: "będziesz", lock: "dołącz, by zobaczyć dowody", joinAll: "zobacz wszystko — za darmo" },
+  fr: { cta: "montre-moi les preuves", reveal: "les preuves, jusqu'ici —", stats: "vraies personnes : {n} · CV : 0", youd: "tu serais", lock: "rejoins pour voir les preuves", joinAll: "vois tout — c'est gratuit" },
 };
 
 export default function HomeShell({
@@ -230,7 +230,7 @@ export default function HomeShell({
               <div className="text-center mb-16">
                 <button
                   onClick={() => setPeek(true)}
-                  className="group px-6 py-3.5 rounded-2xl border-[3px] border-[#fff6ec]/80 text-[#fff6ec] font-[Syne] font-bold text-[16px] hover:bg-[#fff6ec] hover:text-[#ff5d3b] transition-colors"
+                  className="px-6 py-3.5 rounded-2xl border-[3px] border-[#fff6ec]/80 text-[#fff6ec] font-[Syne] font-bold text-[16px] hover:bg-[#fff6ec] hover:text-[#ff5d3b] transition-colors"
                 >
                   {pk.cta} <span className="bob inline-block ml-1">↓</span>
                 </button>
@@ -281,6 +281,71 @@ export default function HomeShell({
                   const workImage = p.artifacts?.find((a) => a.image)?.image;
                   const accent = p.accent || "#6b4eff";
                   const both = p.id === myProfileId ? [] : shared(p);
+
+                  // guests get the velvet rope: real, but veiled — joining is how you look closer
+                  if (mode === "guest") {
+                    return (
+                      <Link
+                        key={p.id}
+                        href="/login"
+                        className="chapter block bg-[#fff6ec] rounded-3xl border-[3px] border-[#1c1410] shadow-[7px_7px_0_#1c1410,0_22px_44px_rgba(28,20,16,0.25)] overflow-hidden hover:translate-y-[-5px] hover:rotate-[-0.4deg] hover:shadow-[10px_13px_0_#1c1410,0_30px_60px_rgba(28,20,16,0.3)] active:translate-y-0 active:shadow-[4px_4px_0_#1c1410] transition-all duration-200"
+                        style={{ animationDelay: `${idx * 90}ms` }}
+                      >
+                        <div style={{ background: accent }} className="h-2 w-full" />
+                        <div className="p-5 flex items-center gap-4">
+                          {p.photo ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={p.photo}
+                              alt=""
+                              className="w-16 h-16 rounded-full object-cover border-[3px] flex-none blur-[7px] select-none" style={{ borderColor: accent }}
+                            />
+                          ) : (
+                            <div className="w-16 h-16 rounded-full text-[#fff6ec] flex items-center justify-center font-[Syne] font-extrabold text-2xl flex-none" style={{ background: accent }}>
+                              {p.name?.[0] ?? "?"}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            {!p.user_id && (
+                              <span className="inline-block mb-1 px-2 py-0.5 rounded-full border border-[#1c1410]/40 bg-white font-mono text-[9.5px] uppercase tracking-wider text-[#6b5e52]">
+                                {t(lang, "sample.badge")}
+                              </span>
+                            )}
+                            <p className="font-[Syne] font-extrabold text-xl leading-tight truncate tracking-[-0.01em]">
+                              {p.name.split(" ")[0]}
+                            </p>
+                            <p className="text-[13.5px] leading-snug text-[#3a2c20] line-clamp-2">
+                              {p.headline}
+                            </p>
+                            {p.mindset && p.mindset.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1.5">
+                                {p.mindset.slice(0, 3).map((tag) => (
+                                  <span
+                                    key={tag}
+                                    className="px-2 py-0.5 rounded-full text-[#fff6ec] text-[10.5px] font-medium" style={{ background: accent }}
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {workImage && (
+                          <div className="relative overflow-hidden border-t-[3px] border-[#1c1410]">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={workImage} alt="" className="w-full h-36 object-cover blur-md scale-110 select-none" />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="px-3.5 py-2 rounded-full bg-[#1c1410] text-[#fff6ec] font-mono text-[11px] font-bold tracking-wide">
+                                🔒 {pk.lock}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </Link>
+                    );
+                  }
+
                   return (
                     <Link
                       key={p.id}
@@ -343,9 +408,17 @@ export default function HomeShell({
               </div>
             )}
 
-            <p className="font-mono text-[11px] text-[#fff6ec]/80 mt-8 text-center">
-              {t(lang, "home.tapAnyone")}
-            </p>
+            {mode === "guest" ? (
+              <div className="text-center mt-8 mb-4">
+                <Link href="/login" className="inline-block px-7 py-4 rounded-2xl bg-[#c8f000] text-[#1c1410] font-[Syne] font-extrabold text-[16px] border-[3px] border-[#1c1410] shadow-[6px_6px_0_#1c1410] hover:translate-y-[-3px] hover:shadow-[8px_9px_0_#1c1410] active:translate-y-0 active:shadow-[3px_3px_0_#1c1410] transition-all duration-150">
+                  {pk.joinAll}
+                </Link>
+              </div>
+            ) : (
+              <p className="font-mono text-[11px] text-[#fff6ec]/80 mt-8 text-center">
+                {t(lang, "home.tapAnyone")}
+              </p>
+            )}
           </>
         )}
       </div>
