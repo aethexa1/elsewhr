@@ -6,6 +6,7 @@ import Link from "next/link";
 import OwnerBar from "./OwnerBar";
 import VouchSection from "./VouchSection";
 import ReachOut from "./ReachOut";
+import ReportBlockActions from "@/app/ReportBlockActions";
 import {
   BackLink,
   SampleBadge,
@@ -152,6 +153,12 @@ export default async function ProfilePage({
           profileId={profile.id}
           profileName={profile.name}
           ownerUserId={profile.user_id ?? null}
+        />
+
+        {/* safety: report + block (hidden for guests and on your own profile) */}
+        <ReportBlockActions
+          profileId={profile.id}
+          profileOwnerId={profile.user_id ?? null}
         />
 
         {/* the work */}
