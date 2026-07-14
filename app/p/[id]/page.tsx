@@ -7,6 +7,7 @@ import OwnerBar from "./OwnerBar";
 import VouchSection from "./VouchSection";
 import ReachOut from "./ReachOut";
 import ReportBlockActions from "@/app/ReportBlockActions";
+import DayOneBlock from "./DayOneBlock";
 import {
   BackLink,
   SampleBadge,
@@ -42,6 +43,7 @@ type Profile = {
   learning?: string | null;
   goal?: string | null;
   accent?: string | null;
+  day_one?: string | null;
   artifacts: Artifact[] | null;
 };
 
@@ -160,6 +162,11 @@ export default async function ProfilePage({
           profileId={profile.id}
           profileOwnerId={profile.user_id ?? null}
         />
+
+        {/* day one: zero work history, displayed with pride */}
+        {(!profile.artifacts || profile.artifacts.length === 0) && profile.day_one && (
+          <DayOneBlock firstStep={profile.day_one} />
+        )}
 
         {/* the work */}
         {profile.artifacts && profile.artifacts.length > 0 && (
