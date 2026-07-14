@@ -6,6 +6,7 @@ import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useLang, t } from "@/lib/i18n";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 type Tile = { claim: string; image: string; result: string; field: string; vouch: string };
 
@@ -48,12 +49,12 @@ const ACCENTS = [
 ];
 
 const DAYONE_STRINGS: Record<string, { badge: string; title: string; sub: string; ph: string; preview: string }> = {
-  en: { badge: "day one", title: "nothing built yet? that's day one.", sub: "tell me your first step instead â here, that counts as evidence.", ph: "this month I will …", preview: "DAY ONE — first step:" },
-  es: { badge: "día uno", title: "¿nada construido aún? eso es el día uno.", sub: "cuéntame tu primer paso â aquí, eso cuenta como prueba.", ph: "este mes voy a …", preview: "DÍA UNO — primer paso:" },
-  pt: { badge: "dia um", title: "nada construído ainda? isso é o dia um.", sub: "me conta seu primeiro passo â aqui, isso conta como prova.", ph: "este mês eu vou …", preview: "DIA UM — primeiro passo:" },
-  hi: { badge: "दिन एक", title: "अभी तक कुछ नहीं बनाया? यही है दिन एक।", sub: "मुझे अपना पहला कदम बताओ â यहाँ वही सबूत है।", ph: "इस महीने मैं …", preview: "दिन एक — पहला कदम:" },
-  pl: { badge: "dzień 1", title: "nic jeszcze nie masz? to jest dzień pierwszy.", sub: "powiedz mi swój pierwszy krok â tutaj to się liczy jako dowód.", ph: "w tym miesiącu zamierzam …", preview: "DZIEŃ 1 — pierwszy krok:" },
-  fr: { badge: "jour un", title: "rien de construit encore ? c'est le jour un.", sub: "dis-moi ton premier pas â ici, ça compte comme preuve.", ph: "ce mois-ci je vais …", preview: "JOUR UN — premier pas :" },
+  en: { badge: "day one", title: "nothing built yet? that's day one.", sub: "tell me your first step instead — here, that counts as evidence.", ph: "this month I will …", preview: "DAY ONE — first step:" },
+  es: { badge: "día uno", title: "¿nada construido aún? eso es el día uno.", sub: "cuéntame tu primer paso — aquí, eso cuenta como prueba.", ph: "este mes voy a …", preview: "DÍA UNO — primer paso:" },
+  pt: { badge: "dia um", title: "nada construído ainda? isso é o dia um.", sub: "me conta seu primeiro passo — aqui, isso conta como prova.", ph: "este mês eu vou …", preview: "DIA UM — primeiro passo:" },
+  hi: { badge: "दिन एक", title: "अभी तक कुछ नहीं बनाया? यही है दिन एक।", sub: "मुझे अपना पहला कदम बताओ — यहाँ वही सबूत है।", ph: "इस महीने मैं …", preview: "दिन एक — पहला कदम:" },
+  pl: { badge: "dzień 1", title: "nic jeszcze nie masz? to jest dzień pierwszy.", sub: "powiedz mi swój pierwszy krok — tutaj to się liczy jako dowód.", ph: "w tym miesiącu zamierzam …", preview: "DZIEŃ 1 — pierwszy krok:" },
+  fr: { badge: "jour un", title: "rien de construit encore ? c'est le jour un.", sub: "dis-moi ton premier pas — ici, ça compte comme preuve.", ph: "ce mois-ci je vais …", preview: "JOUR UN — premier pas :" },
 };
 
 const SOFIA = {
@@ -793,9 +794,9 @@ export default function CreatePage() {
       <div aria-hidden className="blob absolute bottom-0 -left-28 w-[26rem] h-[26rem] rounded-full bg-[#6b4eff] opacity-[0.12] blur-3xl" style={{ animation: "drift1 21s ease-in-out infinite reverse" }} />
       <div className="relative w-full max-w-[560px]">
         <div className="flex items-center justify-between mb-6">
-          <div className="font-[Syne] font-extrabold text-2xl tracking-tight text-[#fff6ec]">
+          <Link href="/" className="font-[Syne] font-extrabold text-2xl tracking-tight text-[#fff6ec]">
             elsewhr<span className="text-[#c8f000]">.</span>
-          </div>
+          </Link>
           <div className="flex gap-1.5">
             {steps.map((_, i) => (
               <span key={i} className={`w-2 h-2 rounded-full transition-all duration-300 ${i <= step ? "bg-[#c8f000] scale-110" : "bg-[#fff6ec]/40"}`} />
@@ -839,6 +840,11 @@ export default function CreatePage() {
 
         <p className="font-mono text-[11px] text-[#fff6ec]/80 mt-6 text-center">
           step {step + 1} of {steps.length} · under 5 minutes · you own everything here
+        </p>
+        <p className="mt-2 text-center">
+          <Link href="/" className="font-mono text-[11px] text-[#fff6ec]/70 underline underline-offset-4 hover:text-[#fff6ec]">
+            ← back to elsewhr
+          </Link>
         </p>
         {existingId && isLast && (
           <p className="mt-3 text-center">
