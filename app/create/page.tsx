@@ -47,6 +47,15 @@ const ACCENTS = [
   { name: "rose", hex: "#d94f8a" },
 ];
 
+const DAYONE_STRINGS: Record<string, { badge: string; title: string; sub: string; ph: string; preview: string }> = {
+  en: { badge: "day one", title: "nothing built yet? that's day one.", sub: "tell me your first step instead â here, that counts as evidence.", ph: "this month I will …", preview: "DAY ONE — first step:" },
+  es: { badge: "día uno", title: "¿nada construido aún? eso es el día uno.", sub: "cuéntame tu primer paso â aquí, eso cuenta como prueba.", ph: "este mes voy a …", preview: "DÍA UNO — primer paso:" },
+  pt: { badge: "dia um", title: "nada construído ainda? isso é o dia um.", sub: "me conta seu primeiro passo â aqui, isso conta como prova.", ph: "este mês eu vou …", preview: "DIA UM — primeiro passo:" },
+  hi: { badge: "दिन एक", title: "अभी तक कुछ नहीं बनाया? यही है दिन एक।", sub: "मुझे अपना पहला कदम बताओ â यहाँ वही सबूत है।", ph: "इस महीने मैं …", preview: "दिन एक — पहला कदम:" },
+  pl: { badge: "dzień 1", title: "nic jeszcze nie masz? to jest dzień pierwszy.", sub: "powiedz mi swój pierwszy krok â tutaj to się liczy jako dowód.", ph: "w tym miesiącu zamierzam …", preview: "DZIEŃ 1 — pierwszy krok:" },
+  fr: { badge: "jour un", title: "rien de construit encore ? c'est le jour un.", sub: "dis-moi ton premier pas â ici, ça compte comme preuve.", ph: "ce mois-ci je vais …", preview: "JOUR UN — premier pas :" },
+};
+
 const SOFIA = {
   claim: "Cut mis-ships 40% with a labeling system I built",
   result: "40% fewer errors",
@@ -74,6 +83,7 @@ export default function CreatePage() {
   const [learning, setLearning] = useState("");
   const [goal, setGoal] = useState("");
   const [tiles, setTiles] = useState<Tile[]>([{ ...emptyTile }]);
+  const [dayOne, setDayOne] = useState("");
   const [accent, setAccent] = useState("#6b4eff");
   const [resume, setResume] = useState("");
   const [parsing, setParsing] = useState(false);
@@ -113,6 +123,7 @@ export default function CreatePage() {
         setLearning(existing.learning ?? "");
         setGoal(existing.goal ?? "");
         setAccent(existing.accent ?? "#6b4eff");
+        setDayOne(existing.day_one ?? "");
         const arts = Array.isArray(existing.artifacts) ? existing.artifacts : [];
         setTiles(arts.length > 0 ? arts : [{ ...emptyTile }]);
       }
@@ -177,6 +188,7 @@ export default function CreatePage() {
             learning,
             goal,
             hasPhoto: Boolean(photo),
+            dayOne: dayOne.trim(),
             work: tiles
               .filter((t) => t.claim.trim())
               .map((t) => ({
@@ -235,6 +247,7 @@ export default function CreatePage() {
       goal: goal.trim(),
       artifacts: realTiles,
       accent,
+      day_one: dayOne.trim(),
     };
 
     const { error } = existingId
@@ -324,6 +337,8 @@ export default function CreatePage() {
     setPendingProfile(null);
     setStep(1);
   }
+
+  const ds = DAYONE_STRINGS[lang] || DAYONE_STRINGS.en;
 
   const ex = {
     claim: coach?.example?.claim || SOFIA.claim,
@@ -545,7 +560,7 @@ export default function CreatePage() {
       hint:
         coach?.hints?.work ||
         "A number makes it stronger. A photo makes it real — snap the actual work. \u201CHardworking\u201D is a claim — \u201Ccut errors 40%\u201D is proof.",
-      valid: tiles.some((t) => t.claim.trim().length > 0),
+      valid: tiles.some((t) => t.claim.trim().length > 0) || dayOne.trim().length >= 5,
       body: (
         <div className="flex flex-col gap-4">
           <button
@@ -614,6 +629,23 @@ export default function CreatePage() {
               + add another piece of work
             </button>
           )}
+
+          {!tiles.some((t) => t.claim.trim()) && (
+            <div className="border-[3px] border-[#6b4eff] bg-[#6b4eff]/10 rounded-2xl p-4">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-[#6b4eff] mb-1.5">
+                {ds.badge} ◦
+              </p>
+              <p className="font-bold text-[15px] leading-snug">{ds.title}</p>
+              <p className="text-[12.5px] text-[#6b5e52] mt-1 leading-snug">{ds.sub}</p>
+              <input
+                className={inputCls + " mt-3"}
+                value={dayOne}
+                onChange={(e) => setDayOne(e.target.value)}
+                maxLength={140}
+                placeholder={ds.ph}
+              />
+            </div>
+          )}
         </div>
       ),
     },
@@ -664,9 +696,18 @@ export default function CreatePage() {
             <div className="mt-3 flex items-center gap-2 text-[12px] font-mono">
               <span className="w-4 h-4 rounded-full inline-block border border-[#1c1410]/30" style={{ background: accent }} /> your color
             </div>
-            <p className="mt-2 text-[13px] text-[#6b5e52]">
-              {tiles.filter((t) => t.claim.trim()).length} piece(s) of work attached
-            </p>
+            {tiles.some((t) => t.claim.trim()) ? (
+              <p className="mt-2 text-[13px] text-[#6b5e52]">
+                {tiles.filter((t) => t.claim.trim()).length} piece(s) of work attached
+              </p>
+            ) : dayOne.trim() ? (
+              <p className="mt-2 text-[13px]">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-[#6b4eff]">{ds.preview}</span>{" "}
+                {dayOne.trim()}
+              </p>
+            ) : (
+              <p className="mt-2 text-[13px] text-[#6b5e52]">0 piece(s) of work attached</p>
+            )}
           </div>
 
           {!review && (
