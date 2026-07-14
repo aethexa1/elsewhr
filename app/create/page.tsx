@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useLang, t } from "@/lib/i18n";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import FlightMap from "./FlightMap";
 
 type Tile = { claim: string; image: string; result: string; field: string; vouch: string };
 
@@ -30,7 +31,7 @@ type Coach = {
 
 type Review = { strongest?: string; gaps?: string[]; verdict?: string };
 
-type Geo = { name: string; admin1?: string; country?: string };
+type Geo = { name: string; admin1?: string; country?: string; latitude?: number; longitude?: number };
 
 const MINDSET_OPTIONS = [
   "builder", "curious", "ships fast", "night owl", "team player",
@@ -49,12 +50,12 @@ const ACCENTS = [
 ];
 
 const DAYONE_STRINGS: Record<string, { badge: string; title: string; sub: string; ph: string; preview: string }> = {
-  en: { badge: "day one", title: "nothing built yet? that's day one.", sub: "tell me your first step instead — here, that counts as evidence.", ph: "this month I will …", preview: "DAY ONE — first step:" },
-  es: { badge: "día uno", title: "¿nada construido aún? eso es el día uno.", sub: "cuéntame tu primer paso — aquí, eso cuenta como prueba.", ph: "este mes voy a …", preview: "DÍA UNO — primer paso:" },
-  pt: { badge: "dia um", title: "nada construído ainda? isso é o dia um.", sub: "me conta seu primeiro passo — aqui, isso conta como prova.", ph: "este mês eu vou …", preview: "DIA UM — primeiro passo:" },
-  hi: { badge: "दिन एक", title: "अभी तक कुछ नहीं बनाया? यही है दिन एक।", sub: "मुझे अपना पहला कदम बताओ — यहाँ वही सबूत है।", ph: "इस महीने मैं …", preview: "दिन एक — पहला कदम:" },
-  pl: { badge: "dzień 1", title: "nic jeszcze nie masz? to jest dzień pierwszy.", sub: "powiedz mi swój pierwszy krok — tutaj to się liczy jako dowód.", ph: "w tym miesiącu zamierzam …", preview: "DZIEŃ 1 — pierwszy krok:" },
-  fr: { badge: "jour un", title: "rien de construit encore ? c'est le jour un.", sub: "dis-moi ton premier pas — ici, ça compte comme preuve.", ph: "ce mois-ci je vais …", preview: "JOUR UN — premier pas :" },
+  en: { badge: "day one", title: "nothing built yet? that's day one.", sub: "tell me your first step instead â here, that counts as evidence.", ph: "this month I will …", preview: "DAY ONE — first step:" },
+  es: { badge: "día uno", title: "¿nada construido aún? eso es el día uno.", sub: "cuéntame tu primer paso â aquí, eso cuenta como prueba.", ph: "este mes voy a …", preview: "DÍA UNO — primer paso:" },
+  pt: { badge: "dia um", title: "nada construído ainda? isso é o dia um.", sub: "me conta seu primeiro passo â aqui, isso conta como prova.", ph: "este mês eu vou …", preview: "DIA UM — primeiro passo:" },
+  hi: { badge: "दिन एक", title: "अभी तक कुछ नहीं बनाया? यही है दिन एक।", sub: "मुझे अपना पहला कदम बताओ â यहाँ वही सबूत है।", ph: "इस महीने मैं …", preview: "दिन एक — पहला कदम:" },
+  pl: { badge: "dzień 1", title: "nic jeszcze nie masz? to jest dzień pierwszy.", sub: "powiedz mi swój pierwszy krok â tutaj to się liczy jako dowód.", ph: "w tym miesiącu zamierzam …", preview: "DZIEŃ 1 — pierwszy krok:" },
+  fr: { badge: "jour un", title: "rien de construit encore ? c'est le jour un.", sub: "dis-moi ton premier pas â ici, ça compte comme preuve.", ph: "ce mois-ci je vais …", preview: "JOUR UN — premier pas :" },
 };
 
 const DEST_STRINGS: Record<string, {
@@ -66,10 +67,10 @@ const DEST_STRINGS: Record<string, {
   statuses: { key: string; label: string }[];
 }> = {
   en: {
-    guide: "heading somewhere? new school, new city — tell me where, and I'll introduce you to people arriving with you.",
-    hint: "totally skippable — if you're settled where you are, just hit Next.",
-    placeLabel: "where you're headed", placePh: "UC Riverside · Chaffey College · a new city",
-    programLabel: "program / field", programPh: "computer science · nursing · trade school",
+    guide: "heading somewhere? new school, new city â tell me where, and I'll introduce you to people arriving with you.",
+    hint: "totally skippable â if you're settled where you are, just hit Next.",
+    placeLabel: "where you're headed", placePh: "UC Riverside Â· Chaffey College Â· a new city",
+    programLabel: "program / field", programPh: "computer science Â· nursing Â· trade school",
     termLabel: "when", termPh: "fall 2026",
     statusLabel: "where you are in the journey",
     statuses: [
@@ -81,10 +82,10 @@ const DEST_STRINGS: Record<string, {
     ],
   },
   es: {
-    guide: "¿vas a algún lugar? nueva escuela, nueva ciudad — dime dónde y te presentaré a gente que llega contigo.",
-    hint: "totalmente opcional — si ya estás establecido, dale a Siguiente.",
-    placeLabel: "a dónde vas", placePh: "UC Riverside · Chaffey College · una nueva ciudad",
-    programLabel: "programa / campo", programPh: "informática · enfermería · escuela técnica",
+    guide: "¿vas a algún lugar? nueva escuela, nueva ciudad â dime dónde y te presentaré a gente que llega contigo.",
+    hint: "totalmente opcional â si ya estás establecido, dale a Siguiente.",
+    placeLabel: "a dónde vas", placePh: "UC Riverside Â· Chaffey College Â· una nueva ciudad",
+    programLabel: "programa / campo", programPh: "informática Â· enfermería Â· escuela técnica",
     termLabel: "cuándo", termPh: "otoño 2026",
     statusLabel: "en qué punto del camino estás",
     statuses: [
@@ -96,10 +97,10 @@ const DEST_STRINGS: Record<string, {
     ],
   },
   pt: {
-    guide: "indo para algum lugar? nova escola, nova cidade — me diz onde e eu te apresento pessoas chegando com você.",
-    hint: "totalmente opcional — se você já está estabelecido, é só clicar em Próximo.",
-    placeLabel: "para onde você vai", placePh: "UC Riverside · Chaffey College · uma nova cidade",
-    programLabel: "programa / área", programPh: "computação · enfermagem · escola técnica",
+    guide: "indo para algum lugar? nova escola, nova cidade â me diz onde e eu te apresento pessoas chegando com você.",
+    hint: "totalmente opcional â se você já está estabelecido, é só clicar em Próximo.",
+    placeLabel: "para onde você vai", placePh: "UC Riverside Â· Chaffey College Â· uma nova cidade",
+    programLabel: "programa / área", programPh: "computação Â· enfermagem Â· escola técnica",
     termLabel: "quando", termPh: "outono 2026",
     statusLabel: "em que ponto da jornada você está",
     statuses: [
@@ -111,10 +112,10 @@ const DEST_STRINGS: Record<string, {
     ],
   },
   hi: {
-    guide: "कहीं जा रहे हो? नया स्कूल, नया शहर — मुझे बताओ कहाँ, और मैं तुम्हें उन लोगों से मिलाऊँगा जो तुम्हारे साथ पहुँच रहे हैं।",
-    hint: "पूरी तरह वैकल्पिक — अगर तुम जहाँ हो वहीं ठीक हो, तो बस Next दबाओ।",
-    placeLabel: "कहाँ जा रहे हो", placePh: "UC Riverside · Chaffey College · एक नया शहर",
-    programLabel: "प्रोग्राम / क्षेत्र", programPh: "कंप्यूटर साइंस · नर्सिंग · ट्रेड स्कूल",
+    guide: "कहीं जा रहे हो? नया स्कूल, नया शहर â मुझे बताओ कहाँ, और मैं तुम्हें उन लोगों से मिलाऊँगा जो तुम्हारे साथ पहुँच रहे हैं।",
+    hint: "पूरी तरह वैकल्पिक â अगर तुम जहाँ हो वहीं ठीक हो, तो बस Next दबाओ।",
+    placeLabel: "कहाँ जा रहे हो", placePh: "UC Riverside Â· Chaffey College Â· एक नया शहर",
+    programLabel: "प्रोग्राम / क्षेत्र", programPh: "कंप्यूटर साइंस Â· नर्सिंग Â· ट्रेड स्कूल",
     termLabel: "कब", termPh: "फ़ॉल 2026",
     statusLabel: "सफ़र में कहाँ हो",
     statuses: [
@@ -126,10 +127,10 @@ const DEST_STRINGS: Record<string, {
     ],
   },
   pl: {
-    guide: "wybierasz się gdzieś? nowa szkoła, nowe miasto — powiedz mi gdzie, a przedstawię ci ludzi, którzy przybywają razem z tobą.",
-    hint: "całkowicie opcjonalne — jeśli jesteś już na miejscu, po prostu kliknij Dalej.",
-    placeLabel: "dokąd zmierzasz", placePh: "UC Riverside · Chaffey College · nowe miasto",
-    programLabel: "kierunek / dziedzina", programPh: "informatyka · pielęgniarstwo · szkoła zawodowa",
+    guide: "wybierasz się gdzieś? nowa szkoła, nowe miasto â powiedz mi gdzie, a przedstawię ci ludzi, którzy przybywają razem z tobą.",
+    hint: "całkowicie opcjonalne â jeśli jesteś już na miejscu, po prostu kliknij Dalej.",
+    placeLabel: "dokąd zmierzasz", placePh: "UC Riverside Â· Chaffey College Â· nowe miasto",
+    programLabel: "kierunek / dziedzina", programPh: "informatyka Â· pielęgniarstwo Â· szkoła zawodowa",
     termLabel: "kiedy", termPh: "jesień 2026",
     statusLabel: "gdzie jesteś w tej podróży",
     statuses: [
@@ -141,10 +142,10 @@ const DEST_STRINGS: Record<string, {
     ],
   },
   fr: {
-    guide: "tu pars quelque part ? nouvelle école, nouvelle ville — dis-moi où, et je te présenterai ceux qui arrivent avec toi.",
-    hint: "totalement facultatif — si tu es déjà installé, clique simplement sur Suivant.",
-    placeLabel: "où tu vas", placePh: "UC Riverside · Chaffey College · une nouvelle ville",
-    programLabel: "programme / domaine", programPh: "informatique · soins infirmiers · école de métiers",
+    guide: "tu pars quelque part ? nouvelle école, nouvelle ville â dis-moi où, et je te présenterai ceux qui arrivent avec toi.",
+    hint: "totalement facultatif â si tu es déjà installé, clique simplement sur Suivant.",
+    placeLabel: "où tu vas", placePh: "UC Riverside Â· Chaffey College Â· une nouvelle ville",
+    programLabel: "programme / domaine", programPh: "informatique Â· soins infirmiers Â· école de métiers",
     termLabel: "quand", termPh: "automne 2026",
     statusLabel: "où tu en es dans le parcours",
     statuses: [
@@ -189,6 +190,7 @@ export default function CreatePage() {
   const [destProgram, setDestProgram] = useState("");
   const [destTerm, setDestTerm] = useState("");
   const [destStatus, setDestStatus] = useState("");
+  const [locCoords, setLocCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [accent, setAccent] = useState("#6b4eff");
   const [resume, setResume] = useState("");
   const [parsing, setParsing] = useState(false);
@@ -580,7 +582,8 @@ export default function CreatePage() {
       valid: true,
       body: (
         <div>
-          <LocationPicker value={location} onChange={setLocation} />
+          <LocationPicker value={location} onChange={setLocation} onCoords={(la, lo) => setLocCoords({ lat: la, lon: lo })} />
+          <FlightMap lat={locCoords ? locCoords.lat : null} lon={locCoords ? locCoords.lon : null} label={locCoords ? location : undefined} />
           <div className="mt-4">
             <FieldLabel>{t(lang, "c.websiteLabel")}</FieldLabel>
             <input
@@ -1034,13 +1037,15 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 function LocationPicker({
   value,
   onChange,
+  onCoords,
 }: {
   value: string;
   onChange: (v: string) => void;
+  onCoords?: (lat: number, lon: number) => void;
 }) {
   const { lang } = useLang();
   const [q, setQ] = useState(value);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<{ label: string; lat: number; lon: number }[]>([]);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -1055,10 +1060,16 @@ function LocationPicker({
           `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q.trim())}&count=6&language=en&format=json`
         );
         const d = await r.json();
-        const s = ((d.results ?? []) as Geo[]).map((x) =>
-          [x.name, x.admin1, x.country].filter(Boolean).join(", ")
-        );
-        setSuggestions([...new Set(s)]);
+        const seen = new Set<string>();
+        const s: { label: string; lat: number; lon: number }[] = [];
+        for (const x of (d.results ?? []) as Geo[]) {
+          const label = [x.name, x.admin1, x.country].filter(Boolean).join(", ");
+          if (!seen.has(label)) {
+            seen.add(label);
+            s.push({ label, lat: x.latitude ?? 0, lon: x.longitude ?? 0 });
+          }
+        }
+        setSuggestions(s);
         setOpen(true);
       } catch {
         setSuggestions([]);
@@ -1086,16 +1097,17 @@ function LocationPicker({
         <div className="absolute z-10 left-0 right-0 mt-1 bg-white border-2 border-[#1c1410] rounded-xl overflow-hidden shadow-[4px_4px_0_rgba(28,20,16,0.5)]">
           {suggestions.map((s) => (
             <button
-              key={s}
+              key={s.label}
               type="button"
               onMouseDown={() => {
-                setQ(s);
-                onChange(s);
+                setQ(s.label);
+                onChange(s.label);
+                if (onCoords) onCoords(s.lat, s.lon);
                 setOpen(false);
               }}
               className="block w-full text-left px-4 py-2.5 text-[14px] hover:bg-[#c8f000]/40 border-b border-[#1c1410]/10 last:border-b-0"
             >
-              📍 {s}
+              📍 {s.label}
             </button>
           ))}
         </div>
