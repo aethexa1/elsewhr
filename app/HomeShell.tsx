@@ -36,6 +36,7 @@ export default function HomeShell({
   const [peek, setPeek] = useState(false);
   const [myTags, setMyTags] = useState<string[]>([]);
   const [myProfileId, setMyProfileId] = useState<number | null>(null);
+  const [blockedIds, setBlockedIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -54,6 +55,14 @@ export default function HomeShell({
         setMyProfileId(mine.id);
         setMyTags(Array.isArray(mine.mindset) ? mine.mindset : []);
       }
+      // safety: people you've blocked never appear in your feed
+      const { data: blocks } = await supabase
+        .from("blocks")
+        .select("blocked_profile_id")
+        .eq("blocker_user_id", data.user.id);
+      if (blocks && blocks.length > 0) {
+        setBlockedIds(new Set(blocks.map((b) => b.blocked_profile_id as number)));
+      }
     });
   }, []);
 
@@ -66,10 +75,11 @@ export default function HomeShell({
       : [];
 
   // your own card lives under "me ▾ → My profile", not in the feed
-  const others =
+  const others = (
     mode === "member" && myProfileId
       ? profiles.filter((p) => p.id !== myProfileId)
-      : profiles;
+      : profiles
+  ).filter((p) => !blockedIds.has(p.id));
   const ordered =
     mode === "member" && myTags.length
       ? [...others].sort(
