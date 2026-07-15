@@ -21,7 +21,18 @@ export type FeedProfile = {
   seeking?: string | null;
   mindset?: string[] | null;
   accent?: string | null;
+  dest_place?: string | null;
+  dest_term?: string | null;
   artifacts: { image?: string }[] | null;
+};
+
+const WORLD_STRINGS: Record<string, { everywhere: string; also: string; early: string }> = {
+  en: { everywhere: "everywhere", also: "✦ also heading to {place}", early: "{n} in your world so far — you're early." },
+  es: { everywhere: "en todas partes", also: "✦ también va a {place}", early: "{n} en tu mundo por ahora — llegaste temprano." },
+  pt: { everywhere: "em todo lugar", also: "✦ também vai para {place}", early: "{n} no seu mundo por enquanto — você chegou cedo." },
+  hi: { everywhere: "सब जगह", also: "✦ {place} भी जा रहे हैं", early: "आपकी दुनिया में अभी {n} — आप जल्दी आए हैं।" },
+  pl: { everywhere: "wszędzie", also: "✦ też zmierza do {place}", early: "{n} w twoim świecie na razie — jesteś wcześnie." },
+  fr: { everywhere: "partout", also: "✦ va aussi à {place}", early: "{n} dans ton monde pour l'instant — tu es en avance." },
 };
 
 const PEEK_STRINGS: Record<string, { cta: string; reveal: string; stats: string; youd: string; lock: string; joinAll: string }> = {
@@ -42,11 +53,15 @@ export default function HomeShell({
 }) {
   const { lang } = useLang();
   const pk = PEEK_STRINGS[lang] || PEEK_STRINGS.en;
+  const wd = WORLD_STRINGS[lang] || WORLD_STRINGS.en;
   const [mode, setMode] = useState<"loading" | "guest" | "member">("loading");
   const [peek, setPeek] = useState(false);
   const [myTags, setMyTags] = useState<string[]>([]);
   const [myProfileId, setMyProfileId] = useState<number | null>(null);
   const [blockedIds, setBlockedIds] = useState<Set<number>>(new Set());
+  const [myDest, setMyDest] = useState("");
+  const [world, setWorld] = useState<"mine" | "all">("all");
+  const [knockCount, setKnockCount] = useState(0);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -57,14 +72,28 @@ export default function HomeShell({
       setMode("member");
       const { data: mine } = await supabase
         .from("profiles")
-        .select("id, mindset")
+        .select("id, mindset, dest_place")
         .eq("user_id", data.user.id)
         .limit(1)
         .maybeSingle();
       if (mine) {
         setMyProfileId(mine.id);
         setMyTags(Array.isArray(mine.mindset) ? mine.mindset : []);
+        if (mine.dest_place && String(mine.dest_place).trim()) {
+          setMyDest(String(mine.dest_place).trim());
+          let saved: string | null = null;
+          try { saved = localStorage.getItem("wh_world"); } catch { saved = null; }
+          setWorld(saved === "all" ? "all" : "mine");
+        }
       }
+      // knocks waiting at the door
+      const { count: kc } = await supabase
+        .from("reach_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("recipient_user_id", data.user.id)
+        .eq("status", "pending");
+      if (kc && kc > 0) setKnockCount(kc);
+
       // safety: people you've blocked never appear in your feed
       const { data: blocks } = await supabase
         .from("blocks")
@@ -93,12 +122,33 @@ export default function HomeShell({
       ? profiles.filter((p) => p.id !== myProfileId)
       : profiles
   ).filter((p) => !blockedIds.has(p.id));
+  // their own world: same destination rises to the top; nobody is ever filtered out
+  const norm = (s?: string | null) => (s ?? "").trim().toLowerCase();
+  const inCohort = (p: FeedProfile) =>
+    Boolean(myDest) && norm(p.dest_place) === norm(myDest);
+  const scoping = mode === "member" && world === "mine" && Boolean(myDest);
+  const cohortCount = scoping ? others.filter(inCohort).length : 0;
+
   const ordered =
-    mode === "member" && myTags.length
-      ? [...others].sort(
-          (a, b) => shared(b).length - shared(a).length || b.id - a.id
-        )
+    mode === "member"
+      ? [...others].sort((a, b) => {
+          if (scoping) {
+            const ca = inCohort(a) ? 1 : 0;
+            const cb = inCohort(b) ? 1 : 0;
+            if (cb !== ca) return cb - ca;
+          }
+          return shared(b).length - shared(a).length || b.id - a.id;
+        })
       : others;
+
+  const toggleWorld = () => {
+    setWorld((w) => {
+      const next = w === "mine" ? "all" : "mine";
+      try { localStorage.setItem("wh_world", next); } catch { /* private mode */ }
+      return next;
+    });
+  };
+  const shortDest = myDest.length > 16 ? myDest.slice(0, 15).trimEnd() + "…" : myDest;
 
   return (
     <main className="relative min-h-screen bg-[#ff5d3b] text-[#1c1410] flex justify-center px-4 py-8 overflow-hidden">
@@ -210,6 +260,23 @@ export default function HomeShell({
             elsewhr<span className="text-[#c8f000]">.</span>
           </div>
           <div className="flex items-center gap-2 md:gap-3">
+            {mode === "member" && knockCount > 0 && (
+              <Link
+                href="/knocks"
+                className="px-3 py-1.5 rounded-full border-2 border-[#c8f000] bg-[#c8f000] text-[#1c1410] font-mono text-[11px] font-bold tracking-wide hover:translate-y-[-1px] transition-transform"
+              >
+                🐦 {knockCount}
+              </Link>
+            )}
+            {mode === "member" && myDest && (
+              <button
+                type="button"
+                onClick={toggleWorld}
+                className="px-3 py-1.5 rounded-full border-2 border-[#fff6ec]/70 text-[#fff6ec] font-mono text-[11px] font-bold tracking-wide hover:bg-[#fff6ec]/10 transition-colors"
+              >
+                \ud83d\udccd {world === "mine" ? shortDest : wd.everywhere}
+              </button>
+            )}
             <LangPicker />
             <HeaderActions />
             <span className="bob inline-block"><Bird /></span>
@@ -252,6 +319,13 @@ export default function HomeShell({
               </h2>
             )}
           </>
+        )}
+
+        {/* their own world: honest early-days line */}
+        {scoping && (
+          <p className="rise font-mono text-[12px] text-[#fff6ec]/85 mb-4">
+            {wd.early.replace("{n}", String(cohortCount))}
+          </p>
         )}
 
         {/* MEMBER greeting */}
@@ -391,9 +465,15 @@ export default function HomeShell({
                               ))}
                             </div>
                           )}
+                          {scoping && inCohort(p) && (
+                            <p className="mt-1.5 font-mono text-[10.5px] font-bold text-[#6b4eff]">
+                              {wd.also.replace("{place}", p.dest_place ? p.dest_place.trim() : myDest)}
+                              {p.dest_term && p.dest_term.trim() ? " · " + p.dest_term.trim() : ""}
+                            </p>
+                          )}
                           {both.length > 0 && (
                             <p className="mt-1.5 font-mono text-[10.5px] text-[#6b5e52]">
-                              {t(lang, "home.youBoth")} {both.slice(0, 3).join(" · ")}
+                              {t(lang, "home.youBoth")} {both.slice(0, 3).join(" Â· ")}
                             </p>
                           )}
                         </div>
