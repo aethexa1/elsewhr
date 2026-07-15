@@ -1,5 +1,5 @@
-// elsewhr — reach out: the knock. Nothing is delivered without consent.
-// Replaces app/api/reach-out/route.ts
+// elsewhr — the door: accept or ignore a knock, straight from the email
+// Create this file at: app/api/knock/route.ts
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
@@ -7,10 +7,9 @@ import { createClient } from "@supabase/supabase-js";
 export const runtime = "nodejs";
 export const maxDuration = 15;
 
-const DAILY_LIMIT = 5;
+const EXPIRY_DAYS = 7;
 const SITE = "https://elsewhr.vercel.app";
 
-// html-escape without regex (paste-gremlin rule: plain string ops only)
 function esc(s: string): string {
   return s
     .split("&").join("&amp;")
@@ -19,136 +18,91 @@ function esc(s: string): string {
     .split("\n").join("<br/>");
 }
 
-export async function POST(req: Request) {
+function page(title: string, body: string): NextResponse {
+  const html = `<!doctype html>
+<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${title} — elsewhr</title></head>
+<body style="margin:0;background:#ff5d3b;font-family:Arial,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
+  <div style="max-width:440px;background:#fff6ec;border:3px solid #1c1410;border-radius:20px;box-shadow:8px 8px 0 #1c1410;padding:28px;color:#1c1410">
+    <p style="font-size:22px;font-weight:800;margin:0 0 4px">elsewhr<span style="color:#c8f000;-webkit-text-stroke:1px #1c1410">.</span></p>
+    <p style="font-size:18px;font-weight:800;margin:16px 0 8px">${title}</p>
+    <p style="font-size:14px;line-height:1.55;margin:0">${body}</p>
+    <p style="margin:20px 0 0"><a href="${SITE}" style="color:#6b4eff;font-weight:bold;font-size:13px">back to elsewhr &#8594;</a></p>
+  </div>
+</body></html>`;
+  return new NextResponse(html, {
+    status: 200,
+    headers: { "content-type": "text/html; charset=utf-8" },
+  }) as NextResponse;
+}
+
+export async function GET(req: Request) {
   try {
-    // --- who is knocking? ---
-    const authHeader = req.headers.get("authorization") || "";
-    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
-    if (!token) {
-      return NextResponse.json({ error: "Log in to reach out." }, { status: 401 });
-    }
+    const url = new URL(req.url);
+    const token = url.searchParams.get("token") || "";
+    const action = url.searchParams.get("action") || "";
 
-    const anon = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    const { data: userData, error: authError } = await anon.auth.getUser(token);
-    if (authError || !userData.user) {
-      return NextResponse.json({ error: "Log in to reach out." }, { status: 401 });
-    }
-    const sender = userData.user;
-
-    const { profileId, message } = await req.json();
-    if (!profileId || typeof message !== "string" || message.trim().length < 10) {
-      return NextResponse.json({ error: "Write a real message first." }, { status: 400 });
-    }
-    if (message.length > 1000) {
-      return NextResponse.json({ error: "Keep it under 1000 characters." }, { status: 400 });
+    if (!token || (action !== "accept" && action !== "ignore")) {
+      return page("that link doesn't work", "It may be incomplete — try the buttons in the email again.");
     }
 
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const resendKey = process.env.RESEND_API_KEY;
     if (!serviceKey || !resendKey) {
-      return NextResponse.json({ error: "Messaging isn't configured yet." }, { status: 500 });
+      return page("not configured", "Messaging isn't fully set up yet.");
     }
     const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
 
-    // --- you knock as somebody: a profile is required ---
+    const { data: knock } = await admin
+      .from("reach_requests")
+      .select("id, sender_user_id, sender_profile_id, recipient_user_id, message, status, created_at")
+      .eq("accept_token", token)
+      .maybeSingle();
+
+    if (!knock) {
+      return page("that link doesn't work", "This knock doesn't exist anymore.");
+    }
+    if (knock.status === "accepted") {
+      return page("already open", "You accepted this one — the message is in your inbox. Just reply to it.");
+    }
+    if (knock.status === "ignored") {
+      return page("already ignored", "You ignored this knock. They were never told.");
+    }
+
+    const ageMs = Date.now() - new Date(knock.created_at).getTime();
+    if (ageMs > EXPIRY_DAYS * 24 * 60 * 60 * 1000) {
+      await admin
+        .from("reach_requests")
+        .update({ status: "expired", responded_at: new Date().toISOString() })
+        .eq("id", knock.id);
+      return page("this knock expired", "It sat for more than a week. If they still matter to you, find them on elsewhr.");
+    }
+
+    if (action === "ignore") {
+      await admin
+        .from("reach_requests")
+        .update({ status: "ignored", responded_at: new Date().toISOString() })
+        .eq("id", knock.id);
+      return page("ignored", "Done. They will never know — no notification, nothing. The bird keeps secrets. &#128038;");
+    }
+
+    // --- accept: open the channel ---
     const { data: senderProfile } = await admin
       .from("profiles")
       .select("id, name, headline")
-      .eq("user_id", sender.id)
-      .limit(1)
+      .eq("id", knock.sender_profile_id)
       .maybeSingle();
-    if (!senderProfile) {
-      return NextResponse.json(
-        { error: "Build your page first — that's how people know who's knocking." },
-        { status: 400 }
-      );
+    const { data: senderUser } = await admin.auth.admin.getUserById(knock.sender_user_id);
+    const { data: recipientUser } = await admin.auth.admin.getUserById(knock.recipient_user_id);
+    const senderEmail = senderUser?.user?.email;
+    const recipientEmail = recipientUser?.user?.email;
+
+    if (!senderEmail || !recipientEmail) {
+      return page("something went wrong", "One side of this thread can't be reached right now. Try again later.");
     }
 
-    // --- recipient ---
-    const { data: target } = await admin
-      .from("profiles")
-      .select("id, name, user_id")
-      .eq("id", profileId)
-      .maybeSingle();
-    if (!target || !target.user_id) {
-      return NextResponse.json({ error: "That profile can't receive messages." }, { status: 400 });
-    }
-    if (target.user_id === sender.id) {
-      return NextResponse.json({ error: "That's your own profile." }, { status: 400 });
-    }
-
-    // --- blocks: if they've blocked you, the knock silently evaporates ---
-    // (an error here would teach a harasser they've been blocked)
-    const { data: blockRow } = await admin
-      .from("blocks")
-      .select("blocked_profile_id")
-      .eq("blocker_user_id", target.user_id)
-      .eq("blocked_profile_id", senderProfile.id)
-      .maybeSingle();
-    if (blockRow) {
-      return NextResponse.json({ ok: true });
-    }
-
-    // --- rate limit with teeth: counted in the database, 5 knocks a day ---
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { count } = await admin
-      .from("reach_requests")
-      .select("id", { count: "exact", head: true })
-      .eq("sender_user_id", sender.id)
-      .gte("created_at", dayAgo);
-    if ((count ?? 0) >= DAILY_LIMIT) {
-      return NextResponse.json(
-        { error: "The bird carries 5 knocks a day — yours are spent. Try tomorrow." },
-        { status: 429 }
-      );
-    }
-
-    // --- one pending knock per door ---
-    const { data: existing } = await admin
-      .from("reach_requests")
-      .select("id")
-      .eq("sender_user_id", sender.id)
-      .eq("recipient_profile_id", target.id)
-      .eq("status", "pending")
-      .maybeSingle();
-    if (existing) {
-      return NextResponse.json(
-        { error: "You've already knocked — give them time to answer." },
-        { status: 400 }
-      );
-    }
-
-    // --- store the knock ---
-    const { data: knock, error: insertError } = await admin
-      .from("reach_requests")
-      .insert({
-        sender_user_id: sender.id,
-        sender_profile_id: senderProfile.id,
-        recipient_profile_id: target.id,
-        recipient_user_id: target.user_id,
-        message: message.trim(),
-      })
-      .select("accept_token")
-      .single();
-    if (insertError || !knock) {
-      console.error("reach_requests insert:", insertError);
-      return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
-    }
-
-    // --- the knock email: no reply path, two doors ---
-    const { data: targetUser } = await admin.auth.admin.getUserById(target.user_id);
-    const recipientEmail = targetUser?.user?.email;
-    if (!recipientEmail) {
-      return NextResponse.json({ error: "That person can't be reached right now." }, { status: 400 });
-    }
-
-    const senderName = esc(senderProfile.name);
-    const senderLink = SITE + "/p/" + String(senderProfile.id);
-    const acceptUrl = SITE + "/api/knock?token=" + knock.accept_token + "&action=accept";
-    const ignoreUrl = SITE + "/api/knock?token=" + knock.accept_token + "&action=ignore";
+    const senderName = senderProfile ? esc(senderProfile.name) : "Someone on elsewhr";
+    const senderLink = senderProfile ? SITE + "/p/" + String(senderProfile.id) : SITE;
 
     const html = `
       <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;border:3px solid #1c1410;border-radius:16px;overflow:hidden">
@@ -156,17 +110,13 @@ export async function POST(req: Request) {
           <span style="font-size:20px;font-weight:800;color:#fff6ec">elsewhr<span style="color:#c8f000">.</span></span>
         </div>
         <div style="padding:20px;background:#fff6ec;color:#1c1410">
-          <p style="margin:0 0 6px;font-size:15px"><strong>${senderName}</strong> wants to reach out to you on elsewhr:</p>
-          ${senderProfile.headline ? `<p style="margin:0 0 14px;font-size:12px;color:#6b5e52">${esc(senderProfile.headline)}</p>` : ""}
-          <div style="background:#ffffff;border:2px solid #1c1410;border-radius:12px;padding:14px;font-size:14px;line-height:1.5">${esc(message.trim())}</div>
-          <p style="margin:14px 0 0;font-size:13px">
+          <p style="margin:0 0 6px;font-size:15px">You opened the thread with <strong>${senderName}</strong>. Their message:</p>
+          ${senderProfile?.headline ? `<p style="margin:0 0 14px;font-size:12px;color:#6b5e52">${esc(senderProfile.headline)}</p>` : ""}
+          <div style="background:#ffffff;border:2px solid #1c1410;border-radius:12px;padding:14px;font-size:14px;line-height:1.5">${esc(knock.message)}</div>
+          <p style="margin:16px 0 0;font-size:13px">
             <a href="${senderLink}" style="color:#6b4eff;font-weight:bold">See ${senderName}&#39;s real work &#8594;</a>
           </p>
-          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:18px 0 0"><tr>
-            <td><a href="${acceptUrl}" style="display:inline-block;background:#c8f000;color:#1c1410;font-weight:800;font-size:14px;text-decoration:none;border:2px solid #1c1410;border-radius:12px;padding:12px 18px">accept — open the thread</a></td>
-            <td style="padding-left:10px"><a href="${ignoreUrl}" style="display:inline-block;background:#ffffff;color:#1c1410;font-weight:700;font-size:14px;text-decoration:none;border:2px solid #1c1410;border-radius:12px;padding:12px 18px">ignore</a></td>
-          </tr></table>
-          <p style="margin:16px 0 0;font-size:11px;color:#6b5e52">Nothing is shared unless you accept. If you ignore this, ${senderName} will never know. The bird never shares your address. &#128038;</p>
+          <p style="margin:14px 0 0;font-size:11px;color:#6b5e52">Reply to this email and it goes straight to them. The bird never shares your address. &#128038;</p>
         </div>
       </div>`;
 
@@ -179,7 +129,8 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         from: "elsewhr bird <onboarding@resend.dev>",
         to: [recipientEmail],
-        subject: `${senderProfile.name} wants to reach out on elsewhr 🐦`,
+        reply_to: senderEmail,
+        subject: `Thread open: ${senderProfile?.name || "someone"} on elsewhr 🐦`,
         html,
       }),
     });
@@ -187,20 +138,117 @@ export async function POST(req: Request) {
     if (!r.ok) {
       const detail = await r.text();
       console.error("Resend error:", detail);
-      // knock stays stored; recipient just didn't get the email — mark expired so sender can retry later
+      return page("almost", "The thread couldn't open just now — try the accept button again in a minute.");
+    }
+
+    await admin
+      .from("reach_requests")
+      .update({ status: "accepted", responded_at: new Date().toISOString() })
+      .eq("id", knock.id);
+
+    return page("thread open", "Their message is in your inbox with a reply path attached — just hit reply. Addresses stay hidden on both sides. &#128038;");
+  } catch (e) {
+    console.error(e);
+    return page("something went wrong", "Try the link again in a minute.");
+  }
+}
+
+
+export async function POST(req: Request) {
+  try {
+    const { token, action } = await req.json();
+    if (!token || (action !== "accept" && action !== "ignore")) {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const resendKey = process.env.RESEND_API_KEY;
+    if (!serviceKey || !resendKey) {
+      return NextResponse.json({ error: "not configured" }, { status: 500 });
+    }
+    const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
+
+    const { data: knock } = await admin
+      .from("reach_requests")
+      .select("id, sender_user_id, sender_profile_id, recipient_user_id, message, status, created_at")
+      .eq("accept_token", token)
+      .maybeSingle();
+
+    if (!knock) return NextResponse.json({ error: "not found" }, { status: 404 });
+    if (knock.status !== "pending") {
+      return NextResponse.json({ ok: true, status: knock.status, emailed: false });
+    }
+
+    const ageMs = Date.now() - new Date(knock.created_at).getTime();
+    if (ageMs > EXPIRY_DAYS * 24 * 60 * 60 * 1000) {
       await admin
         .from("reach_requests")
         .update({ status: "expired", responded_at: new Date().toISOString() })
-        .eq("accept_token", knock.accept_token);
-      return NextResponse.json(
-        { error: "The bird couldn't deliver that — try again in a bit." },
-        { status: 502 }
-      );
+        .eq("id", knock.id);
+      return NextResponse.json({ ok: true, status: "expired", emailed: false });
     }
 
-    return NextResponse.json({ ok: true });
+    if (action === "ignore") {
+      await admin
+        .from("reach_requests")
+        .update({ status: "ignored", responded_at: new Date().toISOString() })
+        .eq("id", knock.id);
+      return NextResponse.json({ ok: true, status: "ignored", emailed: false });
+    }
+
+    // accept: mark first, then try to open the email thread (best-effort)
+    await admin
+      .from("reach_requests")
+      .update({ status: "accepted", responded_at: new Date().toISOString() })
+      .eq("id", knock.id);
+
+    let emailed = false;
+    try {
+      const { data: senderProfile } = await admin
+        .from("profiles")
+        .select("id, name, headline")
+        .eq("id", knock.sender_profile_id)
+        .maybeSingle();
+      const { data: senderUser } = await admin.auth.admin.getUserById(knock.sender_user_id);
+      const { data: recipientUser } = await admin.auth.admin.getUserById(knock.recipient_user_id);
+      const senderEmail = senderUser?.user?.email;
+      const recipientEmail = recipientUser?.user?.email;
+      if (senderEmail && recipientEmail) {
+        const senderName = senderProfile ? esc(senderProfile.name) : "Someone on elsewhr";
+        const senderLink = senderProfile ? SITE + "/p/" + String(senderProfile.id) : SITE;
+        const html = `
+          <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;border:3px solid #1c1410;border-radius:16px;overflow:hidden">
+            <div style="background:#ff5d3b;padding:16px 20px">
+              <span style="font-size:20px;font-weight:800;color:#fff6ec">elsewhr<span style="color:#c8f000">.</span></span>
+            </div>
+            <div style="padding:20px;background:#fff6ec;color:#1c1410">
+              <p style="margin:0 0 6px;font-size:15px">You opened the thread with <strong>${senderName}</strong>. Their message:</p>
+              <div style="background:#ffffff;border:2px solid #1c1410;border-radius:12px;padding:14px;font-size:14px;line-height:1.5">${esc(knock.message)}</div>
+              <p style="margin:16px 0 0;font-size:13px"><a href="${senderLink}" style="color:#6b4eff;font-weight:bold">See ${senderName}&#39;s real work &#8594;</a></p>
+              <p style="margin:14px 0 0;font-size:11px;color:#6b5e52">Reply to this email and it goes straight to them. &#128038;</p>
+            </div>
+          </div>`;
+        const r = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: `Bearer ${resendKey}` },
+          body: JSON.stringify({
+            from: "elsewhr bird <onboarding@resend.dev>",
+            to: [recipientEmail],
+            reply_to: senderEmail,
+            subject: `Thread open: ${senderProfile?.name || "someone"} on elsewhr 🐦`,
+            html,
+          }),
+        });
+        emailed = r.ok;
+        if (!r.ok) console.error("Resend error (in-app accept, thread email failed):", await r.text());
+      }
+    } catch (e) {
+      console.error("in-app accept email error:", e);
+    }
+
+    return NextResponse.json({ ok: true, status: "accepted", emailed });
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+    return NextResponse.json({ error: "something went wrong" }, { status: 500 });
   }
 }
