@@ -1,154 +1,282 @@
-// elsewhr — the door: accept or ignore a knock, straight from the email
-// Create this file at: app/api/knock/route.ts
+"use client";
 
-import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+// elsewhr — knocks at your door: the in-app inbox for reach-out requests
+// New file: app/knocks/page.tsx
+// Works even when email can't deliver — the door lives here now.
 
-export const runtime = "nodejs";
-export const maxDuration = 15;
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { supabase } from "@/lib/supabaseClient";
+import { useLang } from "@/lib/i18n";
 
-const EXPIRY_DAYS = 7;
-const SITE = "https://elsewhr.vercel.app";
+type Knock = {
+  id: number;
+  sender_profile_id: number;
+  message: string;
+  status: string;
+  created_at: string;
+  accept_token: string;
+};
 
-function esc(s: string): string {
-  return s
-    .split("&").join("&amp;")
-    .split("<").join("&lt;")
-    .split(">").join("&gt;")
-    .split("\n").join("<br/>");
-}
+type SenderCard = {
+  id: number;
+  name: string;
+  headline: string;
+  photo?: string | null;
+  accent?: string | null;
+};
 
-function page(title: string, body: string): NextResponse {
-  const html = `<!doctype html>
-<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>${title} — elsewhr</title></head>
-<body style="margin:0;background:#ff5d3b;font-family:Arial,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
-  <div style="max-width:440px;background:#fff6ec;border:3px solid #1c1410;border-radius:20px;box-shadow:8px 8px 0 #1c1410;padding:28px;color:#1c1410">
-    <p style="font-size:22px;font-weight:800;margin:0 0 4px">elsewhr<span style="color:#c8f000;-webkit-text-stroke:1px #1c1410">.</span></p>
-    <p style="font-size:18px;font-weight:800;margin:16px 0 8px">${title}</p>
-    <p style="font-size:14px;line-height:1.55;margin:0">${body}</p>
-    <p style="margin:20px 0 0"><a href="${SITE}" style="color:#6b4eff;font-weight:bold;font-size:13px">back to elsewhr &#8594;</a></p>
-  </div>
-</body></html>`;
-  return new NextResponse(html, {
-    status: 200,
-    headers: { "content-type": "text/html; charset=utf-8" },
-  }) as NextResponse;
-}
+const STRINGS: Record<string, {
+  title: string; sub: string; empty: string; loading: string;
+  accept: string; ignore: string; accepted: string; acceptedNoEmail: string;
+  ignored: string; wantsTo: string; seeWork: string; back: string;
+}> = {
+  en: {
+    title: "knocks at your door",
+    sub: "people who want to reach you. accept to open the thread — ignore and they'll never know.",
+    empty: "no knocks right now. the door is quiet.",
+    loading: "checking the door…",
+    accept: "accept — open the thread",
+    ignore: "ignore",
+    accepted: "thread open — their message is in your email, just hit reply.",
+    acceptedNoEmail: "accepted — their message is saved here. the email thread opens once elsewhr's mail is fully set up.",
+    ignored: "ignored. they were never told.",
+    wantsTo: "wants to reach out:",
+    seeWork: "see their real work →",
+    back: "← back to elsewhr",
+  },
+  es: {
+    title: "llamados a tu puerta",
+    sub: "gente que quiere contactarte. acepta para abrir el hilo — ignora y nunca lo sabrán.",
+    empty: "no hay llamados ahora. la puerta está tranquila.",
+    loading: "revisando la puerta…",
+    accept: "aceptar — abrir el hilo",
+    ignore: "ignorar",
+    accepted: "hilo abierto — su mensaje está en tu correo, solo responde.",
+    acceptedNoEmail: "aceptado — su mensaje quedó guardado aquí. el hilo por correo se abre cuando el mail de elsewhr esté listo.",
+    ignored: "ignorado. nunca lo sabrán.",
+    wantsTo: "quiere contactarte:",
+    seeWork: "ver su trabajo real →",
+    back: "← volver a elsewhr",
+  },
+  pt: {
+    title: "batidas na sua porta",
+    sub: "pessoas que querem falar com você. aceite para abrir o fio — ignore e elas nunca saberão.",
+    empty: "nenhuma batida agora. a porta está quieta.",
+    loading: "verificando a porta…",
+    accept: "aceitar — abrir o fio",
+    ignore: "ignorar",
+    accepted: "fio aberto — a mensagem está no seu e-mail, é só responder.",
+    acceptedNoEmail: "aceito — a mensagem ficou salva aqui. o fio por e-mail abre quando o mail do elsewhr estiver pronto.",
+    ignored: "ignorado. nunca saberão.",
+    wantsTo: "quer falar com você:",
+    seeWork: "ver o trabalho real →",
+    back: "← voltar ao elsewhr",
+  },
+  hi: {
+    title: "आपके दरवाज़े पर दस्तक",
+    sub: "लोग जो आपसे जुड़ना चाहते हैं। स्वीकार करें और बातचीत शुरू करें — नज़रअंदाज़ करें तो उन्हें कभी पता नहीं चलेगा।",
+    empty: "अभी कोई दस्तक नहीं। दरवाज़ा शांत है।",
+    loading: "दरवाज़ा देख रहे हैं…",
+    accept: "स्वीकार करें — बातचीत खोलें",
+    ignore: "नज़रअंदाज़ करें",
+    accepted: "बातचीत खुल गई — उनका संदेश आपके ईमेल में है, बस reply करें।",
+    acceptedNoEmail: "स्वीकार किया — संदेश यहाँ सुरक्षित है। elsewhr का मेल तैयार होते ही ईमेल थ्रेड खुलेगा।",
+    ignored: "नज़रअंदाज़ किया। उन्हें कभी पता नहीं चलेगा।",
+    wantsTo: "आपसे जुड़ना चाहते हैं:",
+    seeWork: "उनका असली काम देखें →",
+    back: "← elsewhr पर वापस",
+  },
+  pl: {
+    title: "pukanie do twoich drzwi",
+    sub: "ludzie, którzy chcą się z tobą skontaktować. zaakceptuj, by otworzyć wątek — zignoruj, a nigdy się nie dowiedzą.",
+    empty: "brak pukania. drzwi są spokojne.",
+    loading: "sprawdzam drzwi…",
+    accept: "akceptuj — otwórz wątek",
+    ignore: "ignoruj",
+    accepted: "wątek otwarty — wiadomość jest w twoim mailu, po prostu odpowiedz.",
+    acceptedNoEmail: "zaakceptowano — wiadomość zapisana tutaj. wątek mailowy otworzy się, gdy poczta elsewhr będzie gotowa.",
+    ignored: "zignorowano. nigdy się nie dowiedzą.",
+    wantsTo: "chce się skontaktować:",
+    seeWork: "zobacz prawdziwą pracę →",
+    back: "← wróć do elsewhr",
+  },
+  fr: {
+    title: "on frappe à ta porte",
+    sub: "des gens veulent te joindre. accepte pour ouvrir le fil — ignore et ils ne le sauront jamais.",
+    empty: "personne ne frappe. la porte est calme.",
+    loading: "on vérifie la porte…",
+    accept: "accepter — ouvrir le fil",
+    ignore: "ignorer",
+    accepted: "fil ouvert — leur message est dans ta boîte mail, réponds simplement.",
+    acceptedNoEmail: "accepté — le message est gardé ici. le fil par e-mail s'ouvrira quand le mail d'elsewhr sera prêt.",
+    ignored: "ignoré. ils ne le sauront jamais.",
+    wantsTo: "veut te joindre :",
+    seeWork: "voir son vrai travail →",
+    back: "← retour à elsewhr",
+  },
+};
 
-export async function GET(req: Request) {
-  try {
-    const url = new URL(req.url);
-    const token = url.searchParams.get("token") || "";
-    const action = url.searchParams.get("action") || "";
+export default function KnocksPage() {
+  const { lang } = useLang();
+  const s = STRINGS[lang] || STRINGS.en;
+  const [loading, setLoading] = useState(true);
+  const [knocks, setKnocks] = useState<Knock[]>([]);
+  const [senders, setSenders] = useState<Record<number, SenderCard>>({});
+  const [done, setDone] = useState<Record<number, string>>({});
+  const [busy, setBusy] = useState<number | null>(null);
 
-    if (!token || (action !== "accept" && action !== "ignore")) {
-      return page("that link doesn't work", "It may be incomplete — try the buttons in the email again.");
-    }
-
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const resendKey = process.env.RESEND_API_KEY;
-    if (!serviceKey || !resendKey) {
-      return page("not configured", "Messaging isn't fully set up yet.");
-    }
-    const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
-
-    const { data: knock } = await admin
-      .from("reach_requests")
-      .select("id, sender_user_id, sender_profile_id, recipient_user_id, message, status, created_at")
-      .eq("accept_token", token)
-      .maybeSingle();
-
-    if (!knock) {
-      return page("that link doesn't work", "This knock doesn't exist anymore.");
-    }
-    if (knock.status === "accepted") {
-      return page("already open", "You accepted this one — the message is in your inbox. Just reply to it.");
-    }
-    if (knock.status === "ignored") {
-      return page("already ignored", "You ignored this knock. They were never told.");
-    }
-
-    const ageMs = Date.now() - new Date(knock.created_at).getTime();
-    if (ageMs > EXPIRY_DAYS * 24 * 60 * 60 * 1000) {
-      await admin
+  useEffect(() => {
+    async function load() {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) {
+        setLoading(false);
+        return;
+      }
+      const { data: rows } = await supabase
         .from("reach_requests")
-        .update({ status: "expired", responded_at: new Date().toISOString() })
-        .eq("id", knock.id);
-      return page("this knock expired", "It sat for more than a week. If they still matter to you, find them on elsewhr.");
+        .select("id, sender_profile_id, message, status, created_at, accept_token")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+      const list = (rows ?? []) as Knock[];
+      setKnocks(list);
+      if (list.length > 0) {
+        const ids = [...new Set(list.map((k) => k.sender_profile_id))];
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id, name, headline, photo, accent")
+          .in("id", ids);
+        const map: Record<number, SenderCard> = {};
+        for (const p of (profs ?? []) as SenderCard[]) map[p.id] = p;
+        setSenders(map);
+      }
+      setLoading(false);
     }
+    load();
+  }, []);
 
-    if (action === "ignore") {
-      await admin
-        .from("reach_requests")
-        .update({ status: "ignored", responded_at: new Date().toISOString() })
-        .eq("id", knock.id);
-      return page("ignored", "Done. They will never know — no notification, nothing. The bird keeps secrets. &#128038;");
+  async function act(k: Knock, action: "accept" | "ignore") {
+    if (busy !== null) return;
+    setBusy(k.id);
+    try {
+      const r = await fetch("/api/knock", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: k.accept_token, action }),
+      });
+      const data = await r.json();
+      if (r.ok && data.ok) {
+        if (action === "ignore") setDone((d) => ({ ...d, [k.id]: s.ignored }));
+        else setDone((d) => ({ ...d, [k.id]: data.emailed ? s.accepted : s.acceptedNoEmail }));
+      }
+    } catch {
+      // leave the card; they can retry
     }
-
-    // --- accept: open the channel ---
-    const { data: senderProfile } = await admin
-      .from("profiles")
-      .select("id, name, headline")
-      .eq("id", knock.sender_profile_id)
-      .maybeSingle();
-    const { data: senderUser } = await admin.auth.admin.getUserById(knock.sender_user_id);
-    const { data: recipientUser } = await admin.auth.admin.getUserById(knock.recipient_user_id);
-    const senderEmail = senderUser?.user?.email;
-    const recipientEmail = recipientUser?.user?.email;
-
-    if (!senderEmail || !recipientEmail) {
-      return page("something went wrong", "One side of this thread can't be reached right now. Try again later.");
-    }
-
-    const senderName = senderProfile ? esc(senderProfile.name) : "Someone on elsewhr";
-    const senderLink = senderProfile ? SITE + "/p/" + String(senderProfile.id) : SITE;
-
-    const html = `
-      <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;border:3px solid #1c1410;border-radius:16px;overflow:hidden">
-        <div style="background:#ff5d3b;padding:16px 20px">
-          <span style="font-size:20px;font-weight:800;color:#fff6ec">elsewhr<span style="color:#c8f000">.</span></span>
-        </div>
-        <div style="padding:20px;background:#fff6ec;color:#1c1410">
-          <p style="margin:0 0 6px;font-size:15px">You opened the thread with <strong>${senderName}</strong>. Their message:</p>
-          ${senderProfile?.headline ? `<p style="margin:0 0 14px;font-size:12px;color:#6b5e52">${esc(senderProfile.headline)}</p>` : ""}
-          <div style="background:#ffffff;border:2px solid #1c1410;border-radius:12px;padding:14px;font-size:14px;line-height:1.5">${esc(knock.message)}</div>
-          <p style="margin:16px 0 0;font-size:13px">
-            <a href="${senderLink}" style="color:#6b4eff;font-weight:bold">See ${senderName}&#39;s real work &#8594;</a>
-          </p>
-          <p style="margin:14px 0 0;font-size:11px;color:#6b5e52">Reply to this email and it goes straight to them. The bird never shares your address. &#128038;</p>
-        </div>
-      </div>`;
-
-    const r = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${resendKey}`,
-      },
-      body: JSON.stringify({
-        from: "elsewhr bird <onboarding@resend.dev>",
-        to: [recipientEmail],
-        reply_to: senderEmail,
-        subject: `Thread open: ${senderProfile?.name || "someone"} on elsewhr 🐦`,
-        html,
-      }),
-    });
-
-    if (!r.ok) {
-      const detail = await r.text();
-      console.error("Resend error:", detail);
-      return page("almost", "The thread couldn't open just now — try the accept button again in a minute.");
-    }
-
-    await admin
-      .from("reach_requests")
-      .update({ status: "accepted", responded_at: new Date().toISOString() })
-      .eq("id", knock.id);
-
-    return page("thread open", "Their message is in your inbox with a reply path attached — just hit reply. Addresses stay hidden on both sides. &#128038;");
-  } catch (e) {
-    console.error(e);
-    return page("something went wrong", "Try the link again in a minute.");
+    setBusy(null);
   }
+
+  return (
+    <main className="relative min-h-screen bg-[#ff5d3b] text-[#1c1410] flex justify-center px-4 py-8 overflow-hidden">
+      <style>{`
+        @keyframes rise { from { opacity:0; transform:translateY(22px);} to { opacity:1; transform:none;} }
+        .rise { animation: rise .5s cubic-bezier(.2,.7,.3,1) both; }
+        @media (prefers-reduced-motion: reduce) { .rise { animation:none !important; } }
+      `}</style>
+      <div className="relative w-full max-w-[560px]">
+        <div className="flex items-center justify-between mb-6">
+          <Link href="/" className="font-[Syne] font-extrabold text-2xl tracking-tight text-[#fff6ec]">
+            elsewhr<span className="text-[#c8f000]">.</span>
+          </Link>
+          <Link href="/" className="font-mono text-[11px] text-[#fff6ec]/80 underline underline-offset-4 hover:text-[#fff6ec]">
+            {s.back}
+          </Link>
+        </div>
+
+        <h1 className="rise font-[Syne] font-extrabold text-3xl text-[#fff6ec]">{s.title}</h1>
+        <p className="rise mt-2 mb-6 text-[14px] text-[#fff6ec]/90 leading-snug" style={{ animationDelay: "80ms" }}>
+          {s.sub}
+        </p>
+
+        {loading && <p className="font-mono text-[12px] text-[#fff6ec]/70">{s.loading}</p>}
+
+        {!loading && knocks.length === 0 && (
+          <div className="rise bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-3xl p-8 text-center shadow-[7px_7px_0_#1c1410]">
+            <p className="text-[15px] font-medium">{s.empty} 🐦</p>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-4">
+          {knocks.map((k, idx) => {
+            const sender = senders[k.sender_profile_id];
+            const accent = sender?.accent || "#6b4eff";
+            const resolved = done[k.id];
+            return (
+              <div
+                key={k.id}
+                className="rise bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-3xl overflow-hidden shadow-[7px_7px_0_#1c1410]"
+                style={{ animationDelay: `${idx * 90}ms` }}
+              >
+                <div style={{ background: accent }} className="h-2 w-full" />
+                <div className="p-5">
+                  <div className="flex items-center gap-3">
+                    {sender?.photo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={sender.photo} alt={sender.name} className="w-12 h-12 rounded-full object-cover border-[3px] flex-none" style={{ borderColor: accent }} />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full text-[#fff6ec] flex items-center justify-center font-[Syne] font-extrabold text-xl flex-none" style={{ background: accent }}>
+                        {sender?.name?.[0] ?? "?"}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="font-[Syne] font-extrabold text-lg leading-tight truncate">
+                        {sender?.name ?? "…"} <span className="font-sans font-medium text-[13px] text-[#6b5e52]">{s.wantsTo}</span>
+                      </p>
+                      {sender?.headline && (
+                        <p className="text-[12.5px] text-[#6b5e52] truncate">{sender.headline}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-3 bg-white border-2 border-[#1c1410] rounded-xl p-3 text-[14px] leading-relaxed whitespace-pre-wrap">
+                    {k.message}
+                  </div>
+
+                  {sender && (
+                    <p className="mt-2">
+                      <Link href={`/p/${sender.id}`} className="font-mono text-[11.5px] font-bold text-[#6b4eff] underline underline-offset-4">
+                        {s.seeWork}
+                      </Link>
+                    </p>
+                  )}
+
+                  {resolved ? (
+                    <p className="mt-4 text-[13.5px] font-medium">{resolved} 🐦</p>
+                  ) : (
+                    <div className="flex gap-2 mt-4">
+                      <button
+                        type="button"
+                        onClick={() => act(k, "accept")}
+                        disabled={busy !== null}
+                        className="flex-1 py-2.5 rounded-xl border-2 border-[#1c1410] bg-[#c8f000] font-bold text-[14px] hover:translate-y-[-2px] transition-transform disabled:opacity-50"
+                      >
+                        {s.accept}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => act(k, "ignore")}
+                        disabled={busy !== null}
+                        className="px-4 py-2.5 rounded-xl border-2 border-[#1c1410] bg-white font-bold text-[14px] disabled:opacity-50"
+                      >
+                        {s.ignore}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </main>
+  );
 }
