@@ -473,7 +473,7 @@ export default function HomeShell({
                           )}
                           {both.length > 0 && (
                             <p className="mt-1.5 font-mono text-[10.5px] text-[#6b5e52]">
-                              {t(lang, "home.youBoth")} {both.slice(0, 3).join(" Â· ")}
+                              {t(lang, "home.youBoth")} {both.slice(0, 3).join(" · ")}
                             </p>
                           )}
                         </div>
