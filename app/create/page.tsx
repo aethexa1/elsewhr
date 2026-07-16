@@ -50,12 +50,12 @@ const ACCENTS = [
 ];
 
 const DAYONE_STRINGS: Record<string, { badge: string; title: string; sub: string; ph: string; preview: string }> = {
-  en: { badge: "day one", title: "nothing built yet? that's day one.", sub: "tell me your first step instead â here, that counts as evidence.", ph: "this month I will …", preview: "DAY ONE — first step:" },
-  es: { badge: "día uno", title: "¿nada construido aún? eso es el día uno.", sub: "cuéntame tu primer paso â aquí, eso cuenta como prueba.", ph: "este mes voy a …", preview: "DÍA UNO — primer paso:" },
-  pt: { badge: "dia um", title: "nada construído ainda? isso é o dia um.", sub: "me conta seu primeiro passo â aqui, isso conta como prova.", ph: "este mês eu vou …", preview: "DIA UM — primeiro passo:" },
-  hi: { badge: "दिन एक", title: "अभी तक कुछ नहीं बनाया? यही है दिन एक।", sub: "मुझे अपना पहला कदम बताओ â यहाँ वही सबूत है।", ph: "इस महीने मैं …", preview: "दिन एक — पहला कदम:" },
-  pl: { badge: "dzień 1", title: "nic jeszcze nie masz? to jest dzień pierwszy.", sub: "powiedz mi swój pierwszy krok â tutaj to się liczy jako dowód.", ph: "w tym miesiącu zamierzam …", preview: "DZIEŃ 1 — pierwszy krok:" },
-  fr: { badge: "jour un", title: "rien de construit encore ? c'est le jour un.", sub: "dis-moi ton premier pas â ici, ça compte comme preuve.", ph: "ce mois-ci je vais …", preview: "JOUR UN — premier pas :" },
+  en: { badge: "day one", title: "nothing built yet? that's day one.", sub: "tell me your first step instead — here, that counts as evidence.", ph: "this month I will …", preview: "DAY ONE — first step:" },
+  es: { badge: "día uno", title: "¿nada construido aún? eso es el día uno.", sub: "cuéntame tu primer paso — aquí, eso cuenta como prueba.", ph: "este mes voy a …", preview: "DÍA UNO — primer paso:" },
+  pt: { badge: "dia um", title: "nada construído ainda? isso é o dia um.", sub: "me conta seu primeiro passo — aqui, isso conta como prova.", ph: "este mês eu vou …", preview: "DIA UM — primeiro passo:" },
+  hi: { badge: "दिन एक", title: "अभी तक कुछ नहीं बनाया? यही है दिन एक।", sub: "मुझे अपना पहला कदम बताओ — यहाँ वही सबूत है।", ph: "इस महीने मैं …", preview: "दिन एक — पहला कदम:" },
+  pl: { badge: "dzień 1", title: "nic jeszcze nie masz? to jest dzień pierwszy.", sub: "powiedz mi swój pierwszy krok — tutaj to się liczy jako dowód.", ph: "w tym miesiącu zamierzam …", preview: "DZIEŃ 1 — pierwszy krok:" },
+  fr: { badge: "jour un", title: "rien de construit encore ? c'est le jour un.", sub: "dis-moi ton premier pas — ici, ça compte comme preuve.", ph: "ce mois-ci je vais …", preview: "JOUR UN — premier pas :" },
 };
 
 const DEST_STRINGS: Record<string, {
@@ -67,10 +67,10 @@ const DEST_STRINGS: Record<string, {
   statuses: { key: string; label: string }[];
 }> = {
   en: {
-    guide: "heading somewhere? new school, new city â tell me where, and I'll introduce you to people arriving with you.",
-    hint: "totally skippable â if you're settled where you are, just hit Next.",
-    placeLabel: "where you're headed", placePh: "UC Riverside Â· Chaffey College Â· a new city",
-    programLabel: "program / field", programPh: "computer science Â· nursing Â· trade school",
+    guide: "heading somewhere? new school, new city — tell me where, and I'll introduce you to people arriving with you.",
+    hint: "totally skippable — if you're settled where you are, just hit Next.",
+    placeLabel: "where you're headed", placePh: "UC Riverside · Chaffey College · a new city",
+    programLabel: "program / field", programPh: "computer science · nursing · trade school",
     termLabel: "when", termPh: "fall 2026",
     statusLabel: "where you are in the journey",
     statuses: [
@@ -82,10 +82,10 @@ const DEST_STRINGS: Record<string, {
     ],
   },
   es: {
-    guide: "¿vas a algún lugar? nueva escuela, nueva ciudad â dime dónde y te presentaré a gente que llega contigo.",
-    hint: "totalmente opcional â si ya estás establecido, dale a Siguiente.",
-    placeLabel: "a dónde vas", placePh: "UC Riverside Â· Chaffey College Â· una nueva ciudad",
-    programLabel: "programa / campo", programPh: "informática Â· enfermería Â· escuela técnica",
+    guide: "¿vas a algún lugar? nueva escuela, nueva ciudad — dime dónde y te presentaré a gente que llega contigo.",
+    hint: "totalmente opcional — si ya estás establecido, dale a Siguiente.",
+    placeLabel: "a dónde vas", placePh: "UC Riverside · Chaffey College · una nueva ciudad",
+    programLabel: "programa / campo", programPh: "informática · enfermería · escuela técnica",
     termLabel: "cuándo", termPh: "otoño 2026",
     statusLabel: "en qué punto del camino estás",
     statuses: [
@@ -97,10 +97,10 @@ const DEST_STRINGS: Record<string, {
     ],
   },
   pt: {
-    guide: "indo para algum lugar? nova escola, nova cidade â me diz onde e eu te apresento pessoas chegando com você.",
-    hint: "totalmente opcional â se você já está estabelecido, é só clicar em Próximo.",
-    placeLabel: "para onde você vai", placePh: "UC Riverside Â· Chaffey College Â· uma nova cidade",
-    programLabel: "programa / área", programPh: "computação Â· enfermagem Â· escola técnica",
+    guide: "indo para algum lugar? nova escola, nova cidade — me diz onde e eu te apresento pessoas chegando com você.",
+    hint: "totalmente opcional — se você já está estabelecido, é só clicar em Próximo.",
+    placeLabel: "para onde você vai", placePh: "UC Riverside · Chaffey College · uma nova cidade",
+    programLabel: "programa / área", programPh: "computação · enfermagem · escola técnica",
     termLabel: "quando", termPh: "outono 2026",
     statusLabel: "em que ponto da jornada você está",
     statuses: [
@@ -112,10 +112,10 @@ const DEST_STRINGS: Record<string, {
     ],
   },
   hi: {
-    guide: "कहीं जा रहे हो? नया स्कूल, नया शहर â मुझे बताओ कहाँ, और मैं तुम्हें उन लोगों से मिलाऊँगा जो तुम्हारे साथ पहुँच रहे हैं।",
-    hint: "पूरी तरह वैकल्पिक â अगर तुम जहाँ हो वहीं ठीक हो, तो बस Next दबाओ।",
-    placeLabel: "कहाँ जा रहे हो", placePh: "UC Riverside Â· Chaffey College Â· एक नया शहर",
-    programLabel: "प्रोग्राम / क्षेत्र", programPh: "कंप्यूटर साइंस Â· नर्सिंग Â· ट्रेड स्कूल",
+    guide: "कहीं जा रहे हो? नया स्कूल, नया शहर — मुझे बताओ कहाँ, और मैं तुम्हें उन लोगों से मिलाऊँगा जो तुम्हारे साथ पहुँच रहे हैं।",
+    hint: "पूरी तरह वैकल्पिक — अगर तुम जहाँ हो वहीं ठीक हो, तो बस Next दबाओ।",
+    placeLabel: "कहाँ जा रहे हो", placePh: "UC Riverside · Chaffey College · एक नया शहर",
+    programLabel: "प्रोग्राम / क्षेत्र", programPh: "कंप्यूटर साइंस · नर्सिंग · ट्रेड स्कूल",
     termLabel: "कब", termPh: "फ़ॉल 2026",
     statusLabel: "सफ़र में कहाँ हो",
     statuses: [
@@ -127,10 +127,10 @@ const DEST_STRINGS: Record<string, {
     ],
   },
   pl: {
-    guide: "wybierasz się gdzieś? nowa szkoła, nowe miasto â powiedz mi gdzie, a przedstawię ci ludzi, którzy przybywają razem z tobą.",
-    hint: "całkowicie opcjonalne â jeśli jesteś już na miejscu, po prostu kliknij Dalej.",
-    placeLabel: "dokąd zmierzasz", placePh: "UC Riverside Â· Chaffey College Â· nowe miasto",
-    programLabel: "kierunek / dziedzina", programPh: "informatyka Â· pielęgniarstwo Â· szkoła zawodowa",
+    guide: "wybierasz się gdzieś? nowa szkoła, nowe miasto — powiedz mi gdzie, a przedstawię ci ludzi, którzy przybywają razem z tobą.",
+    hint: "całkowicie opcjonalne — jeśli jesteś już na miejscu, po prostu kliknij Dalej.",
+    placeLabel: "dokąd zmierzasz", placePh: "UC Riverside · Chaffey College · nowe miasto",
+    programLabel: "kierunek / dziedzina", programPh: "informatyka · pielęgniarstwo · szkoła zawodowa",
     termLabel: "kiedy", termPh: "jesień 2026",
     statusLabel: "gdzie jesteś w tej podróży",
     statuses: [
@@ -142,10 +142,10 @@ const DEST_STRINGS: Record<string, {
     ],
   },
   fr: {
-    guide: "tu pars quelque part ? nouvelle école, nouvelle ville â dis-moi où, et je te présenterai ceux qui arrivent avec toi.",
-    hint: "totalement facultatif â si tu es déjà installé, clique simplement sur Suivant.",
-    placeLabel: "où tu vas", placePh: "UC Riverside Â· Chaffey College Â· une nouvelle ville",
-    programLabel: "programme / domaine", programPh: "informatique Â· soins infirmiers Â· école de métiers",
+    guide: "tu pars quelque part ? nouvelle école, nouvelle ville — dis-moi où, et je te présenterai ceux qui arrivent avec toi.",
+    hint: "totalement facultatif — si tu es déjà installé, clique simplement sur Suivant.",
+    placeLabel: "où tu vas", placePh: "UC Riverside · Chaffey College · une nouvelle ville",
+    programLabel: "programme / domaine", programPh: "informatique · soins infirmiers · école de métiers",
     termLabel: "quand", termPh: "automne 2026",
     statusLabel: "où tu en es dans le parcours",
     statuses: [
@@ -602,8 +602,7 @@ export default function CreatePage() {
       valid: true,
       body: (
         <div>
-          <FieldLabel>{dst.placeLabel}</FieldLabel>
-          <input autoFocus className={inputCls} value={destPlace} onChange={(e) => setDestPlace(e.target.value)} placeholder={dst.placePh} />
+          <DestinationField label={dst.placeLabel} value={destPlace} onChange={setDestPlace} placeholder={dst.placePh} />
           <div className="grid grid-cols-2 gap-3 mt-3">
             <div>
               <FieldLabel>{dst.programLabel}</FieldLabel>
@@ -1023,6 +1022,134 @@ export default function CreatePage() {
         )}
       </div>
     </main>
+  );
+}
+
+// --- tap-first destinations: community chips + university/city autocomplete ---
+// The field teaches itself: once your first UCR student sets it, every student after taps instead of types.
+// Two live suggestion sources merged while typing: a worldwide university database and real cities.
+// Both fail-soft: if either source hiccups, typing still works.
+function DestinationField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+}) {
+  const [chips, setChips] = useState<string[]>([]);
+  const [sugs, setSugs] = useState<{ label: string; kind: "uni" | "city" }[]>([]);
+  const [open, setOpen] = useState(false);
+  const picked = useRef(false);
+
+  // community chips: destinations real people here have already set
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("profiles")
+          .select("dest_place")
+          .not("dest_place", "is", null)
+          .limit(200);
+        if (!alive || !data) return;
+        const counts = new Map<string, number>();
+        for (const row of data as { dest_place: string | null }[]) {
+          const v = (row.dest_place || "").trim();
+          if (!v) continue;
+          counts.set(v, (counts.get(v) || 0) + 1);
+        }
+        const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map((e) => e[0]);
+        setChips(top);
+      } catch {
+        // chips are a bonus, never a blocker
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // dual-source autocomplete while typing
+  useEffect(() => {
+    if (picked.current) {
+      picked.current = false;
+      return;
+    }
+    const q = value.trim();
+    if (q.length < 3) {
+      setSugs([]);
+      setOpen(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const merged: { label: string; kind: "uni" | "city" }[] = [];
+      const seen = new Set<string>();
+      const [unis, cities] = await Promise.allSettled([
+        fetch(`https://universities.hipolabs.com/search?name=${encodeURIComponent(q)}&limit=4`).then((r) => r.json()),
+        fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=4&language=en&format=json`).then((r) => r.json()),
+      ]);
+      if (unis.status === "fulfilled" && Array.isArray(unis.value)) {
+        for (const u of unis.value.slice(0, 4) as { name?: string; country?: string }[]) {
+          const lbl = u.name || "";
+          if (lbl && !seen.has(lbl)) {
+            seen.add(lbl);
+            merged.push({ label: lbl, kind: "uni" });
+          }
+        }
+      }
+      if (cities.status === "fulfilled" && cities.value?.results) {
+        for (const c of cities.value.results.slice(0, 4) as { name?: string; admin1?: string; country?: string }[]) {
+          const lbl = [c.name, c.admin1, c.country].filter(Boolean).join(", ");
+          if (lbl && !seen.has(lbl)) {
+            seen.add(lbl);
+            merged.push({ label: lbl, kind: "city" });
+          }
+        }
+      }
+      setSugs(merged.slice(0, 7));
+      setOpen(merged.length > 0);
+    }, 320);
+    return () => clearTimeout(timer);
+  }, [value]);
+
+  function pick(v: string) {
+    picked.current = true;
+    onChange(v);
+    setOpen(false);
+    setSugs([]);
+  }
+
+  return (
+    <div className="relative">
+      <FieldLabel>{label}</FieldLabel>
+      <input autoFocus className={inputCls} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+      {open && (
+        <div className="absolute z-20 left-0 right-0 mt-1 bg-white border-2 border-[#1c1410] rounded-xl overflow-hidden shadow-[4px_4px_0_#1c1410]">
+          {sugs.map((s) => (
+            <button key={s.kind + s.label} type="button" onClick={() => pick(s.label)}
+              className="w-full text-left px-4 py-2.5 text-[13.5px] hover:bg-[#c8f000]/30 transition-colors border-b border-[#1c1410]/10 last:border-b-0"
+            >
+              {s.kind === "uni" ? "🎓 " : "📍 "}{s.label}
+            </button>
+          ))}
+        </div>
+      )}
+      {chips.length > 0 && !value.trim() && (
+        <div className="flex flex-wrap gap-2 mt-2">
+          {chips.map((c) => (
+            <button key={c} type="button" onClick={() => pick(c)}
+              className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12.5px] font-medium hover:bg-[#c8f000]/40 transition-colors active:scale-95"
+            >
+              ✦ {c}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
