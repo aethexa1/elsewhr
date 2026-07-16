@@ -1,8 +1,9 @@
 "use client";
 
-// elsewhr â FlightMap: the bird's globe. Pick a place; the world turns to meet you.
-// New file: app/create/FlightMap.tsx
-// Zero dependencies: orthographic projection on a 2D canvas. Idles completely at rest.
+// elsewhr — FlightMap v2: the bird's globe, alive. Pick a place; the world turns to meet you.
+// Replace file at: app/create/FlightMap.tsx
+// Zero dependencies: orthographic projection on a 2D canvas.
+// v2: ambient slow rotation, drag-to-spin with your finger, atmosphere glow, lit shading.
 
 import { useEffect, useMemo, useRef } from "react";
 
@@ -61,6 +62,10 @@ export default function FlightMap({
   const raf = useRef<number>(0);
   const settledAt = useRef<number>(0);
   const hasPin = useRef(false);
+  const flying = useRef(false);
+  const dragging = useRef(false);
+  const lastPtr = useRef({ x: 0, y: 0 });
+  const reducedMotion = useRef(false);
 
   // the world's dots, computed once
   const dots = useMemo(() => {
@@ -77,43 +82,86 @@ export default function FlightMap({
     if (lat == null || lon == null) return;
     target.current = { lon, lat: Math.max(-60, Math.min(75, lat)) };
     hasPin.current = true;
+    flying.current = true;
     settledAt.current = 0;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) {
+    if (reducedMotion.current) {
       rot.current = { ...target.current };
       settledAt.current = performance.now();
+      flying.current = false;
     }
     start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lat, lon]);
 
   useEffect(() => {
-    draw();
-    return () => cancelAnimationFrame(raf.current);
+    reducedMotion.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const canvas = canvasRef.current;
+
+    const onDown = (e: PointerEvent) => {
+      if (!canvas) return;
+      dragging.current = true;
+      flying.current = false; // your hand outranks the autopilot
+      lastPtr.current = { x: e.clientX, y: e.clientY };
+      canvas.setPointerCapture(e.pointerId);
+      start();
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!dragging.current || !canvas) return;
+      const k = 180 / (canvas.clientWidth * 0.84); // degrees per pixel across the sphere
+      rot.current.lon += (e.clientX - lastPtr.current.x) * k;
+      rot.current.lat = Math.max(-75, Math.min(75, rot.current.lat + (e.clientY - lastPtr.current.y) * k));
+      lastPtr.current = { x: e.clientX, y: e.clientY };
+    };
+    const onUp = (e: PointerEvent) => {
+      dragging.current = false;
+      if (canvas?.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+    };
+
+    canvas?.addEventListener("pointerdown", onDown);
+    canvas?.addEventListener("pointermove", onMove);
+    canvas?.addEventListener("pointerup", onUp);
+    canvas?.addEventListener("pointercancel", onUp);
+
+    if (!reducedMotion.current) start(); // alive before anyone touches it
+    else draw();
+
+    return () => {
+      cancelAnimationFrame(raf.current);
+      canvas?.removeEventListener("pointerdown", onDown);
+      canvas?.removeEventListener("pointermove", onMove);
+      canvas?.removeEventListener("pointerup", onUp);
+      canvas?.removeEventListener("pointercancel", onUp);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dots]);
 
   function start() {
     cancelAnimationFrame(raf.current);
     const tick = (now: number) => {
-      // shortest-path longitude approach
-      let dLon = target.current.lon - rot.current.lon;
-      while (dLon > 180) dLon -= 360;
-      while (dLon < -180) dLon += 360;
-      const dLat = target.current.lat - rot.current.lat;
+      if (flying.current && !dragging.current) {
+        // shortest-path longitude approach
+        let dLon = target.current.lon - rot.current.lon;
+        while (dLon > 180) dLon -= 360;
+        while (dLon < -180) dLon += 360;
+        const dLat = target.current.lat - rot.current.lat;
 
-      rot.current.lon += dLon * 0.085;
-      rot.current.lat += dLat * 0.085;
+        rot.current.lon += dLon * 0.085;
+        rot.current.lat += dLat * 0.085;
 
-      const settled = Math.abs(dLon) < 0.05 && Math.abs(dLat) < 0.05;
-      if (settled && settledAt.current === 0) settledAt.current = now;
+        const settled = Math.abs(dLon) < 0.05 && Math.abs(dLat) < 0.05;
+        if (settled) {
+          flying.current = false;
+          if (settledAt.current === 0) settledAt.current = now;
+        }
+      } else if (!dragging.current && !reducedMotion.current) {
+        // ambient: the world turns slowly on its own
+        rot.current.lon += 0.045;
+      }
 
       draw(now);
 
-      // keep animating through the pin pulse (2.4s), then fully idle
-      if (!settled || (settledAt.current > 0 && now - settledAt.current < 2400)) {
-        raf.current = requestAnimationFrame(tick);
-      }
+      if (reducedMotion.current && !flying.current && !dragging.current) return; // rest
+      raf.current = requestAnimationFrame(tick);
     };
     raf.current = requestAnimationFrame(tick);
   }
@@ -140,6 +188,26 @@ export default function FlightMap({
     const sinRp = Math.sin(rp);
     const cosRp = Math.cos(rp);
 
+    // atmosphere: a lime breath around the sphere
+    const halo = ctx.createRadialGradient(cx, cy, R * 0.92, cx, cy, R * 1.16);
+    halo.addColorStop(0, "rgba(200,240,0,0)");
+    halo.addColorStop(0.55, "rgba(200,240,0,0.22)");
+    halo.addColorStop(1, "rgba(200,240,0,0)");
+    ctx.beginPath();
+    ctx.arc(cx, cy, R * 1.16, 0, Math.PI * 2);
+    ctx.fillStyle = halo;
+    ctx.fill();
+
+    // lit disc: light from the upper left gives the sphere a face
+    const lit = ctx.createRadialGradient(cx - R * 0.38, cy - R * 0.38, R * 0.1, cx, cy, R);
+    lit.addColorStop(0, "rgba(255,255,255,0.55)");
+    lit.addColorStop(0.55, "rgba(255,255,255,0)");
+    lit.addColorStop(1, "rgba(28,20,16,0.10)");
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.fillStyle = lit;
+    ctx.fill();
+
     // sphere outline
     ctx.beginPath();
     ctx.arc(cx, cy, R, 0, Math.PI * 2);
@@ -156,8 +224,10 @@ export default function FlightMap({
       if (z <= 0.02) continue;
       const x = cosPhi * Math.sin(lam);
       const y = cosRp * Math.sin(phi) - sinRp * cosPhi * Math.cos(lam);
+      // lit shading: dots facing the upper-left light burn brighter
+      const shade = Math.max(0, -x * 0.45 + y * 0.4 + z * 0.8);
       const r = 0.9 + 1.5 * z;
-      ctx.globalAlpha = 0.28 + 0.72 * z;
+      ctx.globalAlpha = 0.18 + 0.5 * z + 0.32 * shade;
       ctx.beginPath();
       ctx.arc(cx + x * R, cy - y * R, r, 0, Math.PI * 2);
       ctx.fillStyle = INK;
@@ -198,18 +268,21 @@ export default function FlightMap({
     if (coordRef.current) {
       const la = rot.current.lat;
       const lo = ((rot.current.lon + 540) % 360) - 180;
-      const laStr = Math.abs(la).toFixed(2) + "Â°" + (la >= 0 ? "N" : "S");
-      const loStr = Math.abs(lo).toFixed(2) + "Â°" + (lo >= 0 ? "E" : "W");
-      coordRef.current.textContent = laStr + " Â· " + loStr;
+      const laStr = Math.abs(la).toFixed(2) + "°" + (la >= 0 ? "N" : "S");
+      const loStr = Math.abs(lo).toFixed(2) + "°" + (lo >= 0 ? "E" : "W");
+      coordRef.current.textContent = laStr + " · " + loStr;
     }
   }
 
   return (
     <div className="mt-4 border-[3px] border-[#1c1410] rounded-2xl bg-white/60 p-4 overflow-hidden">
-      <canvas ref={canvasRef} className="w-full aspect-square block" style={{ maxWidth: "320px", margin: "0 auto" }} />
+      <canvas ref={canvasRef}
+        className="w-full aspect-square block cursor-grab active:cursor-grabbing"
+        style={{ maxWidth: "320px", margin: "0 auto", touchAction: "none" }}
+      />
       <p className="mt-2 text-center font-mono text-[11px] tracking-wide text-[#6b5e52]">
-        <span ref={coordRef}>25.00Â°N Â· 100.00Â°W</span>
-        {label ? <span className="text-[#1c1410] font-bold"> Â· {label}</span> : null}
+        <span ref={coordRef}>25.00°N · 100.00°W</span>
+        {label ? <span className="text-[#1c1410] font-bold"> · {label}</span> : null}
       </p>
     </div>
   );
