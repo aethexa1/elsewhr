@@ -39,8 +39,10 @@ function page(title: string, body: string): NextResponse {
 }
 
 // --- shared: build + send the thread-open email; returns true if it delivered ---
+// admin is typed loosely on purpose — Supabase client generics vary by version
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function sendThreadEmail(
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   resendKey: string,
   knock: { sender_user_id: string; sender_profile_id: number; recipient_user_id: string; message: string }
 ): Promise<boolean> {
