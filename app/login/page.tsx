@@ -2,6 +2,7 @@
 
 // elsewhr — login / signup page
 // Replace file at: app/login/page.tsx
+// fix: escape hatch — wordmark links home + visible back link (no more trapped visitors)
 
 import { useState } from "react";
 import Link from "next/link";
@@ -62,11 +63,11 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen bg-[#ff5d3b] text-[#1c1410] flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-[420px]">
-        {/* brand */}
+        {/* brand — the wordmark is a door home */}
         <div className="flex items-center justify-between mb-6">
-          <div className="font-[Syne] font-extrabold text-2xl tracking-tight text-[#fff6ec]">
+          <Link href="/" className="font-[Syne] font-extrabold text-2xl tracking-tight text-[#fff6ec]">
             elsewhr<span className="text-[#c8f000]">.</span>
-          </div>
+          </Link>
           <Bird />
         </div>
 
@@ -104,10 +105,7 @@ export default function LoginPage() {
 
           {mode === "login" && (
             <div className="mb-4 text-right">
-              <Link
-                href="/reset-password"
-                className="font-mono text-[11px] underline underline-offset-4 text-[#6b4eff]"
-              >
+              <Link href="/reset-password" className="font-mono text-[11px] underline underline-offset-4 text-[#6b4eff]">
                 Forgot password?
               </Link>
             </div>
@@ -146,7 +144,12 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <p className="font-mono text-[11px] text-[#fff6ec]/80 mt-6 text-center">
+        <p className="mt-6 text-center">
+          <Link href="/" className="font-mono text-[11px] text-[#fff6ec]/80 underline underline-offset-4 hover:text-[#fff6ec]">
+            ← back to elsewhr
+          </Link>
+        </p>
+        <p className="font-mono text-[11px] text-[#fff6ec]/80 mt-3 text-center">
           free · you own your profile · no data sold, ever
         </p>
       </div>
