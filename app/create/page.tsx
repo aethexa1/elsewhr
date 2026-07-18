@@ -62,7 +62,9 @@ const DEST_STRINGS: Record<string, {
   guide: string; hint: string;
   placeLabel: string; placePh: string;
   programLabel: string; programPh: string;
+  programChips: string[];
   termLabel: string; termPh: string;
+  seasons: string[];
   statusLabel: string;
   statuses: { key: string; label: string }[];
 }> = {
@@ -72,6 +74,8 @@ const DEST_STRINGS: Record<string, {
     placeLabel: "where you're headed", placePh: "UC Riverside · Chaffey College · a new city",
     programLabel: "program / field", programPh: "computer science · nursing · trade school",
     termLabel: "when", termPh: "fall 2026",
+    programChips: ["computer science", "nursing", "business", "engineering", "psychology", "biology", "trades", "art & design"],
+    seasons: ["fall", "winter", "spring", "summer"],
     statusLabel: "where you are in the journey",
     statuses: [
       { key: "applied", label: "applied" },
@@ -87,6 +91,8 @@ const DEST_STRINGS: Record<string, {
     placeLabel: "a dónde vas", placePh: "UC Riverside · Chaffey College · una nueva ciudad",
     programLabel: "programa / campo", programPh: "informática · enfermería · escuela técnica",
     termLabel: "cuándo", termPh: "otoño 2026",
+    programChips: ["informática", "enfermería", "negocios", "ingeniería", "psicología", "biología", "oficios", "arte y diseño"],
+    seasons: ["otoño", "invierno", "primavera", "verano"],
     statusLabel: "en qué punto del camino estás",
     statuses: [
       { key: "applied", label: "apliqué" },
@@ -102,6 +108,8 @@ const DEST_STRINGS: Record<string, {
     placeLabel: "para onde você vai", placePh: "UC Riverside · Chaffey College · uma nova cidade",
     programLabel: "programa / área", programPh: "computação · enfermagem · escola técnica",
     termLabel: "quando", termPh: "outono 2026",
+    programChips: ["computação", "enfermagem", "negócios", "engenharia", "psicologia", "biologia", "ofícios", "arte e design"],
+    seasons: ["outono", "inverno", "primavera", "verão"],
     statusLabel: "em que ponto da jornada você está",
     statuses: [
       { key: "applied", label: "apliquei" },
@@ -117,6 +125,8 @@ const DEST_STRINGS: Record<string, {
     placeLabel: "कहाँ जा रहे हो", placePh: "UC Riverside · Chaffey College · एक नया शहर",
     programLabel: "प्रोग्राम / क्षेत्र", programPh: "कंप्यूटर साइंस · नर्सिंग · ट्रेड स्कूल",
     termLabel: "कब", termPh: "फ़ॉल 2026",
+    programChips: ["कंप्यूटर साइंस", "नर्सिंग", "बिजनेस", "इंजीनियरिंग", "साइकोलॉजी", "बायोलॉजी", "ट्रेड", "आर्ट और डिज़ाइन"],
+    seasons: ["फ़ॉल", "विंटर", "स्प्रिंग", "समर"],
     statusLabel: "सफ़र में कहाँ हो",
     statuses: [
       { key: "applied", label: "आवेदन किया" },
@@ -132,6 +142,8 @@ const DEST_STRINGS: Record<string, {
     placeLabel: "dokąd zmierzasz", placePh: "UC Riverside · Chaffey College · nowe miasto",
     programLabel: "kierunek / dziedzina", programPh: "informatyka · pielęgniarstwo · szkoła zawodowa",
     termLabel: "kiedy", termPh: "jesień 2026",
+    programChips: ["informatyka", "pielęgniarstwo", "biznes", "inżynieria", "psychologia", "biologia", "zawody", "sztuka i design"],
+    seasons: ["jesień", "zima", "wiosna", "lato"],
     statusLabel: "gdzie jesteś w tej podróży",
     statuses: [
       { key: "applied", label: "aplikowałem" },
@@ -147,6 +159,8 @@ const DEST_STRINGS: Record<string, {
     placeLabel: "où tu vas", placePh: "UC Riverside · Chaffey College · une nouvelle ville",
     programLabel: "programme / domaine", programPh: "informatique · soins infirmiers · école de métiers",
     termLabel: "quand", termPh: "automne 2026",
+    programChips: ["informatique", "soins infirmiers", "commerce", "ingénierie", "psychologie", "biologie", "métiers", "art et design"],
+    seasons: ["automne", "hiver", "printemps", "été"],
     statusLabel: "où tu en es dans le parcours",
     statuses: [
       { key: "applied", label: "candidature envoyée" },
@@ -603,15 +617,35 @@ export default function CreatePage() {
       body: (
         <div>
           <DestinationField label={dst.placeLabel} value={destPlace} onChange={setDestPlace} placeholder={dst.placePh} />
-          <div className="grid grid-cols-2 gap-3 mt-3">
-            <div>
-              <FieldLabel>{dst.programLabel}</FieldLabel>
-              <input className={inputCls} value={destProgram} onChange={(e) => setDestProgram(e.target.value)} placeholder={dst.programPh} />
-            </div>
-            <div>
-              <FieldLabel>{dst.termLabel}</FieldLabel>
-              <input className={inputCls} value={destTerm} onChange={(e) => setDestTerm(e.target.value)} placeholder={dst.termPh} />
-            </div>
+          <div className="mt-3">
+            <FieldLabel>{dst.programLabel}</FieldLabel>
+            {!destProgram.trim() && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {dst.programChips.map((c) => (
+                  <button key={c} type="button" onClick={() => setDestProgram(c)}
+                    className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12.5px] font-medium hover:bg-[#c8f000]/40 transition-colors active:scale-95"
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            )}
+            <input className={inputCls} value={destProgram} onChange={(e) => setDestProgram(e.target.value)} placeholder={dst.programPh} />
+          </div>
+          <div className="mt-3">
+            <FieldLabel>{dst.termLabel}</FieldLabel>
+            {!destTerm.trim() && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {intakeChips(dst.seasons).map((c) => (
+                  <button key={c} type="button" onClick={() => setDestTerm(c)}
+                    className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12.5px] font-medium hover:bg-[#c8f000]/40 transition-colors active:scale-95"
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            )}
+            <input className={inputCls} value={destTerm} onChange={(e) => setDestTerm(e.target.value)} placeholder={dst.termPh} />
           </div>
           {destPlace.trim().length > 0 && (
             <div className="mt-4">
@@ -1025,6 +1059,31 @@ export default function CreatePage() {
   );
 }
 
+// the next four real intakes, from today forward, in the user's language
+function intakeChips(seasons: string[]): string[] {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth(); // 0-11
+  // season order: [fall, winter, spring, summer] with rough start months
+  const cal: { si: number; month: number }[] = [
+    { si: 2, month: 0 },  // spring → Jan
+    { si: 3, month: 5 },  // summer → Jun
+    { si: 0, month: 8 },  // fall → Sep
+    { si: 1, month: 11 }, // winter → Dec
+  ];
+  const out: string[] = [];
+  let year = y;
+  let idx = cal.findIndex((c) => c.month >= m);
+  if (idx === -1) { idx = 0; year += 1; }
+  while (out.length < 4) {
+    const c = cal[idx];
+    out.push(seasons[c.si] + " " + year);
+    idx += 1;
+    if (idx >= cal.length) { idx = 0; year += 1; }
+  }
+  return out;
+}
+
 // --- tap-first destinations: community chips + university/city autocomplete ---
 // The field teaches itself: once your first UCR student sets it, every student after taps instead of types.
 // Two live suggestion sources merged while typing: a worldwide university database and real cities.
@@ -1088,18 +1147,30 @@ function DestinationField({
     const timer = setTimeout(async () => {
       const merged: { label: string; kind: "uni" | "city" }[] = [];
       const seen = new Set<string>();
-      const [unis, cities] = await Promise.allSettled([
-        fetch(`https://universities.hipolabs.com/search?name=${encodeURIComponent(q)}&limit=4`).then((r) => r.json()),
+      // students type "UC Riverside"; the database says "University of California, Riverside".
+      // Expand what they mean, so the option appears instead of silence.
+      const expansions = [q];
+      if (/^uc\s+\S/i.test(q)) expansions.push("University of California, " + q.slice(3).trim());
+      if (/^csu\s+\S/i.test(q)) expansions.push("California State University, " + q.slice(4).trim());
+      if (/^cal\s?poly/i.test(q)) expansions.push("California Polytechnic");
+      if (/^st\.?\s+\S/i.test(q)) expansions.push("Saint " + q.replace(/^st\.?\s+/i, ""));
+      const [cities, ...uniBatches] = await Promise.allSettled([
         fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=4&language=en&format=json`).then((r) => r.json()),
+        ...expansions.slice(0, 3).map((e) =>
+          fetch(`https://universities.hipolabs.com/search?name=${encodeURIComponent(e)}&limit=5`).then((r) => r.json())
+        ),
       ]);
-      if (unis.status === "fulfilled" && Array.isArray(unis.value)) {
-        for (const u of unis.value.slice(0, 4) as { name?: string; country?: string }[]) {
-          const lbl = u.name || "";
-          if (lbl && !seen.has(lbl)) {
-            seen.add(lbl);
-            merged.push({ label: lbl, kind: "uni" });
-          }
+      const uniList: { name?: string }[] = [];
+      for (const b of uniBatches) {
+        if (b.status === "fulfilled" && Array.isArray(b.value)) uniList.push(...(b.value as { name?: string }[]));
+      }
+      for (const u of uniList.slice(0, 8)) {
+        const lbl = u.name || "";
+        if (lbl && !seen.has(lbl)) {
+          seen.add(lbl);
+          merged.push({ label: lbl, kind: "uni" });
         }
+        if (merged.length >= 5) break;
       }
       if (cities.status === "fulfilled" && cities.value?.results) {
         for (const c of cities.value.results.slice(0, 4) as { name?: string; admin1?: string; country?: string }[]) {
@@ -1110,7 +1181,7 @@ function DestinationField({
           }
         }
       }
-      setSugs(merged.slice(0, 7));
+      setSugs(merged.slice(0, 8));
       setOpen(merged.length > 0);
     }, 320);
     return () => clearTimeout(timer);
