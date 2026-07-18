@@ -44,6 +44,9 @@ type Profile = {
   goal?: string | null;
   accent?: string | null;
   day_one?: string | null;
+  dest_place?: string | null;
+  dest_program?: string | null;
+  dest_term?: string | null;
   artifacts: Artifact[] | null;
 };
 
@@ -114,6 +117,21 @@ export default async function ProfilePage({
                 {profile.name}
               </h1>
               <p className="font-semibold mt-2" style={{ color: accent === "#1c1410" ? "#c8f000" : accent }}>{profile.headline}</p>
+              {profile.dest_place && profile.dest_place.trim() && (
+                <p className="mt-2 text-[14px] font-bold">
+                  <Link href={"/w?place=" + encodeURIComponent(profile.dest_place.trim())}
+                    className="text-[#c8f000] underline decoration-2 underline-offset-4 hover:text-[#fff6ec]"
+                  >
+                    → {profile.dest_place.trim()}
+                  </Link>
+                  {profile.dest_term && profile.dest_term.trim() && (
+                    <span className="text-[#fff6ec]/80 font-medium"> · {profile.dest_term.trim()}</span>
+                  )}
+                  {profile.dest_program && profile.dest_program.trim() && (
+                    <span className="text-[#fff6ec]/80 font-medium"> · {profile.dest_program.trim()}</span>
+                  )}
+                </p>
+              )}
             </div>
           </div>
           {profile.seeking && (
