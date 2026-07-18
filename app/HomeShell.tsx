@@ -30,6 +30,16 @@ export type FeedProfile = {
 };
 
 // two worlds, one universe: connect is the front door, work stands behind it
+// each world has its own voice: connect speaks arrival, work speaks evidence
+const CONNECT_TAGLINE: Record<string, string> = {
+  en: "new school, new city, new shift — find your people before day one.",
+  es: "nueva escuela, nueva ciudad — encuentra a tu gente antes del primer día.",
+  pt: "nova escola, nova cidade — encontre sua gente antes do primeiro dia.",
+  hi: "नया कॉलेज, नया शहर — पहले दिन से पहले अपने लोग ढूंढो।",
+  pl: "nowa szkoła, nowe miasto — znajdź swoich ludzi przed pierwszym dniem.",
+  fr: "nouvelle école, nouvelle ville — trouve tes gens avant le premier jour.",
+};
+
 const MARQUEE_STRINGS: Record<string, string> = {
   en: "you got in · now you know nobody there · elsewhr · ",
   es: "entraste · y no conoces a nadie allá · elsewhr · ",
@@ -388,8 +398,8 @@ export default function HomeShell({
         {/* MEMBER greeting */}
         {mode === "member" && (
           <p className="rise text-[#fff6ec]/90 text-[15px] mb-7 font-mono tracking-wide" style={{ animationDelay: "60ms" }}>
-            {t(lang, "home.tagline")}
-            {myTags.length > 0 && t(lang, "home.yourPeople")}
+            {universe === "connect" ? (CONNECT_TAGLINE[lang] || CONNECT_TAGLINE.en) : t(lang, "home.tagline")}
+            {universe === "work" && myTags.length > 0 && t(lang, "home.yourPeople")}
           </p>
         )}
 
