@@ -7,7 +7,12 @@ import { supabase } from "@/lib/supabaseClient";
 import { useLang, t } from "@/lib/i18n";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import FlightMap from "./FlightMap";
+import nextDynamic from "next/dynamic";
+// the true-3D globe loads only on this step, never in the first bundle
+const FlightMap = nextDynamic(() => import("./Globe3D"), {
+  ssr: false,
+  loading: () => <div className="mt-4 h-[280px] border-[3px] border-[#1c1410] rounded-2xl bg-white/60" />,
+});
 
 type Tile = { claim: string; image: string; result: string; field: string; vouch: string };
 
