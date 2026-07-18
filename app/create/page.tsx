@@ -1059,6 +1059,42 @@ export default function CreatePage() {
   );
 }
 
+// how students actually write their schools — acronyms resolve to what the database calls them
+const SCHOOL_ALIASES: Record<string, string> = {
+  // UC system
+  ucla: "University of California, Los Angeles",
+  ucr: "University of California, Riverside",
+  uci: "University of California, Irvine",
+  ucsd: "University of California, San Diego",
+  ucsb: "University of California, Santa Barbara",
+  ucsc: "University of California, Santa Cruz",
+  ucd: "University of California, Davis",
+  ucdavis: "University of California, Davis",
+  ucb: "University of California, Berkeley",
+  ucberkeley: "University of California, Berkeley",
+  ucmerced: "University of California, Merced",
+  // CSU system
+  csudh: "California State University, Dominguez Hills",
+  csun: "California State University, Northridge",
+  csulb: "California State University, Long Beach",
+  csula: "California State University, Los Angeles",
+  csusb: "California State University, San Bernardino",
+  csuf: "California State University, Fullerton",
+  sdsu: "San Diego State University",
+  sfsu: "San Francisco State University",
+  sjsu: "San Jose State University",
+  cpp: "California State Polytechnic University, Pomona",
+  calpoly: "California Polytechnic State University",
+  // the ones everyone knows
+  usc: "University of Southern California",
+  mit: "Massachusetts Institute of Technology",
+  nyu: "New York University",
+  asu: "Arizona State University",
+  unlv: "University of Nevada, Las Vegas",
+  utaustin: "University of Texas at Austin",
+  gatech: "Georgia Institute of Technology",
+};
+
 // the next four real intakes, from today forward, in the user's language
 function intakeChips(seasons: string[]): string[] {
   const now = new Date();
@@ -1150,6 +1186,8 @@ function DestinationField({
       // students type "UC Riverside"; the database says "University of California, Riverside".
       // Expand what they mean, so the option appears instead of silence.
       const expansions = [q];
+      const acro = SCHOOL_ALIASES[q.toLowerCase().replace(/[^a-z]/g, "")];
+      if (acro) expansions.unshift(acro);
       if (/^uc\s+\S/i.test(q)) expansions.push("University of California, " + q.slice(3).trim());
       if (/^csu\s+\S/i.test(q)) expansions.push("California State University, " + q.slice(4).trim());
       if (/^cal\s?poly/i.test(q)) expansions.push("California Polytechnic");
