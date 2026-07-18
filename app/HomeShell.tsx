@@ -26,6 +26,16 @@ export type FeedProfile = {
   artifacts: { image?: string }[] | null;
 };
 
+// two worlds, one universe: connect is the front door, work stands behind it
+const UNIVERSE_STRINGS: Record<string, { connect: string; work: string; headedTo: string }> = {
+  en: { connect: "connect", work: "work", headedTo: "→ " },
+  es: { connect: "conectar", work: "trabajo", headedTo: "→ " },
+  pt: { connect: "conectar", work: "trabalho", headedTo: "→ " },
+  hi: { connect: "जुड़ो", work: "काम", headedTo: "→ " },
+  pl: { connect: "połącz", work: "praca", headedTo: "→ " },
+  fr: { connect: "connecter", work: "travail", headedTo: "→ " },
+};
+
 const WORLD_STRINGS: Record<string, { everywhere: string; also: string; early: string }> = {
   en: { everywhere: "everywhere", also: "✦ also heading to {place}", early: "{n} in your world so far — you're early." },
   es: { everywhere: "en todas partes", also: "✦ también va a {place}", early: "{n} en tu mundo por ahora — llegaste temprano." },
@@ -54,6 +64,7 @@ export default function HomeShell({
   const { lang } = useLang();
   const pk = PEEK_STRINGS[lang] || PEEK_STRINGS.en;
   const wd = WORLD_STRINGS[lang] || WORLD_STRINGS.en;
+  const uv = UNIVERSE_STRINGS[lang] || UNIVERSE_STRINGS.en;
   const [mode, setMode] = useState<"loading" | "guest" | "member">("loading");
   const [peek, setPeek] = useState(false);
   const [myTags, setMyTags] = useState<string[]>([]);
@@ -61,9 +72,14 @@ export default function HomeShell({
   const [blockedIds, setBlockedIds] = useState<Set<number>>(new Set());
   const [myDest, setMyDest] = useState("");
   const [world, setWorld] = useState<"mine" | "all">("all");
+  const [universe, setUniverse] = useState<"connect" | "work">("connect");
   const [knockCount, setKnockCount] = useState(0);
 
   useEffect(() => {
+    try {
+      const savedU = localStorage.getItem("wh_universe");
+      if (savedU === "work") setUniverse("work");
+    } catch { /* private mode */ }
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) {
         setMode("guest");
@@ -147,6 +163,10 @@ export default function HomeShell({
       try { localStorage.setItem("wh_world", next); } catch { /* private mode */ }
       return next;
     });
+  };
+  const pickUniverse = (u: "connect" | "work") => {
+    setUniverse(u);
+    try { localStorage.setItem("wh_universe", u); } catch { /* private mode */ }
   };
   const shortDest = myDest.length > 16 ? myDest.slice(0, 15).trimEnd() + "…" : myDest;
 
@@ -274,7 +294,7 @@ export default function HomeShell({
                 onClick={toggleWorld}
                 className="px-3 py-1.5 rounded-full border-2 border-[#fff6ec]/70 text-[#fff6ec] font-mono text-[11px] font-bold tracking-wide hover:bg-[#fff6ec]/10 transition-colors"
               >
-                \ud83d\udccd {world === "mine" ? shortDest : wd.everywhere}
+                📍 {world === "mine" ? shortDest : wd.everywhere}
               </button>
             )}
             <LangPicker />
@@ -334,6 +354,24 @@ export default function HomeShell({
             {t(lang, "home.tagline")}
             {myTags.length > 0 && t(lang, "home.yourPeople")}
           </p>
+        )}
+
+        {/* TWO WORLDS, ONE UNIVERSE: the switcher */}
+        {showFeed && (
+          <div className="rise flex justify-center mb-6" style={{ animationDelay: "90ms" }}>
+            <div className="inline-flex rounded-full border-[3px] border-[#1c1410] bg-[#fff6ec] p-1 shadow-[4px_4px_0_#1c1410]">
+              <button type="button" onClick={() => pickUniverse("connect")}
+                className={`px-5 py-2 rounded-full font-bold text-[13.5px] transition-all duration-150 ${universe === "connect" ? "bg-[#c8f000] border-2 border-[#1c1410]" : "border-2 border-transparent hover:bg-[#1c1410]/5"}`}
+              >
+                🤝 {uv.connect}
+              </button>
+              <button type="button" onClick={() => pickUniverse("work")}
+                className={`px-5 py-2 rounded-full font-bold text-[13.5px] transition-all duration-150 ${universe === "work" ? "bg-[#c8f000] border-2 border-[#1c1410]" : "border-2 border-transparent hover:bg-[#1c1410]/5"}`}
+              >
+                💼 {uv.work}
+              </button>
+            </div>
+          </div>
         )}
 
         {/* THE FEED */}
@@ -450,9 +488,15 @@ export default function HomeShell({
                           <p className="font-[Syne] font-extrabold text-xl leading-tight truncate tracking-[-0.01em]">
                             {p.name}
                           </p>
-                          <p className="text-[13.5px] leading-snug text-[#3a2c20] line-clamp-2">
-                            {p.headline}
-                          </p>
+                          {universe === "connect" && p.dest_place && p.dest_place.trim() ? (
+                            <p className="text-[13.5px] leading-snug font-bold text-[#6b4eff] truncate">
+                              {uv.headedTo}{p.dest_place.trim()}{p.dest_term && p.dest_term.trim() ? " · " + p.dest_term.trim() : ""}
+                            </p>
+                          ) : (
+                            <p className="text-[13.5px] leading-snug text-[#3a2c20] line-clamp-2">
+                              {p.headline}
+                            </p>
+                          )}
                           {p.mindset && p.mindset.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1.5">
                               {p.mindset.slice(0, 3).map((tag) => (
@@ -478,7 +522,7 @@ export default function HomeShell({
                           )}
                         </div>
                       </div>
-                      {workImage && (
+                      {universe === "work" && workImage && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={workImage} alt="" className="w-full h-36 object-cover border-t-[3px] border-[#1c1410]" />
                       )}
