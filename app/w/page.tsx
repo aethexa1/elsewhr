@@ -18,6 +18,39 @@ type WikiInfo = {
   description?: string;
 };
 
+type Facts = { students?: string; staff?: string; founded?: string; site?: string };
+
+// structured facts from Wikidata: student body, staff, founding year, official site
+async function fetchFacts(title: string): Promise<Facts> {
+  const out: Facts = {};
+  try {
+    const r1 = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=pageprops&ppprop=wikibase_item&format=json&origin=*`
+    );
+    const d1 = await r1.json();
+    const pages = d1?.query?.pages || {};
+    const first = Object.values(pages)[0] as { pageprops?: { wikibase_item?: string } } | undefined;
+    const qid = first?.pageprops?.wikibase_item;
+    if (!qid) return out;
+    const r2 = await fetch(`https://www.wikidata.org/wiki/Special:EntityData/${qid}.json`);
+    const d2 = await r2.json();
+    const claims = d2?.entities?.[qid]?.claims || {};
+    const amount = (p: string) => {
+      const v = claims?.[p]?.[0]?.mainsnak?.datavalue?.value?.amount;
+      if (!v) return undefined;
+      const n = Number(String(v).replace("+", ""));
+      return Number.isFinite(n) ? n.toLocaleString() : undefined;
+    };
+    out.students = amount("P2196");
+    out.staff = amount("P8113") || amount("P1128");
+    const t = claims?.P571?.[0]?.mainsnak?.datavalue?.value?.time as string | undefined;
+    if (t) out.founded = t.slice(1, 5);
+    const site = claims?.P856?.[0]?.mainsnak?.datavalue?.value as string | undefined;
+    if (site) out.site = site;
+  } catch { /* facts are a bonus, never a blocker */ }
+  return out;
+}
+
 type Person = {
   id: number;
   user_id?: string | null;
@@ -121,6 +154,7 @@ function WorldPageInner() {
   const s = STRINGS[lang] || STRINGS.en;
 
   const [wiki, setWiki] = useState<WikiInfo | null>(null);
+  const [facts, setFacts] = useState<Facts>({});
   const [site, setSite] = useState<string | null>(null);
   const [people, setPeople] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,8 +174,13 @@ function WorldPageInner() {
           if (alive && d.extract && d.type !== "disambiguation") setWiki(d);
         }
       } catch { /* the place card still renders */ }
-      // official site: a search link that always works — no flaky API in the path
+      // structured facts + the true official site from Wikidata; search link as the floor
       if (alive) setSite(`https://www.google.com/search?q=${encodeURIComponent(place + " official site")}`);
+      const f = await fetchFacts(place);
+      if (alive) {
+        setFacts(f);
+        if (f.site) setSite(f.site);
+      }
     })();
     return () => { alive = false; };
   }, [place, lang]);
@@ -212,6 +251,24 @@ function WorldPageInner() {
             <div className="p-5">
               <p className="font-mono text-[10px] uppercase tracking-widest text-[#6b5e52] mb-2">{s.about}</p>
               <p className="text-[14px] leading-relaxed">{wiki.extract}</p>
+              {(facts.students || facts.staff || facts.founded) && (
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {facts.students && (
+                    <span className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12px] font-bold">🎓 {facts.students} students</span>
+                  )}
+                  {facts.staff && (
+                    <span className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12px] font-bold">👥 {facts.staff} staff</span>
+                  )}
+                  {facts.founded && (
+                    <span className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12px] font-bold">est. {facts.founded}</span>
+                  )}
+                </div>
+              )}
+              <p className="mt-3">
+                <Link href={"/compare?a=" + encodeURIComponent(place)} className="font-mono text-[12px] font-bold text-[#6b4eff] underline underline-offset-4">
+                  ⚖️ compare this school →
+                </Link>
+              </p>
               <div className="flex flex-wrap items-center gap-4 mt-4">
                 {site && (
                   <a href={site} target="_blank" rel="noopener noreferrer" className="font-mono text-[12px] font-bold text-[#6b4eff] underline underline-offset-4">
