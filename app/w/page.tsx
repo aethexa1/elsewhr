@@ -138,11 +138,8 @@ function WorldPageInner() {
           if (alive && d.extract && d.type !== "disambiguation") setWiki(d);
         }
       } catch { /* the place card still renders */ }
-      try {
-        const r = await fetch(`https://universities.hipolabs.com/search?name=${encodeURIComponent(place)}&limit=1`);
-        const d = (await r.json()) as { web_pages?: string[] }[];
-        if (alive && d?.[0]?.web_pages?.[0]) setSite(d[0].web_pages[0]);
-      } catch { /* optional */ }
+      // official site: a search link that always works — no flaky API in the path
+      if (alive) setSite(`https://www.google.com/search?q=${encodeURIComponent(place + " official site")}`);
     })();
     return () => { alive = false; };
   }, [place, lang]);
