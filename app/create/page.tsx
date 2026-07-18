@@ -220,6 +220,18 @@ export default function CreatePage() {
   const [review, setReview] = useState<Review | null>(null);
   const [reviewBusy, setReviewBusy] = useState(false);
 
+  // autosave the draft: interrupted at step 8 on a shift break, resume at step 8 tonight
+  useEffect(() => {
+    if (loading || existingId) return; // editing a published profile has the DB as its memory
+    try {
+      localStorage.setItem("wh_draft", JSON.stringify({
+        step, name, headline, location, website, seeking, mindset,
+        learning, goal, accent, dayOne, destPlace, destProgram, destTerm, destStatus, tiles,
+      }));
+    } catch { /* storage full or blocked — typing still works */ }
+  }, [loading, existingId, step, name, headline, location, website, seeking, mindset,
+      learning, goal, accent, dayOne, destPlace, destProgram, destTerm, destStatus, tiles]);
+
   useEffect(() => {
     async function init() {
       const { data: auth } = await supabase.auth.getUser();
@@ -256,6 +268,32 @@ export default function CreatePage() {
         setDestStatus(existing.dest_status ?? "");
         const arts = Array.isArray(existing.artifacts) ? existing.artifacts : [];
         setTiles(arts.length > 0 ? arts : [{ ...emptyTile }]);
+      } else {
+        // no published profile — restore any half-finished draft so nothing typed is lost
+        try {
+          const raw = localStorage.getItem("wh_draft");
+          if (raw) {
+            const d = JSON.parse(raw);
+            if (d && typeof d === "object") {
+              if (d.name) setName(d.name);
+              if (d.headline) setHeadline(d.headline);
+              if (d.location) setLocation(d.location);
+              if (d.website) setWebsite(d.website);
+              if (d.seeking) setSeeking(d.seeking);
+              if (Array.isArray(d.mindset)) setMindset(d.mindset);
+              if (d.learning) setLearning(d.learning);
+              if (d.goal) setGoal(d.goal);
+              if (d.accent) setAccent(d.accent);
+              if (d.dayOne) setDayOne(d.dayOne);
+              if (d.destPlace) setDestPlace(d.destPlace);
+              if (d.destProgram) setDestProgram(d.destProgram);
+              if (d.destTerm) setDestTerm(d.destTerm);
+              if (d.destStatus) setDestStatus(d.destStatus);
+              if (Array.isArray(d.tiles) && d.tiles.length > 0) setTiles(d.tiles);
+              if (typeof d.step === "number" && d.step > 0) setStep(Math.min(d.step, 12));
+            }
+          }
+        } catch { /* a broken draft should never block the wizard */ }
       }
       setLoading(false);
     }
@@ -395,6 +433,7 @@ export default function CreatePage() {
       setMsg(error.message);
       setBusy(false);
     } else {
+      try { localStorage.removeItem("wh_draft"); } catch { /* fine */ }
       router.push("/");
     }
   }
