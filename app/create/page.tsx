@@ -1197,21 +1197,29 @@ function DestinationField({
       if (/^csu\s+\S/i.test(q)) expansions.push("California State University, " + q.slice(4).trim());
       if (/^cal\s?poly/i.test(q)) expansions.push("California Polytechnic");
       if (/^st\.?\s+\S/i.test(q)) expansions.push("Saint " + q.replace(/^st\.?\s+/i, ""));
-      const [cities, ...uniBatches] = await Promise.allSettled([
+      // schools come from Wikipedia search: global, every university, cal state,
+      // community college, trade school or high school with a page — anywhere on earth
+      const EDU = ["universit", "college", "school", "institut", "polytechnic", "academy", "conservator"];
+      const isEdu = (title: string, desc: string) => {
+        const t = (title + " " + desc).toLowerCase();
+        return EDU.some((k) => t.includes(k));
+      };
+      const [cities, ...wikiBatches] = await Promise.allSettled([
         fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=4&language=en&format=json`).then((r) => r.json()),
-        ...expansions.slice(0, 3).map((e) =>
-          fetch(`https://universities.hipolabs.com/search?name=${encodeURIComponent(e)}&limit=5`).then((r) => r.json())
+        ...expansions.slice(0, 2).map((e) =>
+          fetch(`https://en.wikipedia.org/w/rest.php/v1/search/title?q=${encodeURIComponent(e)}&limit=8`).then((r) => r.json())
         ),
       ]);
-      const uniList: { name?: string }[] = [];
-      for (const b of uniBatches) {
-        if (b.status === "fulfilled" && Array.isArray(b.value)) uniList.push(...(b.value as { name?: string }[]));
-      }
-      for (const u of uniList.slice(0, 8)) {
-        const lbl = u.name || "";
-        if (lbl && !seen.has(lbl)) {
+      for (const b of wikiBatches) {
+        if (b.status !== "fulfilled") continue;
+        const pages = (b.value as { pages?: { title?: string; description?: string }[] })?.pages ?? [];
+        for (const pg of pages) {
+          const lbl = pg.title || "";
+          if (!lbl || seen.has(lbl)) continue;
+          if (!isEdu(lbl, pg.description || "")) continue;
           seen.add(lbl);
           merged.push({ label: lbl, kind: "uni" });
+          if (merged.length >= 5) break;
         }
         if (merged.length >= 5) break;
       }
