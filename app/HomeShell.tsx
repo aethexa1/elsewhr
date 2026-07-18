@@ -9,6 +9,8 @@ import { supabase } from "@/lib/supabaseClient";
 import HeaderActions from "./HeaderActions";
 import WelcomeHero from "./WelcomeHero";
 import LangPicker from "./LangPicker";
+import CurvedMarquee from "./CurvedMarquee";
+import ProfileCoverflow from "./ProfileCoverflow";
 import { useLang, t } from "@/lib/i18n";
 
 export type FeedProfile = {
@@ -27,6 +29,15 @@ export type FeedProfile = {
 };
 
 // two worlds, one universe: connect is the front door, work stands behind it
+const MARQUEE_STRINGS: Record<string, string> = {
+  en: "you got in · now you know nobody there · elsewhr · ",
+  es: "entraste · y no conoces a nadie allá · elsewhr · ",
+  pt: "você entrou · e não conhece ninguém lá · elsewhr · ",
+  hi: "एडमिशन मिल गया · वहाँ किसी को नहीं जानते · elsewhr · ",
+  pl: "dostałeś się · nikogo tam nie znasz · elsewhr · ",
+  fr: "t'es admis · tu ne connais personne là-bas · elsewhr · ",
+};
+
 const UNIVERSE_STRINGS: Record<string, { connect: string; work: string; headedTo: string }> = {
   en: { connect: "connect", work: "work", headedTo: "→ " },
   es: { connect: "conectar", work: "trabajo", headedTo: "→ " },
@@ -125,6 +136,16 @@ export default function HomeShell({
 
   // never-inflate applies to counting too: only real accounts count
   const realCount = profiles.filter((p) => !!p.user_id).length;
+
+  // real faces for the guest coverflow — only real accounts with photos
+  const coverSlides = profiles
+    .filter((p) => !!p.user_id && !!p.photo)
+    .slice(0, 8)
+    .map((p) => ({
+      photo: p.photo as string,
+      name: p.name,
+      line: p.dest_place && p.dest_place.trim() ? "→ " + p.dest_place.trim() : undefined,
+    }));
 
   // matching-lite: people who share your mindset rise to the top
   const shared = (p: FeedProfile) =>
@@ -313,6 +334,14 @@ export default function HomeShell({
             <div className="min-h-[55vh] flex items-center">
               <WelcomeHero />
             </div>
+            <div className="-mx-4 mb-4">
+              <CurvedMarquee text={MARQUEE_STRINGS[lang] || MARQUEE_STRINGS.en} />
+            </div>
+            {!peek && coverSlides.length >= 3 && (
+              <div className="mb-8">
+                <ProfileCoverflow slides={coverSlides} />
+              </div>
+            )}
             {!peek && (
               <div className="text-center mb-16">
                 <button
