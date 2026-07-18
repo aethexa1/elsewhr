@@ -11,6 +11,7 @@ import WelcomeHero from "./WelcomeHero";
 import LangPicker from "./LangPicker";
 import CurvedMarquee from "./CurvedMarquee";
 import ProfileCoverflow from "./ProfileCoverflow";
+import { useRouter } from "next/navigation";
 import { useLang, t } from "@/lib/i18n";
 
 export type FeedProfile = {
@@ -76,6 +77,13 @@ export default function HomeShell({
   const pk = PEEK_STRINGS[lang] || PEEK_STRINGS.en;
   const wd = WORLD_STRINGS[lang] || WORLD_STRINGS.en;
   const uv = UNIVERSE_STRINGS[lang] || UNIVERSE_STRINGS.en;
+  const router = useRouter();
+  // a place line inside a profile card opens that place's world; the card link stays intact
+  const goPlace = (e: React.MouseEvent, place: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    router.push("/w?place=" + encodeURIComponent(place));
+  };
   const [mode, setMode] = useState<"loading" | "guest" | "member">("loading");
   const [peek, setPeek] = useState(false);
   const [myTags, setMyTags] = useState<string[]>([]);
@@ -519,7 +527,16 @@ export default function HomeShell({
                           </p>
                           {universe === "connect" && p.dest_place && p.dest_place.trim() ? (
                             <p className="text-[13.5px] leading-snug font-bold text-[#6b4eff] truncate">
-                              {uv.headedTo}{p.dest_place.trim()}{p.dest_term && p.dest_term.trim() ? " · " + p.dest_term.trim() : ""}
+                              <span role="link" tabIndex={0} onClick={(e) => goPlace(e, p.dest_place!.trim())} className="underline decoration-2 underline-offset-2 hover:text-[#1c1410] cursor-pointer">
+                                {uv.headedTo}{p.dest_place.trim()}
+                              </span>
+                              {p.dest_term && p.dest_term.trim() ? " · " + p.dest_term.trim() : ""}
+                            </p>
+                          ) : universe === "connect" && p.location && p.location.trim() ? (
+                            <p className="text-[13.5px] leading-snug truncate">
+                              <span role="link" tabIndex={0} onClick={(e) => goPlace(e, p.location.trim())} className="font-bold text-[#6b4eff] underline decoration-2 underline-offset-2 hover:text-[#1c1410] cursor-pointer">
+                                📍 {p.location.trim()}
+                              </span>
                             </p>
                           ) : (
                             <p className="text-[13.5px] leading-snug text-[#3a2c20] line-clamp-2">
