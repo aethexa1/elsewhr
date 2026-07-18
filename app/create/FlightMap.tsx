@@ -66,6 +66,8 @@ export default function FlightMap({
   const dragging = useRef(false);
   const lastPtr = useRef({ x: 0, y: 0 });
   const reducedMotion = useRef(false);
+  const zoom = useRef(1);
+  const zoomTarget = useRef(1);
 
   // the world's dots, computed once
   const dots = useMemo(() => {
@@ -84,10 +86,13 @@ export default function FlightMap({
     hasPin.current = true;
     flying.current = true;
     settledAt.current = 0;
+    zoomTarget.current = 1; // pull back for the flight...
     if (reducedMotion.current) {
       rot.current = { ...target.current };
       settledAt.current = performance.now();
       flying.current = false;
+      zoom.current = 1.9;
+      zoomTarget.current = 1.9;
     }
     start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -101,6 +106,7 @@ export default function FlightMap({
       if (!canvas) return;
       dragging.current = true;
       flying.current = false; // your hand outranks the autopilot
+      zoomTarget.current = 1; // pull back so you can see the world you're spinning
       lastPtr.current = { x: e.clientX, y: e.clientY };
       canvas.setPointerCapture(e.pointerId);
       start();
@@ -152,15 +158,19 @@ export default function FlightMap({
         if (settled) {
           flying.current = false;
           if (settledAt.current === 0) settledAt.current = now;
+          zoomTarget.current = 1.9; // ...then push in on where you're going
         }
       } else if (!dragging.current && !reducedMotion.current) {
-        // ambient: the world turns slowly on its own
-        rot.current.lon += 0.045;
+        // ambient: the world turns slowly on its own (slower when zoomed in — ground speed is real)
+        rot.current.lon += 0.045 / zoom.current;
       }
+
+      zoom.current += (zoomTarget.current - zoom.current) * 0.06;
 
       draw(now);
 
-      if (reducedMotion.current && !flying.current && !dragging.current) return; // rest
+      const zoomBusy = Math.abs(zoomTarget.current - zoom.current) > 0.004;
+      if (reducedMotion.current && !flying.current && !dragging.current && !zoomBusy) return; // rest
       raf.current = requestAnimationFrame(tick);
     };
     raf.current = requestAnimationFrame(tick);
@@ -179,10 +189,14 @@ export default function FlightMap({
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cssSize, cssSize);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, cssSize, cssSize);
+    ctx.clip();
 
     const cx = cssSize / 2;
     const cy = cssSize / 2;
-    const R = cssSize * 0.42;
+    const R = cssSize * 0.42 * zoom.current;
     const rl = (rot.current.lon * Math.PI) / 180;
     const rp = (rot.current.lat * Math.PI) / 180;
     const sinRp = Math.sin(rp);
@@ -263,6 +277,8 @@ export default function FlightMap({
         ctx.stroke();
       }
     }
+
+    ctx.restore();
 
     // live coordinates in the ticker
     if (coordRef.current) {
