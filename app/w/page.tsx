@@ -29,6 +29,8 @@ type Person = {
   dest_term?: string | null;
   dest_program?: string | null;
   dest_status?: string | null;
+  location?: string | null;
+  livesHere?: boolean;
 };
 
 const STRINGS: Record<string, {
@@ -149,22 +151,28 @@ function WorldPageInner() {
     if (!place) { setLoading(false); return; }
     let alive = true;
     (async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("id, user_id, name, photo, headline, accent, mindset, dest_term, dest_program, dest_status")
-        .ilike("dest_place", place)
-        .order("id", { ascending: false })
-        .limit(60);
+      const cols = "id, user_id, name, photo, headline, location, accent, mindset, dest_term, dest_program, dest_status";
+      const [dst, liv] = await Promise.all([
+        supabase.from("profiles").select(cols).ilike("dest_place", place).order("id", { ascending: false }).limit(60),
+        supabase.from("profiles").select(cols).ilike("location", "%" + place + "%").order("id", { ascending: false }).limit(60),
+      ]);
       if (alive) {
-        setPeople(((data ?? []) as Person[]).filter((p) => !!p.user_id));
+        const seen = new Set<number>();
+        const merged: Person[] = [];
+        for (const row of [...(dst.data ?? []), ...(liv.data ?? [])] as Person[]) {
+          if (!row.user_id || seen.has(row.id)) continue;
+          seen.add(row.id);
+          merged.push({ ...row, livesHere: (row.location || "").toLowerCase().includes(place.toLowerCase()) });
+        }
+        setPeople(merged);
         setLoading(false);
       }
     })();
     return () => { alive = false; };
   }, [place]);
 
-  const already = useMemo(() => people.filter((p) => p.dest_status === "current"), [people]);
-  const arriving = useMemo(() => people.filter((p) => p.dest_status !== "current"), [people]);
+  const already = useMemo(() => people.filter((p) => p.dest_status === "current" || p.livesHere), [people]);
+  const arriving = useMemo(() => people.filter((p) => p.dest_status !== "current" && !p.livesHere), [people]);
 
   // arriving, grouped by term — the cohorts forming in real time
   const byTerm = useMemo(() => {
