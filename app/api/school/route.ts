@@ -23,10 +23,71 @@ const FIELDS = [
   "latest.programs.cip_4_digit.title",
 ].join(",");
 
+// field -> CIP program codes (US Dept of Education classification)
+const FIELD_CIP: Record<string, string> = {
+  "cybersecurity": "11.1003",
+  "cyber security": "11.1003",
+  "information security": "11.1003",
+  "computer science": "11.0701",
+  "information technology": "11.0103",
+  "data science": "30.7001",
+  "software": "11.0201",
+  "nursing": "51.3801",
+  "business": "52.0201",
+  "accounting": "52.0301",
+  "finance": "52.0801",
+  "marketing": "52.1401",
+  "psychology": "42.0101",
+  "criminal justice": "43.0104",
+  "biology": "26.0101",
+  "mechanical engineering": "14.1901",
+  "electrical engineering": "14.1001",
+  "civil engineering": "14.0801",
+  "graphic design": "50.0409",
+  "culinary": "12.0503",
+  "welding": "48.0508",
+  "hvac": "47.0201",
+  "automotive": "47.0604",
+  "education": "13.0101",
+  "communications": "09.0101",
+};
+
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const q = (url.searchParams.get("q") || "").trim();
+    const field = (url.searchParams.get("field") || "").trim().toLowerCase();
+
+    // field mode: every US school offering this program, cheapest in-state first
+    if (field) {
+      const key = process.env.SCORECARD_API_KEY;
+      if (!key) return NextResponse.json({ ok: false, error: "not configured" }, { status: 503 });
+      const cip = FIELD_CIP[field];
+      if (!cip) {
+        return NextResponse.json({ ok: true, field, known: Object.keys(FIELD_CIP), schools: null });
+      }
+      const api =
+        "https://api.data.gov/ed/collegescorecard/v1/schools" +
+        `?api_key=${key}` +
+        `&latest.programs.cip_4_digit.code=${cip}` +
+        "&fields=school.name,school.city,school.state,latest.student.size,latest.cost.tuition.in_state,latest.cost.tuition.out_of_state" +
+        "&per_page=100";
+      const r = await fetch(api);
+      if (!r.ok) return NextResponse.json({ ok: false, error: "upstream" }, { status: 502 });
+      const data = (await r.json()) as { metadata?: { total?: number }; results?: Record<string, unknown>[] };
+      const schools = (data.results ?? [])
+        .map((s) => ({
+          name: (s["school.name"] as string) ?? null,
+          city: (s["school.city"] as string) ?? null,
+          state: (s["school.state"] as string) ?? null,
+          size: (s["latest.student.size"] as number) ?? null,
+          tuitionIn: (s["latest.cost.tuition.in_state"] as number) ?? null,
+          tuitionOut: (s["latest.cost.tuition.out_of_state"] as number) ?? null,
+        }))
+        .filter((s) => s.name)
+        .sort((a, b) => (a.tuitionIn ?? 9e9) - (b.tuitionIn ?? 9e9));
+      return NextResponse.json({ ok: true, field, total: data.metadata?.total ?? schools.length, schools: schools.slice(0, 30) });
+    }
     if (q.length < 3) {
       return NextResponse.json({ ok: false, error: "query too short" }, { status: 400 });
     }
