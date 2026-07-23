@@ -20,6 +20,8 @@ type WikiInfo = {
 
 type Facts = { students?: string; staff?: string; founded?: string; site?: string };
 
+type Happening = { id: number; place: string; title: string; when_text?: string | null; link?: string | null; created_by?: string | null };
+
 // structured facts from Wikidata: student body, staff, founding year, official site
 async function fetchFacts(title: string): Promise<Facts> {
   const out: Facts = {};
@@ -71,6 +73,7 @@ type Person = {
 const STRINGS: Record<string, {
   about: string; official: string; arriving: string; already: string;
   nobody: string; youFirst: string; sayHi: string; back: string; loading: string;
+  events: string; noEvents: string; addEvent: string; evTitle: string; evWhen: string; evLink: string; evPost: string;
   wikiNote: string;
 }> = {
   en: {
@@ -81,6 +84,13 @@ const STRINGS: Record<string, {
     nobody: "nobody here yet — the door is open.",
     youFirst: "set this as your destination and you're the first face people see when they search it.",
     sayHi: "say hi →",
+    events: "happenings",
+    noEvents: "nothing planned yet — post the first one. orientation, meetup, chai at 5.",
+    addEvent: "+ add a happening",
+    evTitle: "what’s happening",
+    evWhen: "when (e.g. Aug 20, 6pm)",
+    evLink: "link (optional)",
+    evPost: "post it",
     back: "← back to elsewhr",
     loading: "finding this place…",
     wikiNote: "from Wikipedia",
@@ -93,6 +103,13 @@ const STRINGS: Record<string, {
     nobody: "nadie aquí todavía — la puerta está abierta.",
     youFirst: "ponlo como tu destino y serás la primera cara que la gente vea al buscarlo.",
     sayHi: "saluda →",
+    events: "eventos",
+    noEvents: "nada planeado aún — publica el primero. orientación, encuentro, café a las 5.",
+    addEvent: "+ agregar evento",
+    evTitle: "qué pasa",
+    evWhen: "cuándo (ej. 20 ago, 6pm)",
+    evLink: "enlace (opcional)",
+    evPost: "publicar",
     back: "← volver a elsewhr",
     loading: "buscando este lugar…",
     wikiNote: "de Wikipedia",
@@ -105,6 +122,13 @@ const STRINGS: Record<string, {
     nobody: "ninguém aqui ainda — a porta está aberta.",
     youFirst: "defina como seu destino e você será o primeiro rosto que as pessoas veem ao buscar.",
     sayHi: "diga oi →",
+    events: "eventos",
+    noEvents: "nada planejado ainda — poste o primeiro. orientação, encontro, café às 5.",
+    addEvent: "+ adicionar evento",
+    evTitle: "o que vai rolar",
+    evWhen: "quando (ex. 20 ago, 18h)",
+    evLink: "link (opcional)",
+    evPost: "postar",
     back: "← voltar ao elsewhr",
     loading: "procurando este lugar…",
     wikiNote: "da Wikipédia",
@@ -117,6 +141,13 @@ const STRINGS: Record<string, {
     nobody: "अभी यहाँ कोई नहीं — दरवाज़ा खुला है।",
     youFirst: "इसे अपनी मंज़िल बनाओ और खोजने वालों को सबसे पहले तुम्हारा चेहरा दिखेगा।",
     sayHi: "hi बोलो →",
+    events: "आयोजन",
+    noEvents: "अभी कुछ नहीं — पहला आप डालो।",
+    addEvent: "+ आयोजन जोड़ो",
+    evTitle: "क्या हो रहा है",
+    evWhen: "कब (जैसे 20 अग, 6pm)",
+    evLink: "लिंक (वैकल्पिक)",
+    evPost: "पोस्ट करो",
     back: "← elsewhr पर वापस",
     loading: "यह जगह ढूंढ रहे हैं…",
     wikiNote: "विकिपीडिया से",
@@ -129,6 +160,13 @@ const STRINGS: Record<string, {
     nobody: "nikogo tu jeszcze nie ma — drzwi są otwarte.",
     youFirst: "ustaw to jako swój cel, a będziesz pierwszą twarzą, którą zobaczą szukający.",
     sayHi: "przywitaj się →",
+    events: "wydarzenia",
+    noEvents: "nic nie zaplanowano — dodaj pierwsze. orientacja, spotkanie, kawa o 17.",
+    addEvent: "+ dodaj wydarzenie",
+    evTitle: "co się dzieje",
+    evWhen: "kiedy (np. 20 sie, 18:00)",
+    evLink: "link (opcjonalnie)",
+    evPost: "opublikuj",
     back: "← wróć do elsewhr",
     loading: "szukam tego miejsca…",
     wikiNote: "z Wikipedii",
@@ -141,6 +179,13 @@ const STRINGS: Record<string, {
     nobody: "personne ici pour l'instant — la porte est ouverte.",
     youFirst: "définis-le comme ta destination et tu seras le premier visage qu'on verra en cherchant.",
     sayHi: "dis bonjour →",
+    events: "événements",
+    noEvents: "rien de prévu — poste le premier. orientation, rencontre, café à 17h.",
+    addEvent: "+ ajouter un événement",
+    evTitle: "ce qui se passe",
+    evWhen: "quand (ex. 20 août, 18h)",
+    evLink: "lien (optionnel)",
+    evPost: "publier",
     back: "← retour à elsewhr",
     loading: "on cherche ce lieu…",
     wikiNote: "de Wikipédia",
@@ -158,6 +203,13 @@ function WorldPageInner() {
   const [wiki, setWiki] = useState<WikiInfo | null>(null);
   const [facts, setFacts] = useState<Facts>({});
   const [filter, setFilter] = useState("");
+  const [events, setEvents] = useState<Happening[]>([]);
+  const [uid, setUid] = useState<string | null>(null);
+  const [evOpen, setEvOpen] = useState(false);
+  const [evTitle, setEvTitle] = useState("");
+  const [evWhen, setEvWhen] = useState("");
+  const [evLink, setEvLink] = useState("");
+  const [evBusy, setEvBusy] = useState(false);
   const [site, setSite] = useState<string | null>(null);
   const [people, setPeople] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
@@ -183,6 +235,14 @@ function WorldPageInner() {
       if (alive) {
         setFacts(f);
         if (f.site) setSite(f.site);
+      }
+      const [{ data: evs }, { data: userData }] = await Promise.all([
+        supabase.from("events").select("*").ilike("place", place).order("id", { ascending: false }).limit(20),
+        supabase.auth.getUser(),
+      ]);
+      if (alive) {
+        setEvents((evs ?? []) as Happening[]);
+        setUid(userData?.user?.id ?? null);
       }
     })();
     return () => { alive = false; };
@@ -236,6 +296,22 @@ function WorldPageInner() {
     }
     return [...m.entries()].sort((a, b) => (a[0] === "—" ? 1 : b[0] === "—" ? -1 : a[0].localeCompare(b[0])));
   }, [arriving]);
+
+  async function postEvent() {
+    const title = evTitle.trim();
+    if (!title || !uid || evBusy) return;
+    setEvBusy(true);
+    const { data, error } = await supabase
+      .from("events")
+      .insert({ place, title, when_text: evWhen.trim() || null, link: evLink.trim() || null, created_by: uid })
+      .select()
+      .single();
+    setEvBusy(false);
+    if (!error && data) {
+      setEvents([data as Happening, ...events]);
+      setEvTitle(""); setEvWhen(""); setEvLink(""); setEvOpen(false);
+    }
+  }
 
   return (
     <main className="relative min-h-screen bg-[#ff5d3b] text-[#1c1410] flex justify-center px-4 py-8">
@@ -299,6 +375,56 @@ function WorldPageInner() {
         )}
 
         {/* the elsewhr layer: the campus's real activity is its people */}
+        {/* HAPPENINGS: the world's corkboard */}
+        {!loading && (
+          <div className="mt-6 bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-3xl p-5 shadow-[7px_7px_0_rgba(28,20,16,0.9)]">
+            <div className="flex items-baseline justify-between">
+              <p className="font-mono text-[11px] uppercase tracking-widest text-[#6b5e52]">🗓 {s.events} · {events.length}</p>
+              {uid && (
+                <button type="button" onClick={() => setEvOpen(!evOpen)} className="font-mono text-[11.5px] font-bold text-[#6b4eff] underline underline-offset-4">
+                  {s.addEvent}
+                </button>
+              )}
+            </div>
+            {evOpen && (
+              <div className="mt-3 flex flex-col gap-2">
+                <input value={evTitle} onChange={(e) => setEvTitle(e.target.value)} placeholder={s.evTitle} maxLength={90}
+                  className="px-3 py-2.5 rounded-xl border-2 border-[#1c1410] bg-white outline-none focus:border-[#6b4eff] text-[14px]" />
+                <div className="flex gap-2">
+                  <input value={evWhen} onChange={(e) => setEvWhen(e.target.value)} placeholder={s.evWhen} maxLength={40}
+                    className="flex-1 min-w-0 px-3 py-2.5 rounded-xl border-2 border-[#1c1410] bg-white outline-none focus:border-[#6b4eff] text-[14px]" />
+                  <input value={evLink} onChange={(e) => setEvLink(e.target.value)} placeholder={s.evLink} maxLength={200}
+                    className="flex-1 min-w-0 px-3 py-2.5 rounded-xl border-2 border-[#1c1410] bg-white outline-none focus:border-[#6b4eff] text-[14px]" />
+                </div>
+                <button type="button" onClick={postEvent} disabled={!evTitle.trim() || evBusy}
+                  className="self-start px-4 py-2.5 rounded-xl border-2 border-[#1c1410] bg-[#c8f000] font-bold text-[13px] disabled:opacity-40">
+                  {s.evPost}
+                </button>
+              </div>
+            )}
+            {events.length === 0 && !evOpen && (
+              <p className="mt-2 text-[13px] text-[#6b5e52] leading-snug">{s.noEvents}</p>
+            )}
+            {events.length > 0 && (
+              <div className="mt-3 flex flex-col divide-y-2 divide-[#1c1410]/10">
+                {events.map((ev) => (
+                  <div key={ev.id} className="py-2.5 flex items-baseline justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-bold text-[14px] leading-tight">{ev.title}</p>
+                      {ev.when_text && <p className="text-[12px] text-[#6b5e52]">{ev.when_text}</p>}
+                    </div>
+                    {ev.link && (
+                      <a href={ev.link} target="_blank" rel="noopener noreferrer" className="font-mono text-[11px] font-bold text-[#6b4eff] underline underline-offset-4 whitespace-nowrap">
+                        →
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {!loading && people.length > 1 && (
           <input
             value={filter}
