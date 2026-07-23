@@ -117,6 +117,50 @@ const STRINGS: Record<string, {
 };
 
 const money = (n: number | null) => (n == null ? "—" : "$" + n.toLocaleString());
+
+// a school input that suggests as you type — tap a name, the numbers load; no full typing, ever
+function SchoolInput({ value, onValue, onPick, placeholder }: {
+  value: string; onValue: (v: string) => void; onPick: (name: string) => void; placeholder: string;
+}) {
+  const [sugs, setSugs] = useState<{ name: string; city: string | null; state: string | null }[]>([]);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const t = value.trim();
+    if (t.length < 2) { setSugs([]); setOpen(false); return; }
+    const timer = setTimeout(async () => {
+      try {
+        const r = await fetch("/api/school?suggest=" + encodeURIComponent(t));
+        const d = await r.json();
+        if (Array.isArray(d.suggestions)) { setSugs(d.suggestions); setOpen(d.suggestions.length > 0); }
+      } catch { /* typing still works */ }
+    }, 220);
+    return () => clearTimeout(timer);
+  }, [value]);
+  return (
+    <div className="relative flex-1 min-w-0">
+      <input value={value} onChange={(e) => onValue(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") { setOpen(false); onPick(value); } }}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onFocus={() => sugs.length > 0 && setOpen(true)}
+        placeholder={placeholder}
+        className="w-full px-3 py-2.5 rounded-xl border-2 border-[#1c1410] bg-white outline-none focus:border-[#6b4eff] text-[14px]"
+      />
+      {open && (
+        <div className="absolute z-10 left-0 right-0 mt-1 bg-white border-2 border-[#1c1410] rounded-xl overflow-hidden shadow-[4px_4px_0_rgba(28,20,16,0.5)]">
+          {sugs.map((sg) => (
+            <button key={sg.name} type="button"
+              onMouseDown={() => { setOpen(false); onPick(sg.name); }}
+              className="w-full text-left px-3 py-2 text-[13px] hover:bg-[#c8f000]/40"
+            >
+              🎓 {sg.name}
+              <span className="text-[#6b5e52]"> · {[sg.city, sg.state].filter(Boolean).join(", ")}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 const pct = (n: number | null) => (n == null ? "—" : Math.round(n * 100) + "%");
 
 function ComparePageInner() {
@@ -185,10 +229,8 @@ function ComparePageInner() {
             ([key, q, setQ, school, st, set, setSt]) => (
               <div key={key} className="bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-3xl p-5 shadow-[7px_7px_0_#1c1410]">
                 <div className="flex gap-2">
-                  <input value={q} onChange={(e) => setQ(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") look(q, set, setSt); }}
-                    placeholder={s.placeholder}
-                    className="flex-1 min-w-0 px-3 py-2.5 rounded-xl border-2 border-[#1c1410] bg-white outline-none focus:border-[#6b4eff] text-[14px]"
+                  <SchoolInput value={q} onValue={setQ} placeholder={s.placeholder}
+                    onPick={(name) => { setQ(name); look(name, set, setSt); }}
                   />
                   <button type="button" onClick={() => look(q, set, setSt)}
                     className="px-4 py-2.5 rounded-xl border-2 border-[#1c1410] bg-[#c8f000] font-bold text-[13px] hover:translate-y-[-2px] transition-transform"
