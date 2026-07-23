@@ -81,6 +81,22 @@ export async function GET(req: Request) {
     const q = (url.searchParams.get("q") || "").trim();
     const field = (url.searchParams.get("field") || "").trim().toLowerCase();
 
+    // ?suggest= -> ranked school-name suggestions from the local database
+    const sq = (url.searchParams.get("suggest") || "").trim().toLowerCase();
+    if (sq.length >= 2) {
+      const scored: { s: LocalSchool; sc: number }[] = [];
+      for (const s of SCHOOLS) {
+        const n = s.n.toLowerCase();
+        const sc = n.startsWith(sq) ? 0 : n.split(/[^a-z]+/).some((w) => w.startsWith(sq)) ? 1 : n.includes(sq) ? 2 : 3;
+        if (sc < 3) scored.push({ s, sc });
+      }
+      scored.sort((a, b) => a.sc - b.sc || a.s.n.length - b.s.n.length);
+      return NextResponse.json({
+        ok: true,
+        suggestions: scored.slice(0, 8).map(({ s }) => ({ name: s.n, city: s.c, state: s.s })),
+      });
+    }
+
     // ?list=1 -> the whole catalog for type-ahead: nice names first, then every official field of study
     if (url.searchParams.get("list")) {
       const known = [...new Set([...Object.keys(FIELD_CIP), ...CATALOG.map((e) => e.t)])];
