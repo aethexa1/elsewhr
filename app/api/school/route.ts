@@ -58,6 +58,11 @@ export async function GET(req: Request) {
     const q = (url.searchParams.get("q") || "").trim();
     const field = (url.searchParams.get("field") || "").trim().toLowerCase();
 
+    // ?list=1 -> just the known fields, for type-ahead
+    if (url.searchParams.get("list")) {
+      return NextResponse.json({ ok: true, known: Object.keys(FIELD_CIP) });
+    }
+
     // field mode: every US school offering this program, cheapest in-state first
     if (field) {
       const key = process.env.SCORECARD_API_KEY;
