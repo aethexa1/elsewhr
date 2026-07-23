@@ -421,6 +421,18 @@ export default function HomeShell({
           </div>
         )}
 
+        {/* doors to the discovery pages — features without doors don't exist */}
+        {showFeed && (
+          <div className="rise flex justify-center gap-4 mb-6 -mt-2" style={{ animationDelay: "110ms" }}>
+            <Link href="/f" className="font-mono text-[12px] font-bold text-[#fff6ec]/90 underline decoration-2 underline-offset-4 hover:text-[#fff6ec]">
+              🧭 fields
+            </Link>
+            <Link href="/compare" className="font-mono text-[12px] font-bold text-[#fff6ec]/90 underline decoration-2 underline-offset-4 hover:text-[#fff6ec]">
+              ⚖️ compare schools
+            </Link>
+          </div>
+        )}
+
         {/* THE FEED */}
         {showFeed && (
           <>
