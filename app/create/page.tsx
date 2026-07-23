@@ -1366,6 +1366,34 @@ function LocationPicker({
     return () => clearTimeout(timer);
   }, [q]);
 
+  const [locating, setLocating] = useState(false);
+
+  // one tap, located: permission prompt -> coordinates -> clean "City, Region" from a keyless reverse geocoder
+  function useMyLocation() {
+    if (!navigator.geolocation || locating) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const r = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+          );
+          const d = await r.json();
+          const label = [d.city || d.locality, d.principalSubdivision].filter(Boolean).join(", ");
+          if (label) {
+            setQ(label);
+            onChange(label);
+            if (onCoords) onCoords(latitude, longitude);
+          }
+        } catch { /* typing still works */ }
+        setLocating(false);
+      },
+      () => setLocating(false),
+      { timeout: 8000 }
+    );
+  }
+
   return (
     <div className="relative">
       <FieldLabel>{t(lang, "c.locationLabel")}</FieldLabel>
@@ -1381,6 +1409,11 @@ function LocationPicker({
         onFocus={() => suggestions.length > 0 && setOpen(true)}
         placeholder={t(lang, "c.locationPlaceholder")}
       />
+      <button type="button" onClick={useMyLocation} disabled={locating}
+        className="mt-2 px-3 py-2 rounded-xl border-2 border-[#1c1410] bg-white font-bold text-[12.5px] hover:bg-[#c8f000] transition-colors disabled:opacity-50"
+      >
+        {locating ? "📍 …" : "📍 use my location"}
+      </button>
       {open && suggestions.length > 0 && (
         <div className="absolute z-10 left-0 right-0 mt-1 bg-white border-2 border-[#1c1410] rounded-xl overflow-hidden shadow-[4px_4px_0_rgba(28,20,16,0.5)]">
           {suggestions.map((s) => (
