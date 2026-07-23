@@ -132,6 +132,26 @@ const STRINGS: Record<string, {
 
 const money = (n: number | null) => (n == null ? "—" : "$" + n.toLocaleString());
 
+// free places to learn a field — generated links, no gatekeeping
+const TECH_FIELDS = ["cybersecurity", "computer science", "information technology", "data science", "software"];
+const LEARN_SPECIALS: Record<string, { label: string; url: string }[]> = {
+  "cybersecurity": [
+    { label: "TryHackMe (free rooms)", url: "https://tryhackme.com" },
+    { label: "OverTheWire wargames", url: "https://overthewire.org/wargames/" },
+  ],
+  "computer science": [{ label: "Harvard CS50 (free)", url: "https://cs50.harvard.edu/x/" }],
+  "data science": [{ label: "Kaggle Learn (free)", url: "https://www.kaggle.com/learn" }],
+};
+function learnLinks(field: string): { label: string; url: string }[] {
+  const f = field.toLowerCase();
+  const out: { label: string; url: string }[] = [
+    { label: "YouTube: full course", url: "https://www.youtube.com/results?search_query=" + encodeURIComponent(f + " full course") },
+    { label: "MIT OpenCourseWare", url: "https://ocw.mit.edu/search/?q=" + encodeURIComponent(f) },
+  ];
+  if (TECH_FIELDS.includes(f)) out.push({ label: "freeCodeCamp", url: "https://www.freecodecamp.org/learn/" });
+  return [...(LEARN_SPECIALS[f] ?? []), ...out];
+}
+
 function FieldPageInner() {
   const params = useSearchParams();
   const { lang } = useLang();
@@ -144,6 +164,18 @@ function FieldPageInner() {
   const [known, setKnown] = useState<string[]>([]);
   const [schoolState, setSchoolState] = useState<"idle" | "loading" | "unknown" | "off">("idle");
   const [loadingPeople, setLoadingPeople] = useState(false);
+  const [allFields, setAllFields] = useState<string[]>([]);
+
+  // the known-fields list, once — so one letter is enough
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch("/api/school?list=1");
+        const d = await r.json();
+        if (Array.isArray(d.known)) setAllFields(d.known as string[]);
+      } catch { /* chips are a bonus */ }
+    })();
+  }, []);
 
   useEffect(() => {
     const f = active.trim();
@@ -215,6 +247,22 @@ function FieldPageInner() {
             {s.go}
           </button>
         </div>
+
+        {q.trim().length > 0 && allFields.length > 0 && (() => {
+          const ql = q.trim().toLowerCase();
+          const hits = allFields.filter((k) => k.includes(ql) && k !== active.toLowerCase()).slice(0, 10);
+          return hits.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5 -mt-4 mb-8">
+              {hits.map((k) => (
+                <button key={k} type="button" onClick={() => { setQ(k); setActive(k); }}
+                  className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-[#fff6ec] text-[12px] font-bold hover:bg-[#c8f000]"
+                >
+                  🧭 {k}
+                </button>
+              ))}
+            </div>
+          ) : null;
+        })()}
 
         {active && (
           <>
@@ -308,6 +356,21 @@ function FieldPageInner() {
                 <p className="mt-3 font-mono text-[10.5px] text-[#6b5e52]">{s.usNote}</p>
               </div>
             )}
+            {/* learn it free — the door with no fee */}
+            <div className="mt-5 bg-[#1c1410] text-[#fff6ec] border-[3px] border-[#1c1410] rounded-3xl p-5 shadow-[7px_7px_0_rgba(28,20,16,0.35)]">
+              <p className="font-mono text-[10.5px] uppercase tracking-widest text-[#fff6ec]/70 mb-2.5">
+                🎒 learn it free
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {learnLinks(active).map((l) => (
+                  <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-full bg-[#fff6ec]/10 border border-[#fff6ec]/30 text-[12px] font-bold hover:bg-[#c8f000] hover:text-[#1c1410] transition-colors"
+                  >
+                    {l.label} ↗
+                  </a>
+                ))}
+              </div>
+            </div>
           </>
         )}
       </div>
