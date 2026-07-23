@@ -18,7 +18,24 @@ type WikiInfo = {
   description?: string;
 };
 
-type Facts = { students?: string; staff?: string; founded?: string; site?: string };
+type Facts = { students?: string; staff?: string; founded?: string; site?: string; qid?: string };
+
+type Notable = { name: string; url?: string };
+
+// the school's famous names, straight from Wikidata (educated-at, ranked by fame)
+async function fetchNotable(qid: string): Promise<Notable[]> {
+  try {
+    const sparql = `SELECT ?pLabel ?article WHERE { ?p wdt:P69 wd:${qid} . ?p wikibase:sitelinks ?sl . OPTIONAL { ?article schema:about ?p ; schema:isPartOf <https://en.wikipedia.org/> . } SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } } ORDER BY DESC(?sl) LIMIT 6`;
+    const r = await fetch("https://query.wikidata.org/sparql?format=json&query=" + encodeURIComponent(sparql), {
+      headers: { Accept: "application/sparql-results+json" },
+    });
+    const d = await r.json();
+    const rows = (d?.results?.bindings ?? []) as { pLabel?: { value?: string }; article?: { value?: string } }[];
+    return rows
+      .map((b) => ({ name: b.pLabel?.value || "", url: b.article?.value }))
+      .filter((n) => n.name && !/^Q\d+$/.test(n.name));
+  } catch { return []; }
+}
 
 type Happening = { id: number; place: string; title: string; when_text?: string | null; link?: string | null; created_by?: string | null };
 
@@ -34,6 +51,7 @@ async function fetchFacts(title: string): Promise<Facts> {
     const first = Object.values(pages)[0] as { pageprops?: { wikibase_item?: string } } | undefined;
     const qid = first?.pageprops?.wikibase_item;
     if (!qid) return out;
+    out.qid = qid;
     const r2 = await fetch(`https://www.wikidata.org/wiki/Special:EntityData/${qid}.json`);
     const d2 = await r2.json();
     const claims = d2?.entities?.[qid]?.claims || {};
@@ -74,6 +92,7 @@ const STRINGS: Record<string, {
   about: string; official: string; arriving: string; already: string;
   nobody: string; youFirst: string; sayHi: string; back: string; loading: string;
   events: string; noEvents: string; addEvent: string; evTitle: string; evWhen: string; evLink: string; evPost: string;
+  alumni: string; notable: string;
   wikiNote: string;
 }> = {
   en: {
@@ -91,6 +110,8 @@ const STRINGS: Record<string, {
     evWhen: "when (e.g. Aug 20, 6pm)",
     evLink: "link (optional)",
     evPost: "post it",
+    alumni: "alumni here",
+    notable: "notable alumni",
     back: "← back to elsewhr",
     loading: "finding this place…",
     wikiNote: "from Wikipedia",
@@ -110,6 +131,8 @@ const STRINGS: Record<string, {
     evWhen: "cuándo (ej. 20 ago, 6pm)",
     evLink: "enlace (opcional)",
     evPost: "publicar",
+    alumni: "exalumnos aquí",
+    notable: "exalumnos destacados",
     back: "← volver a elsewhr",
     loading: "buscando este lugar…",
     wikiNote: "de Wikipedia",
@@ -129,6 +152,8 @@ const STRINGS: Record<string, {
     evWhen: "quando (ex. 20 ago, 18h)",
     evLink: "link (opcional)",
     evPost: "postar",
+    alumni: "ex-alunos aqui",
+    notable: "ex-alunos notáveis",
     back: "← voltar ao elsewhr",
     loading: "procurando este lugar…",
     wikiNote: "da Wikipédia",
@@ -148,6 +173,8 @@ const STRINGS: Record<string, {
     evWhen: "कब (जैसे 20 अग, 6pm)",
     evLink: "लिंक (वैकल्पिक)",
     evPost: "पोस्ट करो",
+    alumni: "यहाँ के पूर्व छात्र",
+    notable: "प्रसिद्ध पूर्व छात्र",
     back: "← elsewhr पर वापस",
     loading: "यह जगह ढूंढ रहे हैं…",
     wikiNote: "विकिपीडिया से",
@@ -167,6 +194,8 @@ const STRINGS: Record<string, {
     evWhen: "kiedy (np. 20 sie, 18:00)",
     evLink: "link (opcjonalnie)",
     evPost: "opublikuj",
+    alumni: "absolwenci tutaj",
+    notable: "znani absolwenci",
     back: "← wróć do elsewhr",
     loading: "szukam tego miejsca…",
     wikiNote: "z Wikipedii",
@@ -186,6 +215,8 @@ const STRINGS: Record<string, {
     evWhen: "quand (ex. 20 août, 18h)",
     evLink: "lien (optionnel)",
     evPost: "publier",
+    alumni: "anciens ici",
+    notable: "anciens célèbres",
     back: "← retour à elsewhr",
     loading: "on cherche ce lieu…",
     wikiNote: "de Wikipédia",
@@ -204,6 +235,7 @@ function WorldPageInner() {
   const [facts, setFacts] = useState<Facts>({});
   const [filter, setFilter] = useState("");
   const [events, setEvents] = useState<Happening[]>([]);
+  const [notable, setNotable] = useState<Notable[]>([]);
   const [uid, setUid] = useState<string | null>(null);
   const [evOpen, setEvOpen] = useState(false);
   const [evTitle, setEvTitle] = useState("");
@@ -235,6 +267,10 @@ function WorldPageInner() {
       if (alive) {
         setFacts(f);
         if (f.site) setSite(f.site);
+      }
+      if (f.qid) {
+        const nb = await fetchNotable(f.qid);
+        if (alive) setNotable(nb);
       }
       const [{ data: evs }, { data: userData }] = await Promise.all([
         supabase.from("events").select("*").ilike("place", place).order("id", { ascending: false }).limit(20),
@@ -283,8 +319,9 @@ function WorldPageInner() {
         .some((v) => String(v).toLowerCase().includes(f))
     );
   }, [people, filter]);
-  const already = useMemo(() => visible.filter((p) => p.dest_status === "current" || p.livesHere), [visible]);
-  const arriving = useMemo(() => visible.filter((p) => p.dest_status !== "current" && !p.livesHere), [visible]);
+  const alumni = useMemo(() => visible.filter((p) => p.dest_status === "graduated"), [visible]);
+  const already = useMemo(() => visible.filter((p) => p.dest_status !== "graduated" && (p.dest_status === "current" || p.livesHere)), [visible]);
+  const arriving = useMemo(() => visible.filter((p) => p.dest_status !== "graduated" && p.dest_status !== "current" && !p.livesHere), [visible]);
 
   // arriving, grouped by term — the cohorts forming in real time
   const byTerm = useMemo(() => {
@@ -351,6 +388,26 @@ function WorldPageInner() {
                   {facts.founded && (
                     <span className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12px] font-bold">est. {facts.founded}</span>
                   )}
+                </div>
+              )}
+              {notable.length > 0 && (
+                <div className="mt-3">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-[#6b5e52] mb-1.5">★ {s.notable}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {notable.map((n) =>
+                      n.url ? (
+                        <a key={n.name} href={n.url} target="_blank" rel="noopener noreferrer"
+                          className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12px] font-bold hover:bg-[#c8f000]"
+                        >
+                          {n.name} ↗
+                        </a>
+                      ) : (
+                        <span key={n.name} className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12px] font-bold">
+                          {n.name}
+                        </span>
+                      )
+                    )}
+                  </div>
                 </div>
               )}
               <p className="mt-3">
@@ -445,6 +502,10 @@ function WorldPageInner() {
 
         {!loading && already.length > 0 && (
           <PeopleBlock title={`${s.already} · ${already.length}`} people={already} sayHi={s.sayHi} />
+        )}
+
+        {!loading && alumni.length > 0 && (
+          <PeopleBlock title={`🎓 ${s.alumni} · ${alumni.length}`} people={alumni} sayHi={s.sayHi} />
         )}
 
         {!loading && byTerm.map(([term, group]) => (
