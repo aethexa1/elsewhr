@@ -250,7 +250,11 @@ function FieldPageInner() {
 
         {q.trim().length > 0 && allFields.length > 0 && (() => {
           const ql = q.trim().toLowerCase();
-          const hits = allFields.filter((k) => k.includes(ql) && k !== active.toLowerCase()).slice(0, 10);
+          const score = (k: string) => (k.startsWith(ql) ? 0 : k.split(/[^a-z]+/).some((w) => w.startsWith(ql)) ? 1 : k.includes(ql) ? 2 : 3);
+          const hits = allFields
+            .filter((k) => k !== active.toLowerCase() && score(k) < 3)
+            .sort((a, b) => score(a) - score(b) || a.length - b.length)
+            .slice(0, 12);
           return hits.length > 0 ? (
             <div className="flex flex-wrap gap-1.5 -mt-4 mb-8">
               {hits.map((k) => (
