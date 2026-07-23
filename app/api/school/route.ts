@@ -4,6 +4,25 @@
 // Requires env var SCORECARD_API_KEY (free: https://api.data.gov/signup)
 
 import { NextResponse } from "next/server";
+import schoolData from "@/lib/schoolData.json";
+
+type LocalSchool = {
+  n: string; c: string | null; s: string | null; u: string | null; o: number | null;
+  z: number | null; ti: number | null; to: number | null; np: number | null; me: number | null; ar: number | null;
+};
+const SCHOOLS = schoolData as LocalSchool[];
+
+function findLocal(q: string): LocalSchool | null {
+  const ql = q.toLowerCase();
+  let best: LocalSchool | null = null;
+  let bestScore = 4;
+  for (const s of SCHOOLS) {
+    const n = s.n.toLowerCase();
+    const score = n === ql ? 0 : n.startsWith(ql) ? 1 : n.includes(ql) ? 2 : 4;
+    if (score < bestScore) { best = s; bestScore = score; if (score === 0) break; }
+  }
+  return best;
+}
 
 export const runtime = "nodejs";
 export const maxDuration = 15;
@@ -96,12 +115,38 @@ export async function GET(req: Request) {
     if (q.length < 3) {
       return NextResponse.json({ ok: false, error: "query too short" }, { status: 400 });
     }
-    const key = process.env.SCORECARD_API_KEY;
-    if (!key) {
-      // honest signal so the UI can fall back to Wikidata-only
-      return NextResponse.json({ ok: false, error: "not configured" }, { status: 503 });
+    // the local database answers first: no key, no external call, ever
+    const local = findLocal(q);
+    if (local) {
+      let programs: string[] = [];
+      const key = process.env.SCORECARD_API_KEY;
+      if (key) {
+        // optional garnish: program list from the public API, only if a key was ever configured
+        try {
+          const r = await fetch(
+            "https://api.data.gov/ed/collegescorecard/v1/schools" +
+            `?api_key=${key}&school.name=${encodeURIComponent(local.n)}` +
+            "&fields=school.name,latest.programs.cip_4_digit.title&per_page=1"
+          );
+          if (r.ok) {
+            const d = (await r.json()) as { results?: Record<string, unknown>[] };
+            const raw = d.results?.[0]?.["latest.programs.cip_4_digit.title"];
+            if (Array.isArray(raw)) programs = [...new Set((raw as unknown[]).map(String).filter(Boolean))].sort();
+          }
+        } catch { /* garnish only */ }
+      }
+      return NextResponse.json({
+        ok: true,
+        school: {
+          name: local.n, city: local.c, state: local.s, url: local.u, ownership: local.o,
+          size: local.z, admissionRate: local.ar, tuitionIn: local.ti, tuitionOut: local.to,
+          netPrice: local.np, medianEarnings: local.me, programs,
+        },
+      });
     }
+    return NextResponse.json({ ok: true, school: null });
 
+    /* legacy API path retired — kept out of the request flow
     const api =
       "https://api.data.gov/ed/collegescorecard/v1/schools" +
       `?api_key=${key}` +
@@ -154,6 +199,7 @@ export async function GET(req: Request) {
         programs,
       },
     });
+    */
   } catch (e) {
     console.error(e);
     return NextResponse.json({ ok: false, error: "server error" }, { status: 500 });
