@@ -63,6 +63,8 @@ type Person = {
   dest_program?: string | null;
   dest_status?: string | null;
   location?: string | null;
+  seeking?: string | null;
+  learning?: string | null;
   livesHere?: boolean;
 };
 
@@ -155,6 +157,7 @@ function WorldPageInner() {
 
   const [wiki, setWiki] = useState<WikiInfo | null>(null);
   const [facts, setFacts] = useState<Facts>({});
+  const [filter, setFilter] = useState("");
   const [site, setSite] = useState<string | null>(null);
   const [people, setPeople] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
@@ -190,7 +193,7 @@ function WorldPageInner() {
     if (!place) { setLoading(false); return; }
     let alive = true;
     (async () => {
-      const cols = "id, user_id, name, photo, headline, location, accent, mindset, dest_term, dest_program, dest_status";
+      const cols = "id, user_id, name, photo, headline, location, accent, mindset, seeking, learning, dest_term, dest_program, dest_status";
       const [dst, liv] = await Promise.all([
         supabase.from("profiles").select(cols).ilike("dest_place", place).order("id", { ascending: false }).limit(60),
         supabase.from("profiles").select(cols).ilike("location", "%" + place + "%").order("id", { ascending: false }).limit(60),
@@ -210,8 +213,18 @@ function WorldPageInner() {
     return () => { alive = false; };
   }, [place]);
 
-  const already = useMemo(() => people.filter((p) => p.dest_status === "current" || p.livesHere), [people]);
-  const arriving = useMemo(() => people.filter((p) => p.dest_status !== "current" && !p.livesHere), [people]);
+  // "mehndi artists in Kochi": one place, one field, one box
+  const visible = useMemo(() => {
+    const f = filter.trim().toLowerCase();
+    if (!f) return people;
+    return people.filter((p) =>
+      [p.name, p.headline, p.dest_program, p.seeking, p.learning, ...(p.mindset ?? [])]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(f))
+    );
+  }, [people, filter]);
+  const already = useMemo(() => visible.filter((p) => p.dest_status === "current" || p.livesHere), [visible]);
+  const arriving = useMemo(() => visible.filter((p) => p.dest_status !== "current" && !p.livesHere), [visible]);
 
   // arriving, grouped by term — the cohorts forming in real time
   const byTerm = useMemo(() => {
@@ -286,6 +299,15 @@ function WorldPageInner() {
         )}
 
         {/* the elsewhr layer: the campus's real activity is its people */}
+        {!loading && people.length > 1 && (
+          <input
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="🧭 filter — cybersecurity, design, mehndi…"
+            className="mt-6 w-full px-4 py-3 rounded-2xl border-[3px] border-[#1c1410] bg-[#fff6ec] outline-none focus:border-[#6b4eff] text-[14px] shadow-[5px_5px_0_rgba(28,20,16,0.9)]"
+          />
+        )}
+
         {loading && <p className="mt-6 font-mono text-[12px] text-[#fff6ec]/70">{s.loading}</p>}
 
         {!loading && people.length === 0 && (
