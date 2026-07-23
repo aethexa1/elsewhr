@@ -5,6 +5,10 @@
 
 import { NextResponse } from "next/server";
 import schoolData from "@/lib/schoolData.json";
+import fieldCatalog from "@/lib/fieldCatalog.json";
+
+type CatalogEntry = { t: string; c: string };
+const CATALOG = fieldCatalog as CatalogEntry[];
 
 type LocalSchool = {
   n: string; c: string | null; s: string | null; u: string | null; o: number | null;
@@ -77,16 +81,21 @@ export async function GET(req: Request) {
     const q = (url.searchParams.get("q") || "").trim();
     const field = (url.searchParams.get("field") || "").trim().toLowerCase();
 
-    // ?list=1 -> just the known fields, for type-ahead
+    // ?list=1 -> the whole catalog for type-ahead: nice names first, then every official field of study
     if (url.searchParams.get("list")) {
-      return NextResponse.json({ ok: true, known: Object.keys(FIELD_CIP) });
+      const known = [...new Set([...Object.keys(FIELD_CIP), ...CATALOG.map((e) => e.t)])];
+      return NextResponse.json({ ok: true, known });
     }
 
     // field mode: every US school offering this program, cheapest in-state first
     if (field) {
       const key = process.env.SCORECARD_API_KEY;
       if (!key) return NextResponse.json({ ok: false, error: "not configured" }, { status: 503 });
-      const cip = FIELD_CIP[field];
+      let cip: string | undefined = FIELD_CIP[field];
+      if (!cip) {
+        const hit = CATALOG.find((e) => e.t === field) || CATALOG.find((e) => e.t.includes(field));
+        if (hit) cip = hit.c;
+      }
       if (!cip) {
         return NextResponse.json({ ok: true, field, known: Object.keys(FIELD_CIP), schools: null });
       }
