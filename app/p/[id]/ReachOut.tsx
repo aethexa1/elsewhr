@@ -1,210 +1,265 @@
-// elsewhr — reach out: the knock. Nothing is delivered without consent.
-// fix(reach): email failure no longer kills a knock — the in-app inbox at /knocks is the delivery floor.
-// Replaces app/api/reach-out/route.ts
+"use client";
 
-import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+// elsewhr — reach out: a knock, not a DM. Nothing lands without consent.
+// Replaces app/p/[id]/ReachOut.tsx
 
-export const runtime = "nodejs";
-export const maxDuration = 15;
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import { useLang, t } from "@/lib/i18n";
 
-const DAILY_LIMIT = 5;
-const SITE = "https://elsewhr.vercel.app";
+// when the AI sparks don't arrive, nobody faces a blank box — three human openers stand ready
+const OPENERS: Record<string, string[]> = {
+  en: ["arriving around the same time — hi 👋", "saw we're into some of the same things", "new here too. figured I'd say hi first"],
+  es: ["llegamos por las mismas fechas — hola 👋", "vi que nos gustan cosas parecidas", "también soy nuevo aquí. quería saludar primero"],
+  pt: ["chegando na mesma época — oi 👋", "vi que curtimos coisas parecidas", "também sou novo aqui. resolvi dizer oi primeiro"],
+  hi: ["लगभग साथ ही पहुँच रहे हैं — hi 👋", "देखा हम कुछ एक जैसी चीज़ें पसंद करते हैं", "मैं भी यहाँ नया हूँ। सोचा पहले hi बोल दूँ"],
+  pl: ["przyjeżdżamy w podobnym czasie — cześć 👋", "widzę, że lubimy podobne rzeczy", "też jestem tu nowy. pomyślałem, że się przywitam"],
+  fr: ["on arrive à peu près en même temps — salut 👋", "j'ai vu qu'on aime des trucs similaires", "nouveau ici aussi. je me lance en premier"],
+};
 
-// html-escape without regex (paste-gremlin rule: plain string ops only)
-function esc(s: string): string {
-  return s
-    .split("&").join("&amp;")
-    .split("<").join("&lt;")
-    .split(">").join("&gt;")
-    .split("\n").join("<br/>");
-}
+const WAVE_STRINGS: Record<string, { wave: string; waved: string }> = {
+  en: { wave: "👋 wave", waved: "👋 wave sent — zero words needed" },
+  es: { wave: "👋 saludar", waved: "👋 saludo enviado — sin palabras" },
+  pt: { wave: "👋 acenar", waved: "👋 aceno enviado — sem palavras" },
+  hi: { wave: "👋 wave", waved: "👋 wave भेज दिया — शब्दों की ज़रूरत नहीं" },
+  pl: { wave: "👋 pomachaj", waved: "👋 machnięcie wysłane — bez słów" },
+  fr: { wave: "👋 saluer", waved: "👋 salut envoyé — zéro mot" },
+};
 
-export async function POST(req: Request) {
-  try {
-    // --- who is knocking? ---
-    const authHeader = req.headers.get("authorization") || "";
-    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
-    if (!token) {
-      return NextResponse.json({ error: "Log in to reach out." }, { status: 401 });
-    }
+const CONSENT_STRINGS: Record<string, { explain: string; sent: string }> = {
+  en: {
+    explain: "this arrives as a knock, not a DM — {name} chooses to accept it. addresses stay private.",
+    sent: "your knock is with {name}. if they accept, your message lands in their inbox.",
+  },
+  es: {
+    explain: "esto llega como una solicitud, no un DM — {name} decide aceptarla. las direcciones quedan privadas.",
+    sent: "tu solicitud llegó a {name}. si acepta, tu mensaje aterriza en su correo.",
+  },
+  pt: {
+    explain: "isso chega como um pedido, não uma DM — {name} decide aceitar. os endereços ficam privados.",
+    sent: "seu pedido chegou a {name}. se aceitar, sua mensagem cai na caixa de entrada.",
+  },
+  hi: {
+    explain: "यह एक अनुरोध की तरह पहुँचता है, DM नहीं — {name} इसे स्वीकार करना चुनते हैं। ईमेल पते निजी रहते हैं।",
+    sent: "आपकी दस्तक {name} तक पहुँच गई। अगर वे स्वीकार करते हैं, तो आपका संदेश उनके इनबॉक्स में पहुँचेगा।",
+  },
+  pl: {
+    explain: "to dociera jako prośba, nie DM — {name} decyduje, czy przyjąć. adresy pozostają prywatne.",
+    sent: "twoje pukanie dotarło do {name}. jeśli zaakceptuje, wiadomość trafi do skrzynki.",
+  },
+  fr: {
+    explain: "ça arrive comme une demande, pas un DM — {name} choisit d'accepter. les adresses restent privées.",
+    sent: "ta demande est chez {name}. s'il accepte, ton message arrive dans sa boîte.",
+  },
+};
 
-    const anon = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    const { data: userData, error: authError } = await anon.auth.getUser(token);
-    if (authError || !userData.user) {
-      return NextResponse.json({ error: "Log in to reach out." }, { status: 401 });
-    }
-    const sender = userData.user;
+export default function ReachOut({
+  profileId,
+  profileName,
+  ownerUserId,
+}: {
+  profileId: number;
+  profileName: string;
+  ownerUserId: string | null;
+}) {
+  const { lang } = useLang();
+  const cs = CONSENT_STRINGS[lang] || CONSENT_STRINGS.en;
+  const ws = WAVE_STRINGS[lang] || WAVE_STRINGS.en;
+  const openers = OPENERS[lang] || OPENERS.en;
+  const [viewerId, setViewerId] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [sparks, setSparks] = useState<string[]>([]);
+  const [sparksTried, setSparksTried] = useState(false);
 
-    const { profileId, message } = await req.json();
-    const isWave = typeof message === "string" && message.trim() === "👋";
-    if (!profileId || typeof message !== "string" || (!isWave && message.trim().length < 10)) {
-      return NextResponse.json({ error: "Write a real message first." }, { status: 400 });
-    }
-    if (message.length > 1000) {
-      return NextResponse.json({ error: "Keep it under 1000 characters." }, { status: 400 });
-    }
-
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const resendKey = process.env.RESEND_API_KEY;
-    if (!serviceKey || !resendKey) {
-      return NextResponse.json({ error: "Messaging isn't configured yet." }, { status: 500 });
-    }
-    const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
-
-    // --- you knock as somebody: a profile is required ---
-    const { data: senderProfile } = await admin
-      .from("profiles")
-      .select("id, name, headline")
-      .eq("user_id", sender.id)
-      .limit(1)
-      .maybeSingle();
-    if (!senderProfile) {
-      return NextResponse.json(
-        { error: "Build your page first — that's how people know who's knocking." },
-        { status: 400 }
-      );
-    }
-
-    // --- recipient ---
-    const { data: target } = await admin
-      .from("profiles")
-      .select("id, name, user_id")
-      .eq("id", profileId)
-      .maybeSingle();
-    if (!target || !target.user_id) {
-      return NextResponse.json({ error: "That profile can't receive messages." }, { status: 400 });
-    }
-    if (target.user_id === sender.id) {
-      return NextResponse.json({ error: "That's your own profile." }, { status: 400 });
-    }
-
-    // --- blocks: if they've blocked you, the knock silently evaporates ---
-    // (an error here would teach a harasser they've been blocked)
-    const { data: blockRow } = await admin
-      .from("blocks")
-      .select("blocked_profile_id")
-      .eq("blocker_user_id", target.user_id)
-      .eq("blocked_profile_id", senderProfile.id)
-      .maybeSingle();
-    if (blockRow) {
-      return NextResponse.json({ ok: true });
-    }
-
-    // --- rate limit with teeth: counted in the database, 5 knocks a day ---
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { count } = await admin
-      .from("reach_requests")
-      .select("id", { count: "exact", head: true })
-      .eq("sender_user_id", sender.id)
-      .gte("created_at", dayAgo);
-    if ((count ?? 0) >= DAILY_LIMIT) {
-      return NextResponse.json(
-        { error: "The bird carries 5 knocks a day — yours are spent. Try tomorrow." },
-        { status: 429 }
-      );
-    }
-
-    // --- stale pendings expire so the door can be knocked again ---
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    await admin
-      .from("reach_requests")
-      .update({ status: "expired", responded_at: new Date().toISOString() })
-      .eq("status", "pending")
-      .lt("created_at", weekAgo);
-
-    // --- one pending knock per door ---
-    const { data: existing } = await admin
-      .from("reach_requests")
-      .select("id")
-      .eq("sender_user_id", sender.id)
-      .eq("recipient_profile_id", target.id)
-      .eq("status", "pending")
-      .maybeSingle();
-    if (existing) {
-      return NextResponse.json(
-        { error: "You've already knocked — give them time to answer." },
-        { status: 400 }
-      );
-    }
-
-    // --- store the knock ---
-    const { data: knock, error: insertError } = await admin
-      .from("reach_requests")
-      .insert({
-        sender_user_id: sender.id,
-        sender_profile_id: senderProfile.id,
-        recipient_profile_id: target.id,
-        recipient_user_id: target.user_id,
-        message: message.trim(),
-      })
-      .select("accept_token")
-      .single();
-    if (insertError || !knock) {
-      console.error("reach_requests insert:", insertError);
-      return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
-    }
-
-    // --- the knock email: no reply path, two doors ---
-    const { data: targetUser } = await admin.auth.admin.getUserById(target.user_id);
-    const recipientEmail = targetUser?.user?.email;
-    if (!recipientEmail) {
-      // knock is stored — it lands in their in-app inbox at /knocks
-      return NextResponse.json({ ok: true, emailed: false });
-    }
-
-    const senderName = esc(senderProfile.name);
-    const senderLink = SITE + "/p/" + String(senderProfile.id);
-    const acceptUrl = SITE + "/api/knock?token=" + knock.accept_token + "&action=accept";
-    const ignoreUrl = SITE + "/api/knock?token=" + knock.accept_token + "&action=ignore";
-
-    const html = `
-      <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;border:3px solid #1c1410;border-radius:16px;overflow:hidden">
-        <div style="background:#ff5d3b;padding:16px 20px">
-          <span style="font-size:20px;font-weight:800;color:#fff6ec">elsewhr<span style="color:#c8f000">.</span></span>
-        </div>
-        <div style="padding:20px;background:#fff6ec;color:#1c1410">
-          <p style="margin:0 0 6px;font-size:15px"><strong>${senderName}</strong> wants to reach out to you on elsewhr:</p>
-          ${senderProfile.headline ? `<p style="margin:0 0 14px;font-size:12px;color:#6b5e52">${esc(senderProfile.headline)}</p>` : ""}
-          <div style="background:#ffffff;border:2px solid #1c1410;border-radius:12px;padding:14px;font-size:14px;line-height:1.5">${esc(message.trim())}</div>
-          <p style="margin:14px 0 0;font-size:13px">
-            <a href="${senderLink}" style="color:#6b4eff;font-weight:bold">See ${senderName}&#39;s real work &#8594;</a>
-          </p>
-          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:18px 0 0"><tr>
-            <td><a href="${acceptUrl}" style="display:inline-block;background:#c8f000;color:#1c1410;font-weight:800;font-size:14px;text-decoration:none;border:2px solid #1c1410;border-radius:12px;padding:12px 18px">accept — open the thread</a></td>
-            <td style="padding-left:10px"><a href="${ignoreUrl}" style="display:inline-block;background:#ffffff;color:#1c1410;font-weight:700;font-size:14px;text-decoration:none;border:2px solid #1c1410;border-radius:12px;padding:12px 18px">ignore</a></td>
-          </tr></table>
-          <p style="margin:16px 0 0;font-size:11px;color:#6b5e52">Nothing is shared unless you accept. If you ignore this, ${senderName} will never know. The bird never shares your address. &#128038;</p>
-        </div>
-      </div>`;
-
-    const r = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${resendKey}`,
-      },
-      body: JSON.stringify({
-        from: "elsewhr bird <onboarding@resend.dev>",
-        to: [recipientEmail],
-        subject: `${senderProfile.name} wants to reach out on elsewhr 🐦`,
-        html,
-      }),
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setViewerId(data.user?.id ?? null);
     });
+  }, []);
 
-    if (!r.ok) {
-      const detail = await r.text();
-      console.error("Resend error (knock stays pending — in-app delivery is the floor):", detail);
-      // the knock stays pending and lands in their in-app inbox at /knocks
-      return NextResponse.json({ ok: true, emailed: false });
+  // no button on samples, your own profile, or when logged out
+  if (!ownerUserId || !viewerId || viewerId === ownerUserId) return null;
+
+  async function fetchSparks() {
+    if (sparksTried) return;
+    setSparksTried(true);
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const r = await fetch("/api/spark", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${sess.session?.access_token ?? ""}`,
+        },
+        body: JSON.stringify({ profileId, lang }),
+      });
+      if (r.ok) {
+        const data = await r.json();
+        if (Array.isArray(data.sparks)) setSparks(data.sparks);
+      }
+    } catch {
+      // silent — plain box works fine without sparks
     }
-
-    return NextResponse.json({ ok: true, emailed: true });
-  } catch (e) {
-    console.error(e);
-    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
   }
+
+  async function sendWave() {
+    if (busy) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const r = await fetch("/api/reach-out", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${sess.session?.access_token ?? ""}`,
+        },
+        body: JSON.stringify({ profileId, message: "👋" }),
+      });
+      if (r.ok) {
+        setDone(true);
+        setMsg(null);
+      } else {
+        const d = await r.json().catch(() => ({}));
+        setMsg((d as { error?: string }).error || "something slipped — try again");
+      }
+    } catch {
+      setMsg("something slipped — try again");
+    }
+    setBusy(false);
+  }
+
+  async function send() {
+    if (text.trim().length < 10) {
+      setMsg(t(lang, "reach.short"));
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const r = await fetch("/api/reach-out", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${sess.session?.access_token ?? ""}`,
+        },
+        body: JSON.stringify({ profileId, message: text.trim() }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        setMsg(data.error || t(lang, "reach.failed"));
+      } else {
+        setDone(true);
+        setOpen(false);
+        setText("");
+      }
+    } catch {
+      setMsg(t(lang, "reach.failed"));
+    }
+    setBusy(false);
+  }
+
+  const first = profileName.split(" ")[0];
+
+  return (
+    <div className="rise mt-4" style={{ animationDelay: "120ms" }}>
+      {done ? (
+        <div className="bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-2xl px-4 py-3">
+          <p className="text-[14px] font-medium">
+            {cs.sent.replace("{name}", first)} 🐦
+          </p>
+        </div>
+      ) : !open ? (
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setOpen(true);
+              fetchSparks();
+            }}
+            className="flex-1 py-3 rounded-2xl border-[3px] border-[#1c1410] bg-[#c8f000] font-bold text-[15px] shadow-[5px_5px_0_#1c1410] hover:translate-y-[-2px] hover:shadow-[7px_8px_0_#1c1410] active:translate-y-0 active:shadow-[3px_3px_0_#1c1410] transition-all"
+          >
+            {t(lang, "reach.button")} {first}
+          </button>
+          <button
+            onClick={sendWave}
+            disabled={busy}
+            className="px-4 py-3 rounded-2xl border-[3px] border-[#1c1410] bg-white font-bold text-[15px] shadow-[5px_5px_0_#1c1410] hover:bg-[#c8f000] hover:translate-y-[-2px] hover:shadow-[7px_8px_0_#1c1410] transition-all disabled:opacity-50"
+            title={ws.waved}
+          >
+            {ws.wave}
+          </button>
+        </div>
+      ) : (
+        <div className="bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-2xl p-4">
+          <p className="text-[13px] mb-2 text-[#6b5e52]">
+            {cs.explain.replace("{name}", first)}
+          </p>
+          {sparks.length === 0 && sparksTried && (
+            <div className="mb-3 flex flex-col gap-1.5">
+              {openers.map((o) => (
+                <button key={o} type="button" onClick={() => setText(o)}
+                  className="text-left px-3 py-2 rounded-xl border-2 border-dashed border-[#6b4eff]/50 bg-white text-[13px] leading-snug hover:border-[#6b4eff] hover:bg-[#6b4eff]/5 transition-colors"
+                >
+                  {o}
+                </button>
+              ))}
+            </div>
+          )}
+          {sparks.length > 0 && (
+            <div className="mb-3">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-[#6b5e52] mb-1.5">
+                {t(lang, "reach.sparks")}
+              </p>
+              <div className="flex flex-col gap-1.5">
+                {sparks.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setText(s)}
+                    className="text-left px-3 py-2 rounded-xl border-2 border-dashed border-[#6b4eff]/50 bg-white text-[13px] leading-snug hover:border-[#6b4eff] hover:bg-[#6b4eff]/5 transition-colors"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={3}
+            maxLength={1000}
+            placeholder={t(lang, "reach.placeholder", { name: first })}
+            className="w-full px-4 py-3 rounded-xl border-2 border-[#1c1410] bg-white outline-none focus:border-[#6b4eff] text-[14px]"
+          />
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={send}
+              disabled={busy}
+              className="flex-1 py-2.5 rounded-xl border-2 border-[#1c1410] bg-[#c8f000] font-bold text-sm disabled:opacity-50"
+            >
+              {busy ? t(lang, "reach.sending") : t(lang, "reach.send")}
+            </button>
+            <button
+              onClick={() => {
+                setOpen(false);
+                setMsg(null);
+              }}
+              className="px-4 py-2.5 rounded-xl border-2 border-[#1c1410] bg-white font-bold text-sm"
+            >
+              {t(lang, "reach.cancel")}
+            </button>
+          </div>
+          {msg && (
+            <p className="mt-2 text-[13px] text-[#b03a3a] font-medium">{msg}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
