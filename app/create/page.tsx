@@ -83,6 +83,7 @@ const DEST_STRINGS: Record<string, {
     seasons: ["fall", "winter", "spring", "summer"],
     statusLabel: "where you are in the journey",
     statuses: [
+      { key: "curious", label: "just curious" },
       { key: "applied", label: "applied" },
       { key: "accepted", label: "accepted" },
       { key: "arriving", label: "arriving" },
@@ -100,6 +101,7 @@ const DEST_STRINGS: Record<string, {
     seasons: ["otoño", "invierno", "primavera", "verano"],
     statusLabel: "en qué punto del camino estás",
     statuses: [
+      { key: "curious", label: "solo curioseando" },
       { key: "applied", label: "apliqué" },
       { key: "accepted", label: "aceptado" },
       { key: "arriving", label: "llegando" },
@@ -117,6 +119,7 @@ const DEST_STRINGS: Record<string, {
     seasons: ["outono", "inverno", "primavera", "verão"],
     statusLabel: "em que ponto da jornada você está",
     statuses: [
+      { key: "curious", label: "só curiosidade" },
       { key: "applied", label: "apliquei" },
       { key: "accepted", label: "aceito" },
       { key: "arriving", label: "chegando" },
@@ -134,6 +137,7 @@ const DEST_STRINGS: Record<string, {
     seasons: ["फ़ॉल", "विंटर", "स्प्रिंग", "समर"],
     statusLabel: "सफ़र में कहाँ हो",
     statuses: [
+      { key: "curious", label: "बस देख रहा हूँ" },
       { key: "applied", label: "आवेदन किया" },
       { key: "accepted", label: "स्वीकृत" },
       { key: "arriving", label: "पहुँच रहा हूँ" },
@@ -151,6 +155,7 @@ const DEST_STRINGS: Record<string, {
     seasons: ["jesień", "zima", "wiosna", "lato"],
     statusLabel: "gdzie jesteś w tej podróży",
     statuses: [
+      { key: "curious", label: "tylko ciekawość" },
       { key: "applied", label: "aplikowałem" },
       { key: "accepted", label: "przyjęty" },
       { key: "arriving", label: "przybywam" },
@@ -168,6 +173,7 @@ const DEST_STRINGS: Record<string, {
     seasons: ["automne", "hiver", "printemps", "été"],
     statusLabel: "où tu en es dans le parcours",
     statuses: [
+      { key: "curious", label: "juste curieux" },
       { key: "applied", label: "candidature envoyée" },
       { key: "accepted", label: "accepté" },
       { key: "arriving", label: "j'arrive" },
