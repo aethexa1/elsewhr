@@ -421,16 +421,52 @@ export default function HomeShell({
           </div>
         )}
 
-        {/* doors to the discovery pages — features without doors don't exist */}
+        {/* THE DOOR RACK — every feature, one tap, impossible to miss */}
         {showFeed && (
-          <div className="rise flex justify-center gap-4 mb-6 -mt-2" style={{ animationDelay: "110ms" }}>
-            <Link href="/f" className="font-mono text-[12px] font-bold text-[#fff6ec]/90 underline decoration-2 underline-offset-4 hover:text-[#fff6ec]">
+          <div className="rise flex flex-wrap justify-center gap-2.5 mb-5 -mt-2" style={{ animationDelay: "110ms" }}>
+            {myDest && (
+              <Link href={"/w?place=" + encodeURIComponent(myDest)}
+                className="px-4 py-2 rounded-full border-2 border-[#1c1410] bg-[#c8f000] text-[#1c1410] text-[13px] font-bold shadow-[3px_3px_0_rgba(28,20,16,0.9)] hover:translate-y-[-2px] transition-transform"
+              >
+                🌍 my world
+              </Link>
+            )}
+            <Link href="/f"
+              className="px-4 py-2 rounded-full border-2 border-[#1c1410] bg-[#fff6ec] text-[#1c1410] text-[13px] font-bold shadow-[3px_3px_0_rgba(28,20,16,0.9)] hover:translate-y-[-2px] transition-transform"
+            >
               🧭 fields
             </Link>
-            <Link href="/compare" className="font-mono text-[12px] font-bold text-[#fff6ec]/90 underline decoration-2 underline-offset-4 hover:text-[#fff6ec]">
-              ⚖️ compare schools
+            <Link href="/compare"
+              className="px-4 py-2 rounded-full border-2 border-[#1c1410] bg-[#fff6ec] text-[#1c1410] text-[13px] font-bold shadow-[3px_3px_0_rgba(28,20,16,0.9)] hover:translate-y-[-2px] transition-transform"
+            >
+              ⚖️ compare
             </Link>
+            {mode === "member" && (
+              <Link href="/knocks"
+                className="px-4 py-2 rounded-full border-2 border-[#1c1410] bg-[#fff6ec] text-[#1c1410] text-[13px] font-bold shadow-[3px_3px_0_rgba(28,20,16,0.9)] hover:translate-y-[-2px] transition-transform"
+              >
+                🐦 knocks{knockCount > 0 ? " · " + knockCount : ""}
+              </Link>
+            )}
           </div>
+        )}
+
+        {/* the marquee moves in with the members — the room breathes */}
+        {showFeed && universe === "connect" && (
+          <div className="-mx-4 mb-6">
+            <CurvedMarquee text={MARQUEE_STRINGS[lang] || MARQUEE_STRINGS.en} />
+          </div>
+        )}
+
+        {/* pulse of life: who's here, who's newest */}
+        {showFeed && profiles.length > 0 && (
+          <p className="rise text-center font-mono text-[11px] tracking-wide text-[#fff6ec]/70 mb-6" style={{ animationDelay: "140ms" }}>
+            {profiles.filter((p) => p.user_id).length} real{" · "}
+            {(() => {
+              const newest = profiles.find((p) => p.user_id);
+              return newest ? "newest: " + newest.name : "";
+            })()}
+          </p>
         )}
 
         {/* THE FEED */}
