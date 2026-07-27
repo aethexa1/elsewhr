@@ -133,23 +133,43 @@ const STRINGS: Record<string, {
 const money = (n: number | null) => (n == null ? "—" : "$" + n.toLocaleString());
 
 // free places to learn a field — generated links, no gatekeeping
-const TECH_FIELDS = ["cybersecurity", "computer science", "information technology", "data science", "software"];
+const TECH_HINTS = ["cyber", "computer", "software", "data", "information tech", "web", "program", "artificial intel", "machine learn", "informat"];
 const LEARN_SPECIALS: Record<string, { label: string; url: string }[]> = {
   "cybersecurity": [
     { label: "TryHackMe (free rooms)", url: "https://tryhackme.com" },
     { label: "OverTheWire wargames", url: "https://overthewire.org/wargames/" },
+    { label: "picoCTF (free)", url: "https://picoctf.org" },
   ],
-  "computer science": [{ label: "Harvard CS50 (free)", url: "https://cs50.harvard.edu/x/" }],
+  "computer science": [
+    { label: "Harvard CS50 (free)", url: "https://cs50.harvard.edu/x/" },
+    { label: "The Odin Project", url: "https://www.theodinproject.com" },
+  ],
   "data science": [{ label: "Kaggle Learn (free)", url: "https://www.kaggle.com/learn" }],
 };
 function learnLinks(field: string): { label: string; url: string }[] {
   const f = field.toLowerCase();
+  const q = encodeURIComponent(f);
   const out: { label: string; url: string }[] = [
-    { label: "YouTube: full course", url: "https://www.youtube.com/results?search_query=" + encodeURIComponent(f + " full course") },
-    { label: "MIT OpenCourseWare", url: "https://ocw.mit.edu/search/?q=" + encodeURIComponent(f) },
+    { label: "YouTube: full course", url: "https://www.youtube.com/results?search_query=" + q + "%20full%20course" },
+    { label: "MIT OpenCourseWare", url: "https://ocw.mit.edu/search/?q=" + q },
+    { label: "Khan Academy", url: "https://www.khanacademy.org/search?page_search_query=" + q },
+    { label: "edX (free to audit)", url: "https://www.edx.org/search?q=" + q },
+    { label: "Coursera (audit free)", url: "https://www.coursera.org/search?query=" + q },
+    { label: "OpenStax free textbooks", url: "https://openstax.org/subjects" },
+    { label: "Saylor Academy", url: "https://learn.saylor.org/course/index.php?search=" + q },
   ];
-  if (TECH_FIELDS.includes(f)) out.push({ label: "freeCodeCamp", url: "https://www.freecodecamp.org/learn/" });
-  return [...(LEARN_SPECIALS[f] ?? []), ...out];
+  out.push(
+    { label: "Class Central (all free courses)", url: "https://www.classcentral.com/search?q=" + q + "&free=true" },
+    { label: "GitHub: open resources", url: "https://github.com/search?q=" + encodeURIComponent("awesome " + f) + "&type=repositories" }
+  );
+  if (TECH_HINTS.some((h) => f.includes(h))) {
+    out.push(
+      { label: "freeCodeCamp", url: "https://www.freecodecamp.org/learn/" },
+      { label: "free-programming-books", url: "https://github.com/EbookFoundation/free-programming-books" },
+      { label: "roadmap.sh", url: "https://roadmap.sh" }
+    );
+  }
+  return [...(LEARN_SPECIALS[f] ?? []), ...out].slice(0, 12);
 }
 
 function FieldPageInner() {
