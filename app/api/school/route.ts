@@ -16,16 +16,34 @@ type LocalSchool = {
 };
 const SCHOOLS = schoolData as LocalSchool[];
 
-function findLocal(q: string): LocalSchool | null {
-  const ql = q.toLowerCase();
-  let best: LocalSchool | null = null;
-  let bestScore = 4;
+// THE matcher — built once, used everywhere. Handles:
+//   "cal state"  -> every token prefixes a word (california ✓, state ✓)
+//   "csudh"      -> acronym of the name's words
+//   "dominguez"  -> word-prefix anywhere in the name
+function matchSchools(q: string): LocalSchool[] {
+  const ql = q.toLowerCase().trim();
+  if (!ql) return [];
+  const EXPAND: Record<string, string[]> = { uc: ["university", "california"], csu: ["california", "state", "university"], suny: ["state", "university", "new", "york"] };
+  const STOP = new Set(["of", "the", "and", "at", "in", "for", "a"]);
+  const tokens = ql.split(/\s+/).filter(Boolean).flatMap((t) => EXPAND[t] ?? [t]);
+  const scored: { s: LocalSchool; sc: number }[] = [];
   for (const s of SCHOOLS) {
     const n = s.n.toLowerCase();
-    const score = n === ql ? 0 : n.startsWith(ql) ? 1 : n.includes(ql) ? 2 : 4;
-    if (score < bestScore) { best = s; bestScore = score; if (score === 0) break; }
+    const words = n.split(/[^a-z0-9]+/).filter(Boolean);
+    const acronym = words.filter((w) => !STOP.has(w)).map((w) => w[0]).join("");
+    let sc = 99;
+    if (n === ql || acronym === ql) sc = 0;
+    else if (n.startsWith(ql) || (tokens.length === 1 && acronym.startsWith(tokens[0]) && tokens[0].length >= 3)) sc = 1;
+    else if (tokens.every((t) => words.some((w) => w.startsWith(t)))) sc = 2;
+    else if (n.includes(ql)) sc = 3;
+    if (sc < 99) scored.push({ s, sc });
   }
-  return best;
+  scored.sort((a, b) => a.sc - b.sc || a.s.n.length - b.s.n.length);
+  return scored.map(({ s }) => s);
+}
+
+function findLocal(q: string): LocalSchool | null {
+  return matchSchools(q)[0] ?? null;
 }
 
 export const runtime = "nodejs";
@@ -82,18 +100,11 @@ export async function GET(req: Request) {
     const field = (url.searchParams.get("field") || "").trim().toLowerCase();
 
     // ?suggest= -> ranked school-name suggestions from the local database
-    const sq = (url.searchParams.get("suggest") || "").trim().toLowerCase();
+    const sq = (url.searchParams.get("suggest") || "").trim();
     if (sq.length >= 2) {
-      const scored: { s: LocalSchool; sc: number }[] = [];
-      for (const s of SCHOOLS) {
-        const n = s.n.toLowerCase();
-        const sc = n.startsWith(sq) ? 0 : n.split(/[^a-z]+/).some((w) => w.startsWith(sq)) ? 1 : n.includes(sq) ? 2 : 3;
-        if (sc < 3) scored.push({ s, sc });
-      }
-      scored.sort((a, b) => a.sc - b.sc || a.s.n.length - b.s.n.length);
       return NextResponse.json({
         ok: true,
-        suggestions: scored.slice(0, 8).map(({ s }) => ({ name: s.n, city: s.c, state: s.s })),
+        suggestions: matchSchools(sq).slice(0, 8).map((s) => ({ name: s.n, city: s.c, state: s.s })),
       });
     }
 
