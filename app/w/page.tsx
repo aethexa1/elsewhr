@@ -92,7 +92,7 @@ const STRINGS: Record<string, {
   about: string; official: string; arriving: string; already: string;
   nobody: string; youFirst: string; sayHi: string; back: string; loading: string;
   events: string; noEvents: string; addEvent: string; evTitle: string; evWhen: string; evLink: string; evPost: string;
-  alumni: string; notable: string;
+  alumni: string; notable: string; curious: string;
   wikiNote: string;
 }> = {
   en: {
@@ -112,6 +112,7 @@ const STRINGS: Record<string, {
     evPost: "post it",
     alumni: "alumni here",
     notable: "notable alumni",
+    curious: "curious about this place",
     back: "← back to elsewhr",
     loading: "finding this place…",
     wikiNote: "from Wikipedia",
@@ -133,6 +134,7 @@ const STRINGS: Record<string, {
     evPost: "publicar",
     alumni: "exalumnos aquí",
     notable: "exalumnos destacados",
+    curious: "curioseando este lugar",
     back: "← volver a elsewhr",
     loading: "buscando este lugar…",
     wikiNote: "de Wikipedia",
@@ -154,6 +156,7 @@ const STRINGS: Record<string, {
     evPost: "postar",
     alumni: "ex-alunos aqui",
     notable: "ex-alunos notáveis",
+    curious: "de olho neste lugar",
     back: "← voltar ao elsewhr",
     loading: "procurando este lugar…",
     wikiNote: "da Wikipédia",
@@ -175,6 +178,7 @@ const STRINGS: Record<string, {
     evPost: "पोस्ट करो",
     alumni: "यहाँ के पूर्व छात्र",
     notable: "प्रसिद्ध पूर्व छात्र",
+    curious: "à¤à¤¸ à¤à¤à¤¹ à¤®à¥à¤ à¤¦à¤¿à¤²à¤à¤¸à¥à¤ªà¥",
     back: "← elsewhr पर वापस",
     loading: "यह जगह ढूंढ रहे हैं…",
     wikiNote: "विकिपीडिया से",
@@ -196,6 +200,7 @@ const STRINGS: Record<string, {
     evPost: "opublikuj",
     alumni: "absolwenci tutaj",
     notable: "znani absolwenci",
+    curious: "ciekawi tego miejsca",
     back: "← wróć do elsewhr",
     loading: "szukam tego miejsca…",
     wikiNote: "z Wikipedii",
@@ -217,6 +222,7 @@ const STRINGS: Record<string, {
     evPost: "publier",
     alumni: "anciens ici",
     notable: "anciens célèbres",
+    curious: "curieux de cet endroit",
     back: "← retour à elsewhr",
     loading: "on cherche ce lieu…",
     wikiNote: "de Wikipédia",
@@ -320,8 +326,9 @@ function WorldPageInner() {
     );
   }, [people, filter]);
   const alumni = useMemo(() => visible.filter((p) => p.dest_status === "graduated"), [visible]);
+  const curious = useMemo(() => visible.filter((p) => p.dest_status === "curious"), [visible]);
   const already = useMemo(() => visible.filter((p) => p.dest_status !== "graduated" && (p.dest_status === "current" || p.livesHere)), [visible]);
-  const arriving = useMemo(() => visible.filter((p) => p.dest_status !== "graduated" && p.dest_status !== "current" && !p.livesHere), [visible]);
+  const arriving = useMemo(() => visible.filter((p) => p.dest_status !== "graduated" && p.dest_status !== "curious" && p.dest_status !== "current" && !p.livesHere), [visible]);
 
   // arriving, grouped by term — the cohorts forming in real time
   const byTerm = useMemo(() => {
@@ -506,6 +513,10 @@ function WorldPageInner() {
 
         {!loading && alumni.length > 0 && (
           <PeopleBlock title={`🎓 ${s.alumni} · ${alumni.length}`} people={alumni} sayHi={s.sayHi} />
+        )}
+
+        {!loading && curious.length > 0 && (
+          <PeopleBlock title={`👀 ${s.curious} · ${curious.length}`} people={curious} sayHi={s.sayHi} />
         )}
 
         {!loading && byTerm.map(([term, group]) => (
