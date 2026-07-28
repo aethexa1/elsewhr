@@ -24,6 +24,9 @@ type Notable = { name: string; url?: string };
 
 type Scholar = { name: string; cites: number; url?: string };
 
+type SchoolStats = { size: number | null; admissionRate: number | null; tuitionIn: number | null; tuitionOut: number | null; medianEarnings: number | null };
+type SimilarSchool = { name: string; city: string | null; tuitionIn: number | null };
+
 // OpenAlex: the open catalog of the world's scholars — every institution, keyless
 async function fetchScholars(place: string): Promise<Scholar[]> {
   try {
@@ -114,6 +117,7 @@ const STRINGS: Record<string, {
   nobody: string; youFirst: string; sayHi: string; back: string; loading: string;
   events: string; noEvents: string; addEvent: string; evTitle: string; evWhen: string; evLink: string; evPost: string;
   alumni: string; notable: string; curious: string; research: string;
+  inState: string; outState: string; students: string; admit: string; earn: string; moreLike: string;
   wikiNote: string;
 }> = {
   en: {
@@ -135,6 +139,12 @@ const STRINGS: Record<string, {
     notable: "notable alumni",
     curious: "curious about this place",
     research: "researchers here",
+    inState: "in-state",
+    outState: "out-of-state",
+    students: "students",
+    admit: "admit rate",
+    earn: "median earnings (10y)",
+    moreLike: "more schools like this",
     back: "← back to elsewhr",
     loading: "finding this place…",
     wikiNote: "from Wikipedia",
@@ -158,6 +168,12 @@ const STRINGS: Record<string, {
     notable: "exalumnos destacados",
     curious: "curioseando este lugar",
     research: "investigadores aquí",
+    inState: "estatal",
+    outState: "fuera del estado",
+    students: "estudiantes",
+    admit: "admisión",
+    earn: "ingresos medianos (10a)",
+    moreLike: "escuelas parecidas",
     back: "← volver a elsewhr",
     loading: "buscando este lugar…",
     wikiNote: "de Wikipedia",
@@ -181,6 +197,12 @@ const STRINGS: Record<string, {
     notable: "ex-alunos notáveis",
     curious: "de olho neste lugar",
     research: "pesquisadores aqui",
+    inState: "no estado",
+    outState: "fora do estado",
+    students: "estudantes",
+    admit: "admissão",
+    earn: "renda mediana (10a)",
+    moreLike: "escolas parecidas",
     back: "← voltar ao elsewhr",
     loading: "procurando este lugar…",
     wikiNote: "da Wikipédia",
@@ -204,6 +226,12 @@ const STRINGS: Record<string, {
     notable: "प्रसिद्ध पूर्व छात्र",
     curious: "à¤à¤¸ à¤à¤à¤¹ à¤®à¥à¤ à¤¦à¤¿à¤²à¤à¤¸à¥à¤ªà¥",
     research: "à¤¯à¤¹à¤¾à¤ à¤à¥ à¤¶à¥à¤§à¤à¤°à¥à¤¤à¤¾",
+    inState: "राज्य फ़ीस",
+    outState: "बाहरी फ़ीस",
+    students: "छात्र",
+    admit: "प्रवेश दर",
+    earn: "औसत कमाई (10व)",
+    moreLike: "ऐसे और संस्थान",
     back: "← elsewhr पर वापस",
     loading: "यह जगह ढूंढ रहे हैं…",
     wikiNote: "विकिपीडिया से",
@@ -227,6 +255,12 @@ const STRINGS: Record<string, {
     notable: "znani absolwenci",
     curious: "ciekawi tego miejsca",
     research: "badacze tutaj",
+    inState: "w stanie",
+    outState: "poza stanem",
+    students: "studenci",
+    admit: "przyjęcia",
+    earn: "mediana zarobków (10l)",
+    moreLike: "podobne szkoły",
     back: "← wróć do elsewhr",
     loading: "szukam tego miejsca…",
     wikiNote: "z Wikipedii",
@@ -250,6 +284,12 @@ const STRINGS: Record<string, {
     notable: "anciens célèbres",
     curious: "curieux de cet endroit",
     research: "chercheurs ici",
+    inState: "résident",
+    outState: "non-résident",
+    students: "étudiants",
+    admit: "admission",
+    earn: "revenu médian (10a)",
+    moreLike: "écoles similaires",
     back: "← retour à elsewhr",
     loading: "on cherche ce lieu…",
     wikiNote: "de Wikipédia",
@@ -270,6 +310,8 @@ function WorldPageInner() {
   const [events, setEvents] = useState<Happening[]>([]);
   const [notable, setNotable] = useState<Notable[]>([]);
   const [scholars, setScholars] = useState<Scholar[]>([]);
+  const [stats, setStats] = useState<SchoolStats | null>(null);
+  const [similar, setSimilar] = useState<SimilarSchool[]>([]);
   const [uid, setUid] = useState<string | null>(null);
   const [evOpen, setEvOpen] = useState(false);
   const [evTitle, setEvTitle] = useState("");
@@ -308,6 +350,17 @@ function WorldPageInner() {
       }
       const sch = await fetchScholars(place);
       if (alive) setScholars(sch);
+      // the money and the neighbours: from elsewhr's own school database
+      try {
+        const [rs, rsim] = await Promise.all([
+          fetch("/api/school?q=" + encodeURIComponent(place)).then((r) => r.json()),
+          fetch("/api/school?similar=" + encodeURIComponent(place)).then((r) => r.json()),
+        ]);
+        if (alive) {
+          if (rs?.ok && rs.school) setStats(rs.school as SchoolStats);
+          if (rsim?.ok && Array.isArray(rsim.similar)) setSimilar(rsim.similar as SimilarSchool[]);
+        }
+      } catch { /* a world without stats is still a world */ }
       const [{ data: evs }, { data: userData }] = await Promise.all([
         supabase.from("events").select("*").ilike("place", place).order("id", { ascending: false }).limit(20),
         supabase.auth.getUser(),
@@ -458,6 +511,39 @@ function WorldPageInner() {
                       >
                         {sc.name} ↗
                       </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {stats && (stats.tuitionIn != null || stats.size != null) && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {stats.tuitionIn != null && (
+                    <span className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-[#c8f000]/60 text-[12px] font-bold">💵 ${stats.tuitionIn.toLocaleString()} {s.inState}</span>
+                  )}
+                  {stats.tuitionOut != null && (
+                    <span className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12px] font-bold">💵 ${stats.tuitionOut.toLocaleString()} {s.outState}</span>
+                  )}
+                  {stats.size != null && (
+                    <span className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12px] font-bold">🧑‍🎓 {stats.size.toLocaleString()} {s.students}</span>
+                  )}
+                  {stats.admissionRate != null && (
+                    <span className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12px] font-bold">🚪 {Math.round(stats.admissionRate * 100)}% {s.admit}</span>
+                  )}
+                  {stats.medianEarnings != null && (
+                    <span className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12px] font-bold">📈 ${stats.medianEarnings.toLocaleString()} {s.earn}</span>
+                  )}
+                </div>
+              )}
+              {similar.length > 0 && (
+                <div className="mt-3">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-[#6b5e52] mb-1.5">🏫 {s.moreLike}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {similar.map((sm) => (
+                      <Link key={sm.name} href={"/w?place=" + encodeURIComponent(sm.name)}
+                        className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12px] font-bold hover:bg-[#c8f000]"
+                      >
+                        {sm.name}{sm.tuitionIn != null ? " · $" + sm.tuitionIn.toLocaleString() : ""}
+                      </Link>
                     ))}
                   </div>
                 </div>
