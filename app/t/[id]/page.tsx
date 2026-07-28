@@ -134,14 +134,14 @@ function ThreadInner() {
 
   if (state === "loading") {
     return (
-      <main className="min-h-screen bg-[#ff5d3b] flex items-center justify-center">
+      <main className="min-h-screen bg-[#ff5d3b] text-[#1c1410] flex items-center justify-center">
         <p className="font-mono text-[13px] text-[#fff6ec]/80">{s.loading}</p>
       </main>
     );
   }
   if (state === "denied" || !req) {
     return (
-      <main className="min-h-screen bg-[#ff5d3b] flex flex-col items-center justify-center gap-4 px-4">
+      <main className="min-h-screen bg-[#ff5d3b] text-[#1c1410] flex flex-col items-center justify-center gap-4 px-4">
         <p className="text-[#fff6ec] text-[15px] text-center">{s.notFound}</p>
         <Link href="/knocks" className="font-mono text-[12px] font-bold text-[#fff6ec] underline underline-offset-4">{s.back}</Link>
       </main>
@@ -154,7 +154,7 @@ function ThreadInner() {
   ];
 
   return (
-    <main className="min-h-screen bg-[#ff5d3b] flex justify-center px-4 py-6">
+    <main className="min-h-screen bg-[#ff5d3b] text-[#1c1410] flex justify-center px-4 py-6">
       <div className="w-full max-w-[560px] flex flex-col">
         <div className="flex items-center justify-between mb-4">
           <Link href="/knocks" className="font-mono text-[11px] text-[#fff6ec]/80 underline underline-offset-4 hover:text-[#fff6ec]">
