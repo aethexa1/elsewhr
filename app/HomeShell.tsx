@@ -459,13 +459,6 @@ export default function HomeShell({
           </div>
         )}
 
-        {/* the marquee moves in with the members — the room breathes */}
-        {showFeed && universe === "connect" && (
-          <div className="-mx-4 mb-6">
-            <CurvedMarquee text={MARQUEE_STRINGS[lang] || MARQUEE_STRINGS.en} />
-          </div>
-        )}
-
         {/* pulse of life: who's here, who's newest */}
         {showFeed && profiles.length > 0 && (
           <p className="rise text-center font-mono text-[11px] tracking-wide text-[#fff6ec]/70 mb-6" style={{ animationDelay: "140ms" }}>
@@ -654,6 +647,13 @@ export default function HomeShell({
               <p className="font-mono text-[11px] text-[#fff6ec]/80 mt-8 text-center">
                 {t(lang, "home.tapAnyone")}
               </p>
+            )}
+
+            {/* ambience lives at the bottom now — people first, poetry after */}
+            {showFeed && universe === "connect" && (
+              <div className="-mx-4 mt-10">
+                <CurvedMarquee text={MARQUEE_STRINGS[lang] || MARQUEE_STRINGS.en} />
+              </div>
             )}
           </>
         )}
