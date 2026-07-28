@@ -436,11 +436,19 @@ export default function HomeShell({
             >
               🧭 fields
             </Link>
-            <Link href="/compare"
-              className="px-4 py-2 rounded-full border-2 border-[#1c1410] bg-[#fff6ec] text-[#1c1410] text-[13px] font-bold shadow-[3px_3px_0_rgba(28,20,16,0.9)] hover:translate-y-[-2px] transition-transform"
-            >
-              ⚖️ compare
-            </Link>
+            {profiles.some((p) => p.user_id && p.id !== myProfileId) && (
+              <button
+                type="button"
+                onClick={() => {
+                  const pool = profiles.filter((p) => p.user_id && p.id !== myProfileId);
+                  const pick = pool[Math.floor(Math.random() * pool.length)];
+                  if (pick) router.push("/p/" + pick.id);
+                }}
+                className="px-4 py-2 rounded-full border-2 border-[#1c1410] bg-[#fff6ec] text-[#1c1410] text-[13px] font-bold shadow-[3px_3px_0_rgba(28,20,16,0.9)] hover:translate-y-[-2px] transition-transform"
+              >
+                🎲 meet someone
+              </button>
+            )}
             {mode === "member" && (
               <Link href="/knocks"
                 className="px-4 py-2 rounded-full border-2 border-[#1c1410] bg-[#fff6ec] text-[#1c1410] text-[13px] font-bold shadow-[3px_3px_0_rgba(28,20,16,0.9)] hover:translate-y-[-2px] transition-transform"
