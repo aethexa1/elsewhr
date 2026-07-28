@@ -4,6 +4,7 @@
 // Replaces app/p/[id]/ReachOut.tsx
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useLang, t } from "@/lib/i18n";
 
@@ -63,6 +64,7 @@ export default function ReachOut({
   ownerUserId: string | null;
 }) {
   const { lang } = useLang();
+  const router = useRouter();
   const cs = CONSENT_STRINGS[lang] || CONSENT_STRINGS.en;
   const ws = WAVE_STRINGS[lang] || WAVE_STRINGS.en;
   const openers = OPENERS[lang] || OPENERS.en;
@@ -121,6 +123,9 @@ export default function ReachOut({
         body: JSON.stringify({ profileId, message: "👋" }),
       });
       if (r.ok) {
+        const d = await r.json().catch(() => ({}));
+        const tid = (d as { id?: number }).id;
+        if (tid) { router.push("/t/" + tid); return; }
         setDone(true);
         setMsg(null);
       } else {
@@ -154,6 +159,8 @@ export default function ReachOut({
       if (!r.ok) {
         setMsg(data.error || t(lang, "reach.failed"));
       } else {
+        const tid = (data as { id?: number }).id;
+        if (tid) { router.push("/t/" + tid); return; }
         setDone(true);
         setOpen(false);
         setText("");
@@ -177,7 +184,23 @@ export default function ReachOut({
       ) : !open ? (
         <div className="flex gap-2">
           <button
-            onClick={() => {
+            onClick={async () => {
+              // an existing thread is THE thread — walk in instead of knocking again
+              try {
+                const { data: userData } = await supabase.auth.getUser();
+                const uid = userData?.user?.id;
+                if (uid) {
+                  const { data: pair } = await supabase
+                    .from("reach_requests")
+                    .select("id")
+                    .in("status", ["pending", "accepted"])
+                    .or(`and(sender_user_id.eq.${uid},recipient_profile_id.eq.${profileId}),and(recipient_user_id.eq.${uid},sender_profile_id.eq.${profileId})`)
+                    .order("id", { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                  if (pair?.id) { router.push("/t/" + pair.id); return; }
+                }
+              } catch { /* fall through to compose */ }
               setOpen(true);
               fetchSparks();
             }}
