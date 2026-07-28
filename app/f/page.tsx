@@ -133,7 +133,8 @@ const STRINGS: Record<string, {
 const money = (n: number | null) => (n == null ? "—" : "$" + n.toLocaleString());
 
 // free places to learn a field — generated links, no gatekeeping
-const TECH_HINTS = ["cyber", "computer", "software", "data", "information tech", "web", "program", "artificial intel", "machine learn", "informat"];
+// precise on purpose: "residency program" is medicine, not programming
+const TECH_HINTS = ["cyber", "computer", "software", "programming", "web develop", "web design", "data science", "data analytics", "information technology", "information system", "machine learn", "artificial intel", "network", "database"];
 const LEARN_SPECIALS: Record<string, { label: string; url: string }[]> = {
   "cybersecurity": [
     { label: "TryHackMe (free rooms)", url: "https://tryhackme.com" },
@@ -155,7 +156,7 @@ function learnLinks(field: string): { label: string; url: string }[] {
     { label: "Khan Academy", url: "https://www.khanacademy.org/search?page_search_query=" + q },
     { label: "edX (free to audit)", url: "https://www.edx.org/search?q=" + q },
     { label: "Coursera (audit free)", url: "https://www.coursera.org/search?query=" + q },
-    { label: "OpenStax free textbooks", url: "https://openstax.org/subjects" },
+    { label: "OpenStax textbooks (browse)", url: "https://openstax.org/subjects" },
     { label: "Saylor Academy", url: "https://learn.saylor.org/course/index.php?search=" + q },
   ];
   out.push(
