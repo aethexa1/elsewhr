@@ -130,7 +130,10 @@ export async function GET(req: Request) {
     // ?list=1 -> the whole catalog for type-ahead: nice names first, then every official field of study
     if (url.searchParams.get("list")) {
       const known = [...new Set([...Object.keys(FIELD_CIP), ...CATALOG.map((e) => e.t)])];
-      return NextResponse.json({ ok: true, known });
+      // codes ride along: the first two digits are the field's family (50=arts, 51=health, 11=computing…)
+      const codes: Record<string, string> = {};
+      for (const e of CATALOG) codes[e.t] = e.c;
+      return NextResponse.json({ ok: true, known, codes });
     }
 
     // field mode: every US school offering this program, cheapest in-state first
