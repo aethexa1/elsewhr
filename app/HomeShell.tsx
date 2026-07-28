@@ -139,6 +139,27 @@ export default function HomeShell({
         .eq("status", "pending");
       if (kc && kc > 0) setKnockCount(kc);
 
+      // notifications v1: unread messages since the last inbox visit join the count
+      try {
+        const seen = localStorage.getItem("wh_msgs_seen") || "1970-01-01";
+        const { data: myReqs } = await supabase
+          .from("reach_requests")
+          .select("id")
+          .in("status", ["pending", "accepted"])
+          .or(`sender_user_id.eq.${data.user.id},recipient_user_id.eq.${data.user.id}`)
+          .limit(50);
+        const rids = (myReqs ?? []).map((r) => (r as { id: number }).id);
+        if (rids.length > 0) {
+          const { count: unread } = await supabase
+            .from("messages")
+            .select("id", { count: "exact", head: true })
+            .in("request_id", rids)
+            .neq("sender_user_id", data.user.id)
+            .gt("created_at", seen);
+          if (unread && unread > 0) setKnockCount((c) => c + unread);
+        }
+      } catch { /* the badge is a bonus */ }
+
       // safety: people you've blocked never appear in your feed
       const { data: blocks } = await supabase
         .from("blocks")
