@@ -6,6 +6,7 @@ import Link from "next/link";
 import OwnerBar from "./OwnerBar";
 import VouchSection from "./VouchSection";
 import ReachOut from "./ReachOut";
+import SimilarPeople from "./SimilarPeople";
 import ReportBlockActions from "@/app/ReportBlockActions";
 import DayOneBlock from "./DayOneBlock";
 import {
@@ -174,6 +175,8 @@ export default async function ProfilePage({
           profileName={profile.name}
           ownerUserId={profile.user_id ?? null}
         />
+
+        <SimilarPeople profileId={profile.id} tags={profile.mindset ?? []} />
 
         {/* safety: report + block (hidden for guests and on your own profile) */}
         <ReportBlockActions
