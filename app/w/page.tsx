@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useLang } from "@/lib/i18n";
+import AskBird from "./AskBird";
 
 type WikiInfo = {
   extract?: string;
@@ -570,6 +571,44 @@ function WorldPageInner() {
         )}
 
         {/* the elsewhr layer: the campus's real activity is its people */}
+        {/* ASK THE BIRD: grounded in exactly what this page knows */}
+        {!loading && (
+          <AskBird
+            context={[
+              "PLACE: " + place,
+              wiki?.extract ? "ABOUT: " + wiki.extract.slice(0, 700) : "",
+              facts.students ? "STUDENTS: " + facts.students : "",
+              facts.staff ? "STAFF: " + facts.staff : "",
+              facts.founded ? "FOUNDED: " + facts.founded : "",
+              stats ? "STATS: " +
+                [
+                  stats.tuitionIn != null ? "in-state tuition $" + stats.tuitionIn : "",
+                  stats.tuitionOut != null ? "out-of-state $" + stats.tuitionOut : "",
+                  stats.size != null ? stats.size + " students" : "",
+                  stats.admissionRate != null ? Math.round(stats.admissionRate * 100) + "% admit rate" : "",
+                  stats.medianEarnings != null ? "median earnings 10y $" + stats.medianEarnings : "",
+                ].filter(Boolean).join(", ") : "",
+              notable.length > 0 ? "NOTABLE ALUMNI: " + notable.map((n) => n.name).join(", ") : "",
+              scholars.length > 0 ? "RESEARCHERS: " + scholars.map((n) => n.name).join(", ") : "",
+              similar.length > 0 ? "SIMILAR SCHOOLS: " + similar.map((n) => n.name).join(", ") : "",
+              events.length > 0
+                ? "HAPPENINGS BOARD (community posts, may include job/part-time posts): " +
+                  events.map((ev) => ev.title + (ev.when_text ? " (" + ev.when_text + ")" : "")).join(" | ")
+                : "HAPPENINGS BOARD: empty so far",
+              people.length > 0
+                ? "PEOPLE ON ELSEWHR AT/HEADING TO THIS PLACE: " +
+                  people.map((p) =>
+                    p.name +
+                    (p.dest_status === "current" || p.livesHere ? " (already there)" :
+                     p.dest_status === "graduated" ? " (alumni)" :
+                     p.dest_status === "curious" ? " (curious)" : " (arriving" + (p.dest_term ? " " + p.dest_term : "") + ")") +
+                    (p.dest_program ? ", " + p.dest_program : "")
+                  ).join("; ")
+                : "PEOPLE: nobody on elsewhr here yet",
+            ].filter(Boolean).join("\n")}
+          />
+        )}
+
         {/* HAPPENINGS: the world's corkboard */}
         {!loading && (
           <div className="mt-6 bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-3xl p-5 shadow-[7px_7px_0_rgba(28,20,16,0.9)]">
