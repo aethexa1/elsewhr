@@ -209,7 +209,9 @@ function FieldPageInner() {
         .from("profiles")
         .select("id, user_id, name, photo, headline, location, dest_place, dest_program, accent")
         .or(
-          `dest_program.ilike.${like},headline.ilike.${like},seeking.ilike.${like},learning.ilike.${like},goal.ilike.${like}`
+          f.includes(",")
+            ? `dest_program.ilike.${like},headline.ilike.${like},seeking.ilike.${like},learning.ilike.${like},goal.ilike.${like}`
+            : `dest_program.ilike.${like},headline.ilike.${like},seeking.ilike.${like},learning.ilike.${like},goal.ilike.${like},mindset.cs.{"${f.toLowerCase()}"}`
         )
         .order("id", { ascending: false })
         .limit(40);
