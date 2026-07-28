@@ -91,6 +91,7 @@ export async function POST(req: Request) {
       .eq("blocked_profile_id", senderProfile.id)
       .maybeSingle();
     if (blockRow) {
+      // blocked: polite decoy success, no thread — the blocker's peace is the feature
       return NextResponse.json({ ok: true });
     }
 
@@ -117,18 +118,25 @@ export async function POST(req: Request) {
       .lt("created_at", weekAgo);
 
     // --- one pending knock per door ---
-    const { data: existing } = await admin
+    // an existing thread with this person (either direction, any live status) is THE thread — go there
+    const { data: existingPair } = await admin
       .from("reach_requests")
-      .select("id")
-      .eq("sender_user_id", sender.id)
-      .eq("recipient_profile_id", target.id)
-      .eq("status", "pending")
+      .select("id, status")
+      .in("status", ["pending", "accepted"])
+      .or(
+        `and(sender_user_id.eq.${sender.id},recipient_profile_id.eq.${target.id}),and(recipient_user_id.eq.${sender.id},sender_profile_id.eq.${target.id})`
+      )
+      .order("id", { ascending: false })
+      .limit(1)
       .maybeSingle();
-    if (existing) {
-      return NextResponse.json(
-        { error: "You've already knocked — give them time to answer." },
-        { status: 400 }
-      );
+    if (existingPair) {
+      // drop the message into the existing thread instead of erroring
+      await admin.from("messages").insert({
+        request_id: existingPair.id,
+        sender_user_id: sender.id,
+        body: message.trim(),
+      });
+      return NextResponse.json({ ok: true, id: existingPair.id, existing: true });
     }
 
     // --- store the knock ---
@@ -141,7 +149,7 @@ export async function POST(req: Request) {
         recipient_user_id: target.user_id,
         message: message.trim(),
       })
-      .select("accept_token")
+      .select("id, accept_token")
       .single();
     if (insertError || !knock) {
       console.error("reach_requests insert:", insertError);
@@ -153,7 +161,7 @@ export async function POST(req: Request) {
     const recipientEmail = targetUser?.user?.email;
     if (!recipientEmail) {
       // knock is stored — it lands in their in-app inbox at /knocks
-      return NextResponse.json({ ok: true, emailed: false });
+      return NextResponse.json({ ok: true, id: knock.id, emailed: false });
     }
 
     const senderName = esc(senderProfile.name);
@@ -199,10 +207,10 @@ export async function POST(req: Request) {
       const detail = await r.text();
       console.error("Resend error (knock stays pending — in-app delivery is the floor):", detail);
       // the knock stays pending and lands in their in-app inbox at /knocks
-      return NextResponse.json({ ok: true, emailed: false });
+      return NextResponse.json({ ok: true, id: knock.id, emailed: false });
     }
 
-    return NextResponse.json({ ok: true, emailed: true });
+    return NextResponse.json({ ok: true, id: knock.id, emailed: true });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
