@@ -108,6 +108,25 @@ export async function GET(req: Request) {
       });
     }
 
+    // ?similar= -> schools like this one: same state, closest in size and kind
+    const sim = (url.searchParams.get("similar") || "").trim();
+    if (sim.length >= 2) {
+      const me = findLocal(sim);
+      if (!me) return NextResponse.json({ ok: true, similar: [] });
+      const peers = SCHOOLS
+        .filter((s) => s.n !== me.n && s.s === me.s)
+        .map((s) => ({
+          s,
+          d:
+            Math.abs((s.z ?? 0) - (me.z ?? 0)) / Math.max(me.z ?? 1, 1) +
+            (s.o === me.o ? 0 : 0.75),
+        }))
+        .sort((a, b) => a.d - b.d)
+        .slice(0, 6)
+        .map(({ s }) => ({ name: s.n, city: s.c, tuitionIn: s.ti }));
+      return NextResponse.json({ ok: true, similar: peers });
+    }
+
     // ?list=1 -> the whole catalog for type-ahead: nice names first, then every official field of study
     if (url.searchParams.get("list")) {
       const known = [...new Set([...Object.keys(FIELD_CIP), ...CATALOG.map((e) => e.t)])];
