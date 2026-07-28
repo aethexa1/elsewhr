@@ -28,7 +28,7 @@ type SenderCard = {
 
 const STRINGS: Record<string, {
   title: string; sub: string; empty: string; loading: string;
-  accept: string; ignore: string; accepted: string; acceptedNoEmail: string;
+  accept: string; ignore: string; accepted: string; acceptedNoEmail: string; openChat: string; sentThreads: string;
   ignored: string; wantsTo: string; seeWork: string; back: string;
 }> = {
   en: {
@@ -40,6 +40,8 @@ const STRINGS: Record<string, {
     ignore: "ignore",
     accepted: "thread open — their message is in your email, just hit reply.",
     acceptedNoEmail: "accepted — their message is saved here. the email thread opens once elsewhr's mail is fully set up.",
+    openChat: "open chat →",
+    sentThreads: "your open threads",
     ignored: "ignored. they were never told.",
     wantsTo: "wants to reach out:",
     seeWork: "see their real work →",
@@ -54,6 +56,8 @@ const STRINGS: Record<string, {
     ignore: "ignorar",
     accepted: "hilo abierto — su mensaje está en tu correo, solo responde.",
     acceptedNoEmail: "aceptado — su mensaje quedó guardado aquí. el hilo por correo se abre cuando el mail de elsewhr esté listo.",
+    openChat: "abrir chat →",
+    sentThreads: "tus hilos abiertos",
     ignored: "ignorado. nunca lo sabrán.",
     wantsTo: "quiere contactarte:",
     seeWork: "ver su trabajo real →",
@@ -68,6 +72,8 @@ const STRINGS: Record<string, {
     ignore: "ignorar",
     accepted: "fio aberto — a mensagem está no seu e-mail, é só responder.",
     acceptedNoEmail: "aceito — a mensagem ficou salva aqui. o fio por e-mail abre quando o mail do elsewhr estiver pronto.",
+    openChat: "abrir chat →",
+    sentThreads: "seus fios abertos",
     ignored: "ignorado. nunca saberão.",
     wantsTo: "quer falar com você:",
     seeWork: "ver o trabalho real →",
@@ -82,6 +88,8 @@ const STRINGS: Record<string, {
     ignore: "नज़रअंदाज़ करें",
     accepted: "बातचीत खुल गई — उनका संदेश आपके ईमेल में है, बस reply करें।",
     acceptedNoEmail: "स्वीकार किया — संदेश यहाँ सुरक्षित है। elsewhr का मेल तैयार होते ही ईमेल थ्रेड खुलेगा।",
+    openChat: "चैट खोलो →",
+    sentThreads: "आपकी खुली बातचीत",
     ignored: "नज़रअंदाज़ किया। उन्हें कभी पता नहीं चलेगा।",
     wantsTo: "आपसे जुड़ना चाहते हैं:",
     seeWork: "उनका असली काम देखें →",
@@ -96,6 +104,8 @@ const STRINGS: Record<string, {
     ignore: "ignoruj",
     accepted: "wątek otwarty — wiadomość jest w twoim mailu, po prostu odpowiedz.",
     acceptedNoEmail: "zaakceptowano — wiadomość zapisana tutaj. wątek mailowy otworzy się, gdy poczta elsewhr będzie gotowa.",
+    openChat: "otwórz czat →",
+    sentThreads: "twoje otwarte wątki",
     ignored: "zignorowano. nigdy się nie dowiedzą.",
     wantsTo: "chce się skontaktować:",
     seeWork: "zobacz prawdziwą pracę →",
@@ -110,6 +120,8 @@ const STRINGS: Record<string, {
     ignore: "ignorer",
     accepted: "fil ouvert — leur message est dans ta boîte mail, réponds simplement.",
     acceptedNoEmail: "accepté — le message est gardé ici. le fil par e-mail s'ouvrira quand le mail d'elsewhr sera prêt.",
+    openChat: "ouvrir le chat →",
+    sentThreads: "tes fils ouverts",
     ignored: "ignoré. ils ne le sauront jamais.",
     wantsTo: "veut te joindre :",
     seeWork: "voir son vrai travail →",
@@ -122,6 +134,7 @@ export default function KnocksPage() {
   const s = STRINGS[lang] || STRINGS.en;
   const [loading, setLoading] = useState(true);
   const [knocks, setKnocks] = useState<Knock[]>([]);
+  const [threads, setThreads] = useState<{ id: number; other: SenderCard | null }[]>([]);
   const [senders, setSenders] = useState<Record<number, SenderCard>>({});
   const [done, setDone] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState<number | null>(null);
@@ -140,6 +153,25 @@ export default function KnocksPage() {
         .order("created_at", { ascending: false });
       const list = (rows ?? []) as Knock[];
       setKnocks(list);
+
+      // open threads: accepted knocks in either direction become chats
+      const uid = auth.user.id;
+      const { data: acc } = await supabase
+        .from("reach_requests")
+        .select("id, sender_user_id, sender_profile_id, recipient_profile_id, recipient_user_id")
+        .eq("status", "accepted")
+        .or(`sender_user_id.eq.${uid},recipient_user_id.eq.${uid}`)
+        .order("id", { ascending: false })
+        .limit(30);
+      type AccRow = { id: number; sender_user_id: string; sender_profile_id: number; recipient_profile_id: number };
+      if (acc && acc.length > 0) {
+        const rowsA = acc as AccRow[];
+        const otherIds = [...new Set(rowsA.map((r) => (r.sender_user_id === uid ? r.recipient_profile_id : r.sender_profile_id)))];
+        const { data: ppl } = await supabase.from("profiles").select("id, name, headline, photo, accent").in("id", otherIds);
+        const byId: Record<number, SenderCard> = {};
+        for (const p of (ppl ?? []) as SenderCard[]) byId[p.id] = p;
+        setThreads(rowsA.map((r) => ({ id: r.id, other: byId[r.sender_user_id === uid ? r.recipient_profile_id : r.sender_profile_id] ?? null })));
+      }
       if (list.length > 0) {
         const ids = [...new Set(list.map((k) => k.sender_profile_id))];
         const { data: profs } = await supabase
@@ -205,6 +237,33 @@ export default function KnocksPage() {
           </div>
         )}
 
+        {threads.length > 0 && (
+          <div className="mb-8">
+            <p className="font-mono text-[11px] uppercase tracking-widest text-[#fff6ec]/70 mb-3">💬 {s.sentThreads}</p>
+            <div className="flex flex-col gap-2.5">
+              {threads.map((t) => (
+                <Link key={t.id} href={"/t/" + t.id}
+                  className="flex items-center gap-3 bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-2xl px-4 py-3 shadow-[5px_5px_0_rgba(28,20,16,0.9)] hover:translate-y-[-2px] transition-transform"
+                >
+                  {t.other?.photo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={t.other.photo} alt="" className="w-10 h-10 rounded-full object-cover border-2 border-[#1c1410]" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full border-2 border-[#1c1410] flex items-center justify-center font-bold text-white" style={{ background: t.other?.accent || "#6b4eff" }}>
+                      {(t.other?.name || "?").slice(0, 1)}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="font-[Syne] font-extrabold text-[15px] leading-tight truncate">{t.other?.name ?? "…"}</p>
+                    {t.other?.headline && <p className="text-[11.5px] text-[#6b5e52] truncate">{t.other.headline}</p>}
+                  </div>
+                  <span className="text-[18px]">💬</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col gap-4">
           {knocks.map((k, idx) => {
             const sender = senders[k.sender_profile_id];
@@ -250,7 +309,12 @@ export default function KnocksPage() {
                   )}
 
                   {resolved ? (
-                    <p className="mt-4 text-[13.5px] font-medium">{resolved} 🐦</p>
+                    <div>
+                      <p className="mt-4 text-[13.5px] font-medium">{resolved} 🐦</p>
+                      <Link href={"/t/" + k.id} className="inline-block mt-2 px-4 py-2 rounded-xl border-2 border-[#1c1410] bg-[#c8f000] font-bold text-[13px]">
+                        💬 {s.openChat}
+                      </Link>
+                    </div>
                   ) : (
                     <div className="flex gap-2 mt-4">
                       <button
