@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { Syne, Space_Grotesk, Noto_Sans_Devanagari } from "next/font/google";
 import "./globals.css";
 import LangProvider from "./LangProvider";
+import HelpBird from "./HelpBird";
 
 const syne = Syne({
   subsets: ["latin"],
@@ -44,7 +45,10 @@ export default function RootLayout({
             "var(--font-space), var(--font-deva), sans-serif",
         }}
       >
-        <LangProvider>{children}</LangProvider>
+        <LangProvider>
+          {children}
+          <HelpBird />
+        </LangProvider>
       </body>
     </html>
   );
