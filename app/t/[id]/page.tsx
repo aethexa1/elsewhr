@@ -47,6 +47,7 @@ function ThreadInner() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [sendErr, setSendErr] = useState<string | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "denied">("loading");
   const endRef = useRef<HTMLDivElement | null>(null);
 
@@ -75,7 +76,7 @@ function ThreadInner() {
         .eq("id", requestId)
         .maybeSingle();
       if (!alive) return;
-      if (!r || (r as Req).status !== "accepted" || ((r as Req).sender_user_id !== uid && (r as Req).recipient_user_id !== uid)) {
+      if (!r || !["pending", "accepted"].includes((r as Req).status) || ((r as Req).sender_user_id !== uid && (r as Req).recipient_user_id !== uid)) {
         setState("denied");
         return;
       }
@@ -110,13 +111,24 @@ function ThreadInner() {
     if (!body || busy || !me) return;
     setBusy(true);
     setText("");
+    setSendErr(null);
     const { data, error } = await supabase
       .from("messages")
       .insert({ request_id: requestId, sender_user_id: me, body })
       .select()
       .single();
-    if (!error && data) setMsgs((cur) => [...cur, data as Msg]);
-    else setText(body); // give their words back on failure
+    if (!error && data) {
+      setMsgs((cur) => [...cur, data as Msg]);
+      // replying IS accepting: the recipient's first message opens the thread for good
+      if (req && req.status === "pending" && req.recipient_user_id === me) {
+        await supabase.from("reach_requests").update({ status: "accepted" }).eq("id", requestId);
+        setReq({ ...req, status: "accepted" });
+      }
+    }
+    else {
+      setText(body); // give their words back
+      setSendErr("couldn't send — if this keeps happening, tell the 🐦 in the corner");
+    }
     setBusy(false);
   }
 
@@ -172,7 +184,7 @@ function ThreadInner() {
                 className={
                   mine
                     ? "self-end max-w-[85%] bg-[#6b4eff] text-white rounded-2xl rounded-br-md px-3.5 py-2.5 text-[14px] leading-snug"
-                    : "self-start max-w-[85%] bg-white border-2 border-[#1c1410] rounded-2xl rounded-bl-md px-3.5 py-2.5 text-[14px] leading-snug"
+                    : "self-start max-w-[85%] bg-white text-[#1c1410] border-2 border-[#1c1410] rounded-2xl rounded-bl-md px-3.5 py-2.5 text-[14px] leading-snug"
                 }
               >
                 {m.body}
@@ -182,6 +194,9 @@ function ThreadInner() {
           <div ref={endRef} />
         </div>
 
+        {sendErr && (
+          <p className="mt-2 text-center font-mono text-[11.5px] text-[#fff6ec] bg-[#1c1410]/40 rounded-full px-3 py-1.5">{sendErr}</p>
+        )}
         <div className="mt-3 flex gap-2">
           <input
             value={text}
@@ -189,7 +204,7 @@ function ThreadInner() {
             onKeyDown={(e) => { if (e.key === "Enter") send(); }}
             placeholder={s.ph}
             maxLength={2000}
-            className="flex-1 min-w-0 px-4 py-3 rounded-2xl border-[3px] border-[#1c1410] bg-[#fff6ec] outline-none focus:border-[#6b4eff] text-[14.5px] shadow-[5px_5px_0_rgba(28,20,16,0.9)]"
+            className="flex-1 min-w-0 px-4 py-3 rounded-2xl border-[3px] border-[#1c1410] bg-[#fff6ec] text-[#1c1410] placeholder-[#6b5e52]/70 outline-none focus:border-[#6b4eff] text-[14.5px] shadow-[5px_5px_0_rgba(28,20,16,0.9)]"
           />
           <button
             type="button"
