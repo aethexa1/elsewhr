@@ -28,7 +28,7 @@ type SenderCard = {
 
 const STRINGS: Record<string, {
   title: string; sub: string; empty: string; loading: string;
-  accept: string; ignore: string; accepted: string; acceptedNoEmail: string; openChat: string; sentThreads: string;
+  accept: string; ignore: string; accepted: string; acceptedNoEmail: string; openChat: string; sentThreads: string; waiting: string;
   ignored: string; wantsTo: string; seeWork: string; back: string;
 }> = {
   en: {
@@ -42,6 +42,7 @@ const STRINGS: Record<string, {
     acceptedNoEmail: "accepted — their message is saved here. the email thread opens once elsewhr's mail is fully set up.",
     openChat: "open chat →",
     sentThreads: "your open threads",
+    waiting: "waiting on them — they’ll see it in their knocks",
     ignored: "ignored. they were never told.",
     wantsTo: "wants to reach out:",
     seeWork: "see their real work →",
@@ -58,6 +59,7 @@ const STRINGS: Record<string, {
     acceptedNoEmail: "aceptado — su mensaje quedó guardado aquí. el hilo por correo se abre cuando el mail de elsewhr esté listo.",
     openChat: "abrir chat →",
     sentThreads: "tus hilos abiertos",
+    waiting: "esperando su respuesta — lo verán en sus knocks",
     ignored: "ignorado. nunca lo sabrán.",
     wantsTo: "quiere contactarte:",
     seeWork: "ver su trabajo real →",
@@ -74,6 +76,7 @@ const STRINGS: Record<string, {
     acceptedNoEmail: "aceito — a mensagem ficou salva aqui. o fio por e-mail abre quando o mail do elsewhr estiver pronto.",
     openChat: "abrir chat →",
     sentThreads: "seus fios abertos",
+    waiting: "esperando resposta — vão ver nos knocks deles",
     ignored: "ignorado. nunca saberão.",
     wantsTo: "quer falar com você:",
     seeWork: "ver o trabalho real →",
@@ -90,6 +93,7 @@ const STRINGS: Record<string, {
     acceptedNoEmail: "स्वीकार किया — संदेश यहाँ सुरक्षित है। elsewhr का मेल तैयार होते ही ईमेल थ्रेड खुलेगा।",
     openChat: "चैट खोलो →",
     sentThreads: "आपकी खुली बातचीत",
+    waiting: "उनके जवाब का इंतज़ार — उनके knocks में दिखेगा",
     ignored: "नज़रअंदाज़ किया। उन्हें कभी पता नहीं चलेगा।",
     wantsTo: "आपसे जुड़ना चाहते हैं:",
     seeWork: "उनका असली काम देखें →",
@@ -106,6 +110,7 @@ const STRINGS: Record<string, {
     acceptedNoEmail: "zaakceptowano — wiadomość zapisana tutaj. wątek mailowy otworzy się, gdy poczta elsewhr będzie gotowa.",
     openChat: "otwórz czat →",
     sentThreads: "twoje otwarte wątki",
+    waiting: "czekamy na nich — zobaczą to w swoich knocks",
     ignored: "zignorowano. nigdy się nie dowiedzą.",
     wantsTo: "chce się skontaktować:",
     seeWork: "zobacz prawdziwą pracę →",
@@ -122,6 +127,7 @@ const STRINGS: Record<string, {
     acceptedNoEmail: "accepté — le message est gardé ici. le fil par e-mail s'ouvrira quand le mail d'elsewhr sera prêt.",
     openChat: "ouvrir le chat →",
     sentThreads: "tes fils ouverts",
+    waiting: "en attente — ils le verront dans leurs knocks",
     ignored: "ignoré. ils ne le sauront jamais.",
     wantsTo: "veut te joindre :",
     seeWork: "voir son vrai travail →",
@@ -135,6 +141,7 @@ export default function KnocksPage() {
   const [loading, setLoading] = useState(true);
   const [knocks, setKnocks] = useState<Knock[]>([]);
   const [threads, setThreads] = useState<{ id: number; other: SenderCard | null }[]>([]);
+  const [outgoing, setOutgoing] = useState<{ id: number; other: SenderCard | null; isWave: boolean }[]>([]);
   const [senders, setSenders] = useState<Record<number, SenderCard>>({});
   const [done, setDone] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState<number | null>(null);
@@ -163,6 +170,24 @@ export default function KnocksPage() {
         .or(`sender_user_id.eq.${uid},recipient_user_id.eq.${uid}`)
         .order("id", { ascending: false })
         .limit(30);
+      // in flight: my pending knocks and waves, so silence never reads as failure
+      const { data: outg } = await supabase
+        .from("reach_requests")
+        .select("id, recipient_profile_id, message")
+        .eq("status", "pending")
+        .eq("sender_user_id", uid)
+        .order("id", { ascending: false })
+        .limit(20);
+      type OutRow = { id: number; recipient_profile_id: number; message: string };
+      if (outg && outg.length > 0) {
+        const outRows = outg as OutRow[];
+        const outIds = [...new Set(outRows.map((r) => r.recipient_profile_id))];
+        const { data: outPpl } = await supabase.from("profiles").select("id, name, headline, photo, accent").in("id", outIds);
+        const outBy: Record<number, SenderCard> = {};
+        for (const p of (outPpl ?? []) as SenderCard[]) outBy[p.id] = p;
+        setOutgoing(outRows.map((r) => ({ id: r.id, other: outBy[r.recipient_profile_id] ?? null, isWave: r.message.trim() === "👋" })));
+      }
+
       type AccRow = { id: number; sender_user_id: string; sender_profile_id: number; recipient_profile_id: number };
       if (acc && acc.length > 0) {
         const rowsA = acc as AccRow[];
@@ -259,6 +284,27 @@ export default function KnocksPage() {
                   </div>
                   <span className="text-[18px]">💬</span>
                 </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {outgoing.length > 0 && (
+          <div className="mb-8">
+            <p className="font-mono text-[11px] uppercase tracking-widest text-[#fff6ec]/70 mb-3">🕐 {s.waiting}</p>
+            <div className="flex flex-wrap gap-2">
+              {outgoing.map((o) => (
+                <span key={o.id} className="flex items-center gap-2 bg-[#fff6ec]/15 border-2 border-[#fff6ec]/40 rounded-full pl-1.5 pr-3.5 py-1.5">
+                  {o.other?.photo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={o.other.photo} alt="" className="w-7 h-7 rounded-full object-cover border-2 border-[#1c1410]" />
+                  ) : (
+                    <span className="w-7 h-7 rounded-full border-2 border-[#1c1410] flex items-center justify-center text-[11px] font-bold text-white" style={{ background: o.other?.accent || "#6b4eff" }}>
+                      {(o.other?.name || "?").slice(0, 1)}
+                    </span>
+                  )}
+                  <span className="text-[12.5px] font-bold text-[#fff6ec]">{o.other?.name ?? "…"}{o.isWave ? " 👋" : ""}</span>
+                </span>
               ))}
             </div>
           </div>
