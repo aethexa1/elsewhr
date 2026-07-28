@@ -150,7 +150,8 @@ export default function KnocksPage() {
     async function load() {
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) {
-        setLoading(false);
+        try { localStorage.setItem("wh_msgs_seen", new Date().toISOString()); } catch { /* fine */ }
+      setLoading(false);
         return;
       }
       const { data: rows } = await supabase
@@ -166,7 +167,7 @@ export default function KnocksPage() {
       const { data: acc } = await supabase
         .from("reach_requests")
         .select("id, sender_user_id, sender_profile_id, recipient_profile_id, recipient_user_id")
-        .eq("status", "accepted")
+        .in("status", ["pending", "accepted"])
         .or(`sender_user_id.eq.${uid},recipient_user_id.eq.${uid}`)
         .order("id", { ascending: false })
         .limit(30);
