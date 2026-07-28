@@ -13,7 +13,26 @@ export default function HelpBird() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [greet, setGreet] = useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
+
+  // the bird says hello once per session — then keeps quiet
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem("wh_help_greeted")) return;
+    } catch { /* private mode */ }
+    const id = window.setTimeout(() => setGreet(true), 4500);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  useEffect(() => {
+    if (open || !greet) return;
+    const id = window.setTimeout(() => {
+      setGreet(false);
+      try { sessionStorage.setItem("wh_help_greeted", "1"); } catch { /* fine */ }
+    }, 8000);
+    return () => window.clearTimeout(id);
+  }, [greet, open]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -46,11 +65,31 @@ export default function HelpBird() {
 
   return (
     <>
+      {/* the greeting */}
+      {greet && !open && (
+        <button
+          type="button"
+          onClick={() => {
+            setGreet(false);
+            setOpen(true);
+            try { sessionStorage.setItem("wh_help_greeted", "1"); } catch { /* fine */ }
+          }}
+          style={{ position: "fixed", right: 80, bottom: 26, zIndex: 60 }}
+          className="px-4 py-2.5 rounded-2xl rounded-br-sm border-2 border-[#1c1410] bg-[#fff6ec] text-[#1c1410] text-[13px] font-bold shadow-[4px_4px_0_rgba(28,20,16,0.9)] animate-pulse"
+        >
+          need a hand? 🐦
+        </button>
+      )}
+
       {/* the perch */}
       <button
         type="button"
         aria-label="help"
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          setOpen(!open);
+          setGreet(false);
+          try { sessionStorage.setItem("wh_help_greeted", "1"); } catch { /* fine */ }
+        }}
         style={{ position: "fixed", right: 18, bottom: 18, zIndex: 60 }}
         className="w-14 h-14 rounded-full border-[3px] border-[#1c1410] bg-[#c8f000] shadow-[4px_4px_0_#1c1410] text-[24px] flex items-center justify-center hover:translate-y-[-2px] transition-transform"
       >
@@ -60,7 +99,7 @@ export default function HelpBird() {
       {open && (
         <div
           style={{ position: "fixed", right: 18, bottom: 84, zIndex: 60, width: "min(92vw, 360px)" }}
-          className="bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-3xl shadow-[8px_8px_0_rgba(28,20,16,0.9)] overflow-hidden flex flex-col"
+          className="bg-[#fff6ec] text-[#1c1410] border-[3px] border-[#1c1410] rounded-3xl shadow-[8px_8px_0_rgba(28,20,16,0.9)] overflow-hidden flex flex-col"
         >
           <div className="bg-[#1c1410] text-[#fff6ec] px-4 py-3">
             <p className="font-bold text-[14px] leading-tight">🐦 need a hand?</p>
@@ -102,7 +141,7 @@ export default function HelpBird() {
               onKeyDown={(e) => { if (e.key === "Enter") send(); }}
               placeholder="type here…"
               maxLength={600}
-              className="flex-1 min-w-0 px-3 py-2.5 rounded-xl border-2 border-[#1c1410] bg-white outline-none focus:border-[#6b4eff] text-[13.5px]"
+              className="flex-1 min-w-0 px-3 py-2.5 rounded-xl border-2 border-[#1c1410] bg-white text-[#1c1410] placeholder-[#6b5e52]/70 outline-none focus:border-[#6b4eff] text-[13.5px]"
             />
             <button
               type="button"
