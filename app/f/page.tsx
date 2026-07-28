@@ -147,22 +147,51 @@ const LEARN_SPECIALS: Record<string, { label: string; url: string }[]> = {
   ],
   "data science": [{ label: "Kaggle Learn (free)", url: "https://www.kaggle.com/learn" }],
 };
-function learnLinks(field: string): { label: string; url: string }[] {
+function learnLinks(field: string, cip?: string): { label: string; url: string }[] {
   const f = field.toLowerCase();
   const q = encodeURIComponent(f);
-  const out: { label: string; url: string }[] = [
-    { label: "YouTube: full course", url: "https://www.youtube.com/results?search_query=" + q + "%20full%20course" },
-    { label: "MIT OpenCourseWare", url: "https://ocw.mit.edu/search/?q=" + q },
-    { label: "Khan Academy", url: "https://www.khanacademy.org/search?page_search_query=" + q },
+  const fam = (cip || "").slice(0, 2);
+  const out: { label: string; url: string }[] = [...(LEARN_SPECIALS[f] ?? [])];
+
+  // the base: works for every field on earth
+  out.push(
+    { label: "YouTube: full course", url: "https://www.youtube.com/results?search_query=" + encodeURIComponent(f + " full course") },
+    { label: "Class Central (all free courses)", url: "https://www.classcentral.com/search?q=" + q + "&free=true" },
     { label: "edX (free to audit)", url: "https://www.edx.org/search?q=" + q },
     { label: "Coursera (audit free)", url: "https://www.coursera.org/search?query=" + q },
-    { label: "OpenStax textbooks (browse)", url: "https://openstax.org/subjects" },
-    { label: "Saylor Academy", url: "https://learn.saylor.org/course/index.php?search=" + q },
-  ];
-  out.push(
-    { label: "Class Central (all free courses)", url: "https://www.classcentral.com/search?q=" + q + "&free=true" },
     { label: "GitHub: open resources", url: "https://github.com/search?q=" + encodeURIComponent("awesome " + f) + "&type=repositories" }
   );
+
+  const STEM_FAMS = ["11", "14", "15", "26", "27", "40", "41"];
+  const HUM_FAMS = ["05", "16", "23", "24", "30", "38", "42", "45", "54"];
+
+  if (STEM_FAMS.includes(fam)) {
+    out.push(
+      { label: "MIT OpenCourseWare", url: "https://ocw.mit.edu/search/?q=" + q },
+      { label: "OpenStax textbooks (browse)", url: "https://openstax.org/subjects" }
+    );
+  }
+  if (fam === "50") {
+    out.push({ label: "Open Culture: free arts courses", url: "https://www.openculture.com/freeonlinecourses" });
+    if (/music|opera|voice|piano|violin|instrument|conduct|compos/.test(f)) {
+      out.push({ label: "IMSLP: free sheet music", url: "https://imslp.org" });
+    }
+  }
+  if (fam === "51") {
+    out.push(
+      { label: "Khan Academy", url: "https://www.khanacademy.org/search?page_search_query=" + q },
+      { label: "OpenStax textbooks (browse)", url: "https://openstax.org/subjects" }
+    );
+  }
+  if (fam === "52") {
+    out.push({ label: "Saylor Academy (free certs)", url: "https://www.saylor.org/" });
+  }
+  if (HUM_FAMS.includes(fam)) {
+    out.push(
+      { label: "Open Culture: free courses", url: "https://www.openculture.com/freeonlinecourses" },
+      { label: "OpenStax textbooks (browse)", url: "https://openstax.org/subjects" }
+    );
+  }
   if (TECH_HINTS.some((h) => f.includes(h))) {
     out.push(
       { label: "freeCodeCamp", url: "https://www.freecodecamp.org/learn/" },
@@ -170,7 +199,7 @@ function learnLinks(field: string): { label: string; url: string }[] {
       { label: "roadmap.sh", url: "https://roadmap.sh" }
     );
   }
-  return [...(LEARN_SPECIALS[f] ?? []), ...out].slice(0, 12);
+  return out.slice(0, 12);
 }
 
 function FieldPageInner() {
@@ -186,6 +215,7 @@ function FieldPageInner() {
   const [schoolState, setSchoolState] = useState<"idle" | "loading" | "unknown" | "off">("idle");
   const [loadingPeople, setLoadingPeople] = useState(false);
   const [allFields, setAllFields] = useState<string[]>([]);
+  const [fieldCodes, setFieldCodes] = useState<Record<string, string>>({});
 
   // the known-fields list, once — so one letter is enough
   useEffect(() => {
@@ -194,6 +224,7 @@ function FieldPageInner() {
         const r = await fetch("/api/school?list=1");
         const d = await r.json();
         if (Array.isArray(d.known)) setAllFields(d.known as string[]);
+        if (d.codes && typeof d.codes === "object") setFieldCodes(d.codes as Record<string, string>);
       } catch { /* chips are a bonus */ }
     })();
   }, []);
@@ -389,7 +420,7 @@ function FieldPageInner() {
                 🎒 learn it free
               </p>
               <div className="flex flex-wrap gap-2">
-                {learnLinks(active).map((l) => (
+                {learnLinks(active, fieldCodes[active.toLowerCase()]).map((l) => (
                   <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer"
                     className="px-3 py-1.5 rounded-full bg-[#fff6ec]/10 border border-[#fff6ec]/30 text-[12px] font-bold hover:bg-[#c8f000] hover:text-[#1c1410] transition-colors"
                   >
