@@ -71,6 +71,7 @@ const DEST_STRINGS: Record<string, {
   termLabel: string; termPh: string;
   seasons: string[];
   statusLabel: string;
+  roommateLabel: string;
   statuses: { key: string; label: string }[];
 }> = {
   en: {
@@ -82,6 +83,7 @@ const DEST_STRINGS: Record<string, {
     programChips: ["computer science", "nursing", "business", "engineering", "psychology", "biology", "trades", "art & design"],
     seasons: ["fall", "winter", "spring", "summer"],
     statusLabel: "where you are in the journey",
+    roommateLabel: "looking for a roommate",
     statuses: [
       { key: "curious", label: "just curious" },
       { key: "applied", label: "applied" },
@@ -100,6 +102,7 @@ const DEST_STRINGS: Record<string, {
     programChips: ["informática", "enfermería", "negocios", "ingeniería", "psicología", "biología", "oficios", "arte y diseño"],
     seasons: ["otoño", "invierno", "primavera", "verano"],
     statusLabel: "en qué punto del camino estás",
+    roommateLabel: "buscando roommate",
     statuses: [
       { key: "curious", label: "solo curioseando" },
       { key: "applied", label: "apliqué" },
@@ -118,6 +121,7 @@ const DEST_STRINGS: Record<string, {
     programChips: ["computação", "enfermagem", "negócios", "engenharia", "psicologia", "biologia", "ofícios", "arte e design"],
     seasons: ["outono", "inverno", "primavera", "verão"],
     statusLabel: "em que ponto da jornada você está",
+    roommateLabel: "procurando colega de quarto",
     statuses: [
       { key: "curious", label: "só curiosidade" },
       { key: "applied", label: "apliquei" },
@@ -136,6 +140,7 @@ const DEST_STRINGS: Record<string, {
     programChips: ["कंप्यूटर साइंस", "नर्सिंग", "बिजनेस", "इंजीनियरिंग", "साइकोलॉजी", "बायोलॉजी", "ट्रेड", "आर्ट और डिज़ाइन"],
     seasons: ["फ़ॉल", "विंटर", "स्प्रिंग", "समर"],
     statusLabel: "सफ़र में कहाँ हो",
+    roommateLabel: "रूममेट की तलाश में",
     statuses: [
       { key: "curious", label: "बस देख रहा हूँ" },
       { key: "applied", label: "आवेदन किया" },
@@ -154,6 +159,7 @@ const DEST_STRINGS: Record<string, {
     programChips: ["informatyka", "pielęgniarstwo", "biznes", "inżynieria", "psychologia", "biologia", "zawody", "sztuka i design"],
     seasons: ["jesień", "zima", "wiosna", "lato"],
     statusLabel: "gdzie jesteś w tej podróży",
+    roommateLabel: "szukam współlokatora",
     statuses: [
       { key: "curious", label: "tylko ciekawość" },
       { key: "applied", label: "aplikowałem" },
@@ -172,6 +178,7 @@ const DEST_STRINGS: Record<string, {
     programChips: ["informatique", "soins infirmiers", "commerce", "ingénierie", "psychologie", "biologie", "métiers", "art et design"],
     seasons: ["automne", "hiver", "printemps", "été"],
     statusLabel: "où tu en es dans le parcours",
+    roommateLabel: "cherche un coloc",
     statuses: [
       { key: "curious", label: "juste curieux" },
       { key: "applied", label: "candidature envoyée" },
@@ -215,6 +222,7 @@ export default function CreatePage() {
   const [destProgram, setDestProgram] = useState("");
   const [destTerm, setDestTerm] = useState("");
   const [destStatus, setDestStatus] = useState("");
+  const [roommate, setRoommate] = useState(false);
   const [locCoords, setLocCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [accent, setAccent] = useState("#6b4eff");
   const [resume, setResume] = useState("");
@@ -232,11 +240,11 @@ export default function CreatePage() {
     try {
       localStorage.setItem("wh_draft", JSON.stringify({
         step, name, headline, location, website, seeking, mindset,
-        learning, goal, accent, dayOne, destPlace, destProgram, destTerm, destStatus, tiles,
+        learning, goal, accent, dayOne, destPlace, destProgram, destTerm, destStatus, roommate, tiles,
       }));
     } catch { /* storage full or blocked — typing still works */ }
   }, [loading, existingId, step, name, headline, location, website, seeking, mindset,
-      learning, goal, accent, dayOne, destPlace, destProgram, destTerm, destStatus, tiles]);
+      learning, goal, accent, dayOne, destPlace, destProgram, destTerm, destStatus, roommate, tiles]);
 
   useEffect(() => {
     async function init() {
@@ -272,6 +280,7 @@ export default function CreatePage() {
         setDestProgram(existing.dest_program ?? "");
         setDestTerm(existing.dest_term ?? "");
         setDestStatus(existing.dest_status ?? "");
+        setRoommate(!!(existing as { roommate?: boolean | null }).roommate);
         const arts = Array.isArray(existing.artifacts) ? existing.artifacts : [];
         setTiles(arts.length > 0 ? arts : [{ ...emptyTile }]);
       } else {
@@ -295,6 +304,7 @@ export default function CreatePage() {
               if (d.destProgram) setDestProgram(d.destProgram);
               if (d.destTerm) setDestTerm(d.destTerm);
               if (d.destStatus) setDestStatus(d.destStatus);
+              if (typeof d.roommate === "boolean") setRoommate(d.roommate);
               if (Array.isArray(d.tiles) && d.tiles.length > 0) setTiles(d.tiles);
               if (typeof d.step === "number" && d.step > 0) setStep(Math.min(d.step, 12));
             }
@@ -429,6 +439,7 @@ export default function CreatePage() {
       dest_program: destProgram.trim() || null,
       dest_term: destTerm.trim() || null,
       dest_status: destStatus || null,
+      roommate,
     };
 
     const { error } = existingId
@@ -714,6 +725,15 @@ export default function CreatePage() {
                   </button>
                 ))}
               </div>
+              <button
+                type="button"
+                onClick={() => setRoommate(!roommate)}
+                className={`mt-3 px-4 py-2 rounded-full border-2 text-[13px] font-medium transition-all duration-150 active:scale-90 ${
+                  roommate ? "bg-[#c8f000] border-[#1c1410] font-bold" : "bg-white border-[#1c1410]"
+                }`}
+              >
+                🏠 {dst.roommateLabel}
+              </button>
             </div>
           )}
         </div>
