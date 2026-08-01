@@ -38,6 +38,8 @@ type Review = { strongest?: string; gaps?: string[]; verdict?: string };
 
 type Geo = { name: string; admin1?: string; country?: string; latitude?: number; longitude?: number };
 
+const LANG_CHIPS = ["English", "हिन्दी", "Español", "Português", "Polski", "Français", "中文", "العربية", "বাংলা", "ਪੰਜਾਬੀ", "தமிழ்", "اردو"];
+
 const MINDSET_OPTIONS = [
   "builder", "curious", "ships fast", "night owl", "team player",
   "self-taught", "detail-obsessed", "big dreamer", "disciplined", "creative",
@@ -72,6 +74,7 @@ const DEST_STRINGS: Record<string, {
   seasons: string[];
   statusLabel: string;
   roommateLabel: string;
+  languagesLabel: string;
   statuses: { key: string; label: string }[];
 }> = {
   en: {
@@ -84,6 +87,7 @@ const DEST_STRINGS: Record<string, {
     seasons: ["fall", "winter", "spring", "summer"],
     statusLabel: "where you are in the journey",
     roommateLabel: "looking for a roommate",
+    languagesLabel: "languages you speak",
     statuses: [
       { key: "curious", label: "just curious" },
       { key: "applied", label: "applied" },
@@ -103,6 +107,7 @@ const DEST_STRINGS: Record<string, {
     seasons: ["otoño", "invierno", "primavera", "verano"],
     statusLabel: "en qué punto del camino estás",
     roommateLabel: "buscando roommate",
+    languagesLabel: "idiomas que hablas",
     statuses: [
       { key: "curious", label: "solo curioseando" },
       { key: "applied", label: "apliqué" },
@@ -122,6 +127,7 @@ const DEST_STRINGS: Record<string, {
     seasons: ["outono", "inverno", "primavera", "verão"],
     statusLabel: "em que ponto da jornada você está",
     roommateLabel: "procurando colega de quarto",
+    languagesLabel: "idiomas que você fala",
     statuses: [
       { key: "curious", label: "só curiosidade" },
       { key: "applied", label: "apliquei" },
@@ -141,6 +147,7 @@ const DEST_STRINGS: Record<string, {
     seasons: ["फ़ॉल", "विंटर", "स्प्रिंग", "समर"],
     statusLabel: "सफ़र में कहाँ हो",
     roommateLabel: "रूममेट की तलाश में",
+    languagesLabel: "आप कौन सी भाषाएँ बोलते हैं",
     statuses: [
       { key: "curious", label: "बस देख रहा हूँ" },
       { key: "applied", label: "आवेदन किया" },
@@ -160,6 +167,7 @@ const DEST_STRINGS: Record<string, {
     seasons: ["jesień", "zima", "wiosna", "lato"],
     statusLabel: "gdzie jesteś w tej podróży",
     roommateLabel: "szukam współlokatora",
+    languagesLabel: "języki, którymi mówisz",
     statuses: [
       { key: "curious", label: "tylko ciekawość" },
       { key: "applied", label: "aplikowałem" },
@@ -179,6 +187,7 @@ const DEST_STRINGS: Record<string, {
     seasons: ["automne", "hiver", "printemps", "été"],
     statusLabel: "où tu en es dans le parcours",
     roommateLabel: "cherche un coloc",
+    languagesLabel: "langues que tu parles",
     statuses: [
       { key: "curious", label: "juste curieux" },
       { key: "applied", label: "candidature envoyée" },
@@ -223,6 +232,7 @@ export default function CreatePage() {
   const [destTerm, setDestTerm] = useState("");
   const [destStatus, setDestStatus] = useState("");
   const [roommate, setRoommate] = useState(false);
+  const [languages, setLanguages] = useState<string[]>([]);
   const [locCoords, setLocCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [accent, setAccent] = useState("#6b4eff");
   const [resume, setResume] = useState("");
@@ -240,11 +250,11 @@ export default function CreatePage() {
     try {
       localStorage.setItem("wh_draft", JSON.stringify({
         step, name, headline, location, website, seeking, mindset,
-        learning, goal, accent, dayOne, destPlace, destProgram, destTerm, destStatus, roommate, tiles,
+        learning, goal, accent, dayOne, destPlace, destProgram, destTerm, destStatus, roommate, languages, tiles,
       }));
     } catch { /* storage full or blocked — typing still works */ }
   }, [loading, existingId, step, name, headline, location, website, seeking, mindset,
-      learning, goal, accent, dayOne, destPlace, destProgram, destTerm, destStatus, roommate, tiles]);
+      learning, goal, accent, dayOne, destPlace, destProgram, destTerm, destStatus, roommate, languages, tiles]);
 
   useEffect(() => {
     async function init() {
@@ -281,6 +291,7 @@ export default function CreatePage() {
         setDestTerm(existing.dest_term ?? "");
         setDestStatus(existing.dest_status ?? "");
         setRoommate(!!(existing as { roommate?: boolean | null }).roommate);
+        setLanguages(((existing as { languages?: string[] | null }).languages ?? []) as string[]);
         const arts = Array.isArray(existing.artifacts) ? existing.artifacts : [];
         setTiles(arts.length > 0 ? arts : [{ ...emptyTile }]);
       } else {
@@ -305,6 +316,7 @@ export default function CreatePage() {
               if (d.destTerm) setDestTerm(d.destTerm);
               if (d.destStatus) setDestStatus(d.destStatus);
               if (typeof d.roommate === "boolean") setRoommate(d.roommate);
+              if (Array.isArray(d.languages)) setLanguages(d.languages);
               if (Array.isArray(d.tiles) && d.tiles.length > 0) setTiles(d.tiles);
               if (typeof d.step === "number" && d.step > 0) setStep(Math.min(d.step, 12));
             }
@@ -440,6 +452,7 @@ export default function CreatePage() {
       dest_term: destTerm.trim() || null,
       dest_status: destStatus || null,
       roommate,
+      languages,
     };
 
     const { error } = existingId
@@ -734,6 +747,23 @@ export default function CreatePage() {
               >
                 🏠 {dst.roommateLabel}
               </button>
+              <div className="mt-4">
+                <FieldLabel>{dst.languagesLabel}</FieldLabel>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {LANG_CHIPS.map((lg) => (
+                    <button
+                      key={lg}
+                      type="button"
+                      onClick={() => setLanguages((cur) => cur.includes(lg) ? cur.filter((x) => x !== lg) : [...cur, lg])}
+                      className={`px-3.5 py-1.5 rounded-full border-2 text-[13px] font-medium transition-all duration-150 active:scale-90 ${
+                        languages.includes(lg) ? "bg-[#6b4eff] text-[#fff6ec] border-[#6b4eff]" : "bg-white border-[#1c1410]"
+                      }`}
+                    >
+                      {lg}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>
