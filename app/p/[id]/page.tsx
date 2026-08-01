@@ -41,6 +41,7 @@ type Profile = {
   location: string;
   seeking?: string | null;
   mindset?: string[] | null;
+  languages?: string[] | null;
   learning?: string | null;
   goal?: string | null;
   accent?: string | null;
@@ -152,6 +153,12 @@ export default async function ProfilePage({
                 </span>
               ))}
             </div>
+          )}
+
+          {profile.languages && profile.languages.length > 0 && (
+            <p className="mt-2 text-[13px] font-medium text-[#fff6ec]/90">
+              🗣 {profile.languages.join(" · ")}
+            </p>
           )}
           <LocationLine location={profile.location} />
           {profile.website && (
