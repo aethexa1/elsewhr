@@ -8,8 +8,9 @@
 // Click a side card to bring it to centre; arrows work; autoplay drifts.
 
 import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
+import { useRouter } from "next/navigation";
 
-export type CoverSlide = { photo: string; name: string; line?: string };
+export type CoverSlide = { photo?: string | null; accent?: string | null; name: string; line?: string; href?: string };
 
 const PERSPECTIVE = 1600;
 const SCALE_STEP = 0.16;
@@ -29,6 +30,7 @@ export default function ProfileCoverflow({
   autoplay?: boolean;
   holdSeconds?: number;
 }) {
+  const router = useRouter();
   const n = slides.length;
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -57,11 +59,15 @@ export default function ProfileCoverflow({
   const handleCardClick = useCallback(
     (i: number) => {
       if (lockRef.current) return;
-      if (i === active) return; // the centre card is the star, not a button
+      if (i === active) {
+        const href = slides[i]?.href;
+        if (href) router.push(href); // the centre card is a door
+        return;
+      }
       lock();
       setActive(i);
     },
-    [active, lock]
+    [active, lock, slides, router]
   );
 
   // autoplay drifts until the person touches it — their curiosity takes the wheel
@@ -139,20 +145,39 @@ export default function ProfileCoverflow({
             transform: `translate(-50%, -50%) translateX(${tx}px) translateZ(${tz}px) rotateY(${ry}deg) rotateZ(${rz}deg) scale(${sc})`,
             transition: transitionCss,
             opacity: visible ? 1 : 0,
-            cursor: isActive ? "default" : "pointer",
+            cursor: isActive ? (slide.href ? "pointer" : "default") : "pointer",
             pointerEvents: visible ? "auto" : "none",
             backgroundColor: "#1c1410",
           };
 
           return (
             <div
-              key={slide.photo + i}
+              key={slide.name + i}
               style={cardStyle}
               onClick={() => handleCardClick(i)}
               aria-label={slide.name}
               aria-hidden={!visible}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {!slide.photo && (
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: slide.accent || "#6b4eff",
+                    color: "#fff6ec",
+                    fontFamily: "Syne, sans-serif",
+                    fontWeight: 800,
+                    fontSize: cardHeight * 0.4,
+                  }}
+                >
+                  {slide.name[0]}
+                </div>
+              )}
+              {slide.photo && (
+              /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={slide.photo}
                 alt={slide.name}
@@ -167,6 +192,7 @@ export default function ProfileCoverflow({
                   userSelect: "none",
                 }}
               />
+              )}
 
               {/* legibility gradient + name plate */}
               <div
