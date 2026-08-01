@@ -56,7 +56,7 @@ export default function HelpBird() {
         }),
       });
       const d = await r.json();
-      setMsgs((cur) => [...cur, { role: "assistant", content: d.ok ? d.reply : "the bird is resting — try again 🐦" }]);
+      setMsgs((cur) => [...cur, { role: "assistant", content: (d.ok ? (d.reply as string) : "the bird is resting — try again 🐦").replace(/\*\*/g, "") }]);
     } catch {
       setMsgs((cur) => [...cur, { role: "assistant", content: "the bird is resting — try again 🐦" }]);
     }
