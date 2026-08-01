@@ -227,7 +227,7 @@ export default function ReportBlockActions({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="font-mono text-[11.5px] tracking-wide text-[#6b5e52] underline underline-offset-4 hover:text-[#1c1410] transition-colors"
+          className="font-mono text-[11.5px] font-bold tracking-wide text-[#1c1410] bg-[#fff6ec] border-2 border-[#1c1410] rounded-full px-3 py-1.5 hover:bg-white transition-colors"
         >
           ⚑ {s.report}
         </button>
@@ -235,14 +235,14 @@ export default function ReportBlockActions({
           type="button"
           onClick={toggleBlock}
           disabled={busy}
-          className="font-mono text-[11.5px] tracking-wide text-[#6b5e52] underline underline-offset-4 hover:text-[#1c1410] transition-colors disabled:opacity-50"
+          className="font-mono text-[11.5px] font-bold tracking-wide text-[#1c1410] bg-[#fff6ec] border-2 border-[#1c1410] rounded-full px-3 py-1.5 hover:bg-white transition-colors disabled:opacity-50"
         >
           ⊘ {blocked ? s.unblock : s.block}
         </button>
       </div>
 
       {blocked && (
-        <p className="mt-2 text-right font-mono text-[11px] text-[#6b5e52]">{s.blockedNote}</p>
+        <p className="mt-2 text-right font-mono text-[11px] font-bold text-[#fff6ec]">{s.blockedNote}</p>
       )}
 
       {open && (
