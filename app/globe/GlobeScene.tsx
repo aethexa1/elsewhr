@@ -40,7 +40,7 @@ function DotSphere() {
   }, []);
   return (
     <points geometry={geom}>
-      <pointsMaterial color="#fff6ec" size={0.02} sizeAttenuation transparent opacity={0.28} />
+      <pointsMaterial color="#fff6ec" size={0.016} sizeAttenuation transparent opacity={0.16} />
     </points>
   );
 }
@@ -86,17 +86,33 @@ function Pin({ pin, onGo }: { pin: GlobePin; onGo: (city: string) => void }) {
   );
 }
 
+const EARTH_SOURCES = [
+  "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg",
+  "https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg",
+  "https://cdn.jsdelivr.net/gh/vasturiano/three-globe/example/img/earth-blue-marble.jpg",
+];
+
 function Earth() {
   const [tex, setTex] = useState<THREE.Texture | null>(null);
   useEffect(() => {
     const loader = new THREE.TextureLoader();
     loader.setCrossOrigin("anonymous");
-    loader.load(
-      "https://unpkg.com/three-globe@2.31.0/example/img/earth-night.jpg",
-      (t) => { t.colorSpace = THREE.SRGBColorSpace; setTex(t); },
-      undefined,
-      () => { /* no world tonight — the dot-grid carries it */ }
-    );
+    let cancelled = false;
+    const tryLoad = (i: number) => {
+      if (cancelled || i >= EARTH_SOURCES.length) return;
+      loader.load(
+        EARTH_SOURCES[i],
+        (t) => {
+          if (cancelled) return;
+          t.colorSpace = THREE.SRGBColorSpace;
+          setTex(t);
+        },
+        undefined,
+        () => tryLoad(i + 1)
+      );
+    };
+    tryLoad(0);
+    return () => { cancelled = true; };
   }, []);
   return (
     <mesh rotation={[0, -Math.PI / 2, 0]}>
@@ -163,7 +179,7 @@ function Scene({ pins, onGo }: { pins: GlobePin[]; onGo: (c: string) => void }) 
 export default function GlobeScene({ pins }: { pins: GlobePin[] }) {
   const router = useRouter();
   return (
-    <Canvas camera={{ position: [0, 0, 4.35], fov: 45 }} style={{ touchAction: "none" }}>
+    <Canvas camera={{ position: [0, 0, 3.95], fov: 45 }} style={{ touchAction: "none", width: "100%", height: "100%" }}>
       <Scene pins={pins} onGo={(city) => router.push("/w?place=" + encodeURIComponent(city))} />
     </Canvas>
   );
