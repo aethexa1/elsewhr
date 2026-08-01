@@ -379,6 +379,8 @@ function WorldPageInner() {
     if (!place) { setLoading(false); return; }
     let alive = true;
     (async () => {
+      const { data: authData } = await supabase.auth.getUser();
+      const myUid = authData?.user?.id ?? null;
       const cols = "id, user_id, name, photo, headline, location, accent, mindset, seeking, learning, dest_term, dest_program, dest_status";
       const [dst, liv] = await Promise.all([
         supabase.from("profiles").select(cols).ilike("dest_place", place).order("id", { ascending: false }).limit(60),
@@ -389,6 +391,7 @@ function WorldPageInner() {
         const merged: Person[] = [];
         for (const row of [...(dst.data ?? []), ...(liv.data ?? [])] as Person[]) {
           if (!row.user_id || seen.has(row.id)) continue;
+          if (myUid && row.user_id === myUid) continue; // you know yourself already
           seen.add(row.id);
           merged.push({ ...row, livesHere: (row.location || "").toLowerCase().includes(place.toLowerCase()) });
         }
@@ -560,6 +563,7 @@ function WorldPageInner() {
                     {s.official}
                   </a>
                 )}
+                <a href={"https://news.google.com/search?q=" + encodeURIComponent(place)} target="_blank" rel="noopener noreferrer" className="font-mono text-[10.5px] font-bold text-[#6b4eff] underline underline-offset-4">📰 news →</a>
                 {wiki.content_urls?.desktop?.page && (
                   <a href={wiki.content_urls.desktop.page} target="_blank" rel="noopener noreferrer" className="font-mono text-[10.5px] text-[#6b5e52] underline underline-offset-4">
                     {s.wikiNote}
@@ -644,7 +648,7 @@ function WorldPageInner() {
                 {events.map((ev) => (
                   <div key={ev.id} className="py-2.5 flex items-baseline justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-bold text-[14px] leading-tight">{ev.title}</p>
+                      <p className="font-bold text-[14px] leading-tight">{/(hiring|job|part[- ]?time|vacancy|intern)/i.test(ev.title) ? "💼 " : ""}{ev.title}</p>
                       {ev.when_text && <p className="text-[12px] text-[#6b5e52]">{ev.when_text}</p>}
                     </div>
                     {ev.link && (
