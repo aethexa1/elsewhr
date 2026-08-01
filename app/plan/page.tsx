@@ -142,6 +142,16 @@ export default function PlanPage() {
             <input className={inputCls} value={sleep} onChange={(e) => setSleep(e.target.value)} placeholder={s.sleep} maxLength={60} />
             <input className={inputCls} value={acts} onChange={(e) => setActs(e.target.value)} placeholder={s.acts} maxLength={140} />
           </div>
+          <div className="flex flex-wrap gap-1.5 -mt-1">
+            {ACTIVITY_CHIPS.slice(0, 10).map((a) => (
+              <button key={a} type="button"
+                onClick={() => setActs((cur) => cur.split(",").map(x => x.trim()).filter(Boolean).includes(a) ? cur : (cur.trim() ? cur.trim() + ", " : "") + a)}
+                className="px-2.5 py-1 rounded-full border-2 border-[#1c1410] bg-[#fff6ec] text-[#1c1410] text-[11.5px] font-bold hover:bg-[#c8f000]"
+              >
+                + {a}
+              </button>
+            ))}
+          </div>
           <input className={inputCls} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={s.notes} maxLength={200} />
         </div>
         <button type="button" onClick={make} disabled={busy}
