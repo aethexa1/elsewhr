@@ -142,7 +142,7 @@ export default function GlobePage() {
         <h1 className="font-[Syne] font-extrabold text-3xl text-[#fff6ec] lowercase">🌐 {s.title}</h1>
         <p className="mt-1.5 text-[14px] text-[#fff6ec]/90 leading-snug">{s.sub}</p>
       </div>
-      <div className="relative flex-1 w-full max-w-[1000px] mx-auto" style={{ minHeight: "72vh" }}>
+      <div className="relative w-full max-w-[1000px] mx-auto" style={{ height: "72vh" }}>
         <div
           className="absolute inset-0 pointer-events-none"
           style={{ background: "radial-gradient(circle at 50% 46%, rgba(255,246,236,0.22) 0%, rgba(200,240,0,0.10) 30%, rgba(255,93,59,0) 62%)" }}
