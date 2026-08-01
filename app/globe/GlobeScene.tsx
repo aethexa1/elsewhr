@@ -1,11 +1,10 @@
 "use client";
 
-// elsewhr — the globe: the guide as a planet.
-// New file: app/globe/GlobeScene.tsx
-// Ink sphere, cream dot-grid, lime pins pulsing wherever elsewhr people are.
-// Drag to spin; click a pin to enter that city's world. R3F only — no new deps.
+// elsewhr — the globe v2: a planet that owns the room.
+// Replace: app/globe/GlobeScene.tsx
+// Bigger, brighter, haloed; pins you can actually see, with pulse rings.
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useRouter } from "next/navigation";
@@ -27,8 +26,8 @@ function latLonToVec(lat: number, lon: number, r: number) {
 function DotSphere() {
   const geom = useMemo(() => {
     const pts: number[] = [];
-    for (let lat = -80; lat <= 80; lat += 8) {
-      const steps = Math.max(8, Math.round(44 * Math.cos((lat * Math.PI) / 180)));
+    for (let lat = -84; lat <= 84; lat += 5) {
+      const steps = Math.max(10, Math.round(72 * Math.cos((lat * Math.PI) / 180)));
       for (let i = 0; i < steps; i++) {
         const lon = (i / steps) * 360 - 180;
         const v = latLonToVec(lat, lon, R);
@@ -41,31 +40,72 @@ function DotSphere() {
   }, []);
   return (
     <points geometry={geom}>
-      <pointsMaterial color="#fff6ec" size={0.022} sizeAttenuation transparent opacity={0.55} />
+      <pointsMaterial color="#fff6ec" size={0.02} sizeAttenuation transparent opacity={0.28} />
     </points>
   );
 }
 
 function Pin({ pin, onGo }: { pin: GlobePin; onGo: (city: string) => void }) {
-  const ref = useRef<THREE.Mesh>(null);
+  const dot = useRef<THREE.Mesh>(null);
+  const ring = useRef<THREE.Mesh>(null);
   const [hover, setHover] = useState(false);
-  const pos = useMemo(() => latLonToVec(pin.lat, pin.lon, R * 1.01), [pin]);
+  const pos = useMemo(() => latLonToVec(pin.lat, pin.lon, R * 1.012), [pin]);
+  const outward = useMemo(() => pos.clone().normalize(), [pos]);
+
   useFrame(({ clock }) => {
-    if (!ref.current) return;
-    const pulse = 1 + 0.25 * Math.sin(clock.elapsedTime * 3 + pin.lon);
-    const base = 0.05 + Math.min(0.04, pin.count * 0.012);
-    ref.current.scale.setScalar(base * pulse * (hover ? 1.7 : 1));
+    const t = clock.elapsedTime;
+    if (dot.current) {
+      const pulse = 1 + 0.18 * Math.sin(t * 3 + pin.lon);
+      const base = 0.085 + Math.min(0.05, pin.count * 0.02);
+      dot.current.scale.setScalar(base * pulse * (hover ? 1.5 : 1));
+    }
+    if (ring.current) {
+      const cycle = (t * 0.9 + pin.lon * 0.1) % 1;
+      const s = 0.12 + cycle * 0.3;
+      ring.current.scale.setScalar(s);
+      (ring.current.material as THREE.MeshBasicMaterial).opacity = 0.75 * (1 - cycle);
+    }
   });
+
   return (
-    <mesh
-      ref={ref}
-      position={pos}
-      onClick={(e) => { e.stopPropagation(); onGo(pin.city); }}
-      onPointerOver={(e) => { e.stopPropagation(); setHover(true); document.body.style.cursor = "pointer"; }}
-      onPointerOut={() => { setHover(false); document.body.style.cursor = "default"; }}
-    >
-      <sphereGeometry args={[1, 16, 16]} />
-      <meshBasicMaterial color={hover ? "#ffffff" : "#c8f000"} />
+    <group position={pos}>
+      <mesh
+        ref={dot}
+        onClick={(e) => { e.stopPropagation(); onGo(pin.city); }}
+        onPointerOver={(e) => { e.stopPropagation(); setHover(true); document.body.style.cursor = "pointer"; }}
+        onPointerOut={() => { setHover(false); document.body.style.cursor = "default"; }}
+      >
+        <sphereGeometry args={[1, 16, 16]} />
+        <meshBasicMaterial color={hover ? "#ffffff" : "#c8f000"} />
+      </mesh>
+      <mesh ref={ring} quaternion={new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), outward)}>
+        <ringGeometry args={[0.85, 1, 32]} />
+        <meshBasicMaterial color="#c8f000" transparent opacity={0.6} side={THREE.DoubleSide} />
+      </mesh>
+    </group>
+  );
+}
+
+function Earth() {
+  const [tex, setTex] = useState<THREE.Texture | null>(null);
+  useEffect(() => {
+    const loader = new THREE.TextureLoader();
+    loader.setCrossOrigin("anonymous");
+    loader.load(
+      "https://unpkg.com/three-globe@2.31.0/example/img/earth-night.jpg",
+      (t) => { t.colorSpace = THREE.SRGBColorSpace; setTex(t); },
+      undefined,
+      () => { /* no world tonight — the dot-grid carries it */ }
+    );
+  }, []);
+  return (
+    <mesh rotation={[0, -Math.PI / 2, 0]}>
+      <sphereGeometry args={[R * 0.985, 64, 64]} />
+      {tex ? (
+        <meshBasicMaterial map={tex} />
+      ) : (
+        <meshBasicMaterial color="#241a12" />
+      )}
     </mesh>
   );
 }
@@ -73,20 +113,20 @@ function Pin({ pin, onGo }: { pin: GlobePin; onGo: (city: string) => void }) {
 function Scene({ pins, onGo }: { pins: GlobePin[]; onGo: (c: string) => void }) {
   const group = useRef<THREE.Group>(null);
   const drag = useRef<{ on: boolean; x: number; y: number }>({ on: false, x: 0, y: 0 });
-  const vel = useRef(0.15);
+  const vel = useRef(0.22);
 
   useFrame((_, dt) => {
     if (!group.current) return;
     if (!drag.current.on) {
       group.current.rotation.y += vel.current * dt;
-      vel.current += (0.15 - vel.current) * dt; // ease back to idle drift
+      vel.current += (0.22 - vel.current) * dt;
     }
   });
 
   return (
     <group
       ref={group}
-      rotation={[0.35, 0, 0]}
+      rotation={[0.32, 1.1, 0]}
       onPointerDown={(e) => { drag.current = { on: true, x: e.clientX, y: e.clientY }; }}
       onPointerUp={() => { drag.current.on = false; }}
       onPointerLeave={() => { drag.current.on = false; }}
@@ -101,9 +141,16 @@ function Scene({ pins, onGo }: { pins: GlobePin[]; onGo: (c: string) => void }) 
         vel.current = dx * 0.05;
       }}
     >
+      {/* the planet — the real one: night-earth continents, warm ink until it loads */}
+      <Earth />
+      {/* the halo: lime breath, cream haze */}
       <mesh>
-        <sphereGeometry args={[R * 0.985, 48, 48]} />
-        <meshBasicMaterial color="#1c1410" />
+        <sphereGeometry args={[R * 1.06, 48, 48]} />
+        <meshBasicMaterial color="#c8f000" transparent opacity={0.1} side={THREE.BackSide} />
+      </mesh>
+      <mesh>
+        <sphereGeometry args={[R * 1.16, 48, 48]} />
+        <meshBasicMaterial color="#fff6ec" transparent opacity={0.06} side={THREE.BackSide} />
       </mesh>
       <DotSphere />
       {pins.map((p) => (
@@ -116,7 +163,7 @@ function Scene({ pins, onGo }: { pins: GlobePin[]; onGo: (c: string) => void }) 
 export default function GlobeScene({ pins }: { pins: GlobePin[] }) {
   const router = useRouter();
   return (
-    <Canvas camera={{ position: [0, 0, 5.4], fov: 45 }} style={{ touchAction: "none" }}>
+    <Canvas camera={{ position: [0, 0, 4.35], fov: 45 }} style={{ touchAction: "none" }}>
       <Scene pins={pins} onGo={(city) => router.push("/w?place=" + encodeURIComponent(city))} />
     </Canvas>
   );
