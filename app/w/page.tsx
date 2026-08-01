@@ -112,13 +112,14 @@ type Person = {
   learning?: string | null;
   livesHere?: boolean;
   isMe?: boolean;
+  roommate?: boolean | null;
 };
 
 const STRINGS: Record<string, {
   about: string; official: string; arriving: string; already: string;
   nobody: string; youFirst: string; sayHi: string; back: string; loading: string;
   events: string; noEvents: string; addEvent: string; evTitle: string; evWhen: string; evLink: string; evPost: string;
-  alumni: string; notable: string; curious: string; research: string; you: string; around: string; jobs: string; housing: string; transit: string;
+  alumni: string; notable: string; curious: string; research: string; you: string; around: string; jobs: string; housing: string; transit: string; roomies: string; talk: string; say: string;
   inState: string; outState: string; students: string; admit: string; earn: string; moreLike: string;
   wikiNote: string;
 }> = {
@@ -146,6 +147,9 @@ const STRINGS: Record<string, {
     jobs: "part-time jobs nearby",
     housing: "student housing nearby",
     transit: "getting around",
+    roomies: "looking for roommates",
+    talk: "talk",
+    say: "add a comment…",
     inState: "in-state",
     outState: "out-of-state",
     students: "students",
@@ -180,6 +184,9 @@ const STRINGS: Record<string, {
     jobs: "trabajos de medio tiempo cerca",
     housing: "vivienda estudiantil cerca",
     transit: "cómo moverse",
+    roomies: "buscando roommates",
+    talk: "hablar",
+    say: "comenta algo…",
     inState: "estatal",
     outState: "fuera del estado",
     students: "estudiantes",
@@ -214,6 +221,9 @@ const STRINGS: Record<string, {
     jobs: "empregos de meio período perto",
     housing: "moradia estudantil perto",
     transit: "como se locomover",
+    roomies: "procurando colegas de quarto",
+    talk: "conversar",
+    say: "comente algo…",
     inState: "no estado",
     outState: "fora do estado",
     students: "estudantes",
@@ -248,6 +258,9 @@ const STRINGS: Record<string, {
     jobs: "पास में पार्ट-टाइम काम",
     housing: "पास में छात्र आवास",
     transit: "आना-जाना",
+    roomies: "रूममेट खोज रहे हैं",
+    talk: "बात करो",
+    say: "कुछ लिखो…",
     inState: "राज्य फ़ीस",
     outState: "बाहरी फ़ीस",
     students: "छात्र",
@@ -282,6 +295,9 @@ const STRINGS: Record<string, {
     jobs: "praca dorywcza w pobliżu",
     housing: "mieszkania studenckie w pobliżu",
     transit: "jak się poruszać",
+    roomies: "szukają współlokatorów",
+    talk: "rozmowa",
+    say: "dodaj komentarz…",
     inState: "w stanie",
     outState: "poza stanem",
     students: "studenci",
@@ -316,6 +332,9 @@ const STRINGS: Record<string, {
     jobs: "petits boulots à proximité",
     housing: "logement étudiant à proximité",
     transit: "se déplacer",
+    roomies: "cherchent des colocs",
+    talk: "parler",
+    say: "ajoute un commentaire…",
     inState: "résident",
     outState: "non-résident",
     students: "étudiants",
@@ -412,7 +431,7 @@ function WorldPageInner() {
     (async () => {
       const { data: authData } = await supabase.auth.getUser();
       const myUid = authData?.user?.id ?? null;
-      const cols = "id, user_id, name, photo, headline, location, accent, mindset, seeking, learning, dest_term, dest_program, dest_status";
+      const cols = "id, user_id, name, photo, headline, location, accent, mindset, seeking, learning, dest_term, dest_program, dest_status, roommate";
       const [dst, liv] = await Promise.all([
         supabase.from("profiles").select(cols).ilike("dest_place", place).order("id", { ascending: false }).limit(60),
         supabase.from("profiles").select(cols).ilike("location", "%" + place + "%").order("id", { ascending: false }).limit(60),
@@ -444,6 +463,7 @@ function WorldPageInner() {
   }, [people, filter]);
   const alumni = useMemo(() => visible.filter((p) => p.dest_status === "graduated"), [visible]);
   const curious = useMemo(() => visible.filter((p) => p.dest_status === "curious"), [visible]);
+  const roomies = useMemo(() => visible.filter((p) => !!p.roommate), [visible]);
   const already = useMemo(() => visible.filter((p) => p.dest_status !== "graduated" && (p.dest_status === "current" || p.livesHere)), [visible]);
   const arriving = useMemo(() => visible.filter((p) => p.dest_status !== "graduated" && p.dest_status !== "curious" && p.dest_status !== "current" && !p.livesHere), [visible]);
 
@@ -691,6 +711,7 @@ function WorldPageInner() {
                     <div className="min-w-0">
                       <p className="font-bold text-[14px] leading-tight">{/(hiring|job|part[- ]?time|vacancy|intern)/i.test(ev.title) ? "💼 " : ""}{ev.title}</p>
                       {ev.when_text && <p className="text-[12px] text-[#6b5e52]">{ev.when_text}</p>}
+                      <EventTalk eventId={ev.id} talkLabel={s.talk} sayLabel={s.say} />
                     </div>
                     {ev.link && (
                       <a href={ev.link} target="_blank" rel="noopener noreferrer" className="font-mono text-[11px] font-bold text-[#6b4eff] underline underline-offset-4 whitespace-nowrap">
@@ -734,11 +755,80 @@ function WorldPageInner() {
           <PeopleBlock title={`👀 ${s.curious} · ${curious.length}`} people={curious} sayHi={s.sayHi} youLabel={s.you} />
         )}
 
+
+        {!loading && roomies.length > 0 && (
+
+          <PeopleBlock title={`🏠 ${s.roomies} · ${roomies.length}`} people={roomies} sayHi={s.sayHi} youLabel={s.you} />
+
+        )}
+
         {!loading && byTerm.map(([term, group]) => (
           <PeopleBlock key={term} title={`${s.arriving}${term !== "—" ? " · " + term : ""} · ${group.length}`} people={group} sayHi={s.sayHi} youLabel={s.you} />
         ))}
       </div>
     </main>
+  );
+}
+
+function EventTalk({ eventId, talkLabel, sayLabel }: { eventId: number; talkLabel: string; sayLabel: string }) {
+  const [open, setOpen] = useState(false);
+  const [count, setCount] = useState<number | null>(null);
+  const [rows, setRows] = useState<{ id: number; author: string; body: string }[]>([]);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { count: c } = await supabase.from("event_comments").select("id", { count: "exact", head: true }).eq("event_id", eventId);
+      setCount(c ?? 0);
+    })();
+  }, [eventId]);
+
+  async function load() {
+    const { data } = await supabase.from("event_comments").select("id, author, body").eq("event_id", eventId).order("id", { ascending: true }).limit(50);
+    if (data) setRows(data as { id: number; author: string; body: string }[]);
+  }
+
+  async function send() {
+    const body = text.trim();
+    if (!body || busy) return;
+    setBusy(true);
+    const { data: u } = await supabase.auth.getUser();
+    if (!u?.user) { window.location.href = "/login"; return; }
+    const { data: p } = await supabase.from("profiles").select("name").eq("user_id", u.user.id).maybeSingle();
+    const author = (p?.name as string) || "someone";
+    const { error } = await supabase.from("event_comments").insert({ event_id: eventId, user_id: u.user.id, author, body });
+    if (!error) { setText(""); await load(); setCount((c) => (c ?? 0) + 1); }
+    setBusy(false);
+  }
+
+  return (
+    <div className="mt-2">
+      <button type="button" onClick={async () => { const n = !open; setOpen(n); if (n) await load(); }}
+        className="font-mono text-[10.5px] font-bold text-[#6b4eff] underline underline-offset-2"
+      >
+        💬 {talkLabel}{count != null && count > 0 ? " · " + count : ""}
+      </button>
+      {open && (
+        <div className="mt-2 flex flex-col gap-1.5">
+          {rows.map((r) => (
+            <p key={r.id} className="text-[12.5px] leading-snug bg-white border-2 border-[#1c1410]/25 rounded-xl px-2.5 py-1.5">
+              <span className="font-bold">{r.author}:</span> {r.body}
+            </p>
+          ))}
+          <div className="flex gap-1.5">
+            <input value={text} onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") send(); }}
+              placeholder={sayLabel} maxLength={500}
+              className="flex-1 min-w-0 px-2.5 py-1.5 rounded-xl border-2 border-[#1c1410] bg-white text-[#1c1410] placeholder-[#6b5e52]/60 outline-none focus:border-[#6b4eff] text-[12.5px]"
+            />
+            <button type="button" onClick={send} disabled={busy || !text.trim()}
+              className="px-3 py-1.5 rounded-xl border-2 border-[#1c1410] bg-[#c8f000] font-bold text-[12px] disabled:opacity-40"
+            >→</button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
