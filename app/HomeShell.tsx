@@ -230,6 +230,18 @@ export default function HomeShell({
   };
   const shortDest = myDest.length > 16 ? myDest.slice(0, 15).trimEnd() + "…" : myDest;
 
+  const LOOKING: Record<string, { q: string; explore: string; gotIn: string; meet: string; work: string }> = {
+    en: { q: "what are you looking for?", explore: "🧭 exploring schools", gotIn: "🎓 i got in — set my destination", meet: "🎲 just meet people", work: "💼 balance work + life" },
+    es: { q: "¿qué estás buscando?", explore: "🧭 explorar escuelas", gotIn: "🎓 me aceptaron — fijar destino", meet: "🎲 conocer gente", work: "💼 equilibrar trabajo y vida" },
+    pt: { q: "o que você procura?", explore: "🧭 explorar escolas", gotIn: "🎓 fui aceito — definir destino", meet: "🎲 conhecer pessoas", work: "💼 equilibrar trabalho e vida" },
+    hi: { q: "आप क्या ढूंढ रहे हैं?", explore: "🧭 स्कूल एक्सप्लोर करो", gotIn: "🎓 दाख़िला मिल गया — destination सेट करो", meet: "🎲 बस लोगों से मिलो", work: "💼 काम और ज़िंदगी का बैलेंस" },
+    pl: { q: "czego szukasz?", explore: "🧭 przeglądam szkoły", gotIn: "🎓 dostałem się — ustaw cel", meet: "🎲 poznać ludzi", work: "💼 praca i życie w balansie" },
+    fr: { q: "tu cherches quoi ?", explore: "🧭 explorer des écoles", gotIn: "🎓 admis — définir ma destination", meet: "🎲 rencontrer des gens", work: "💼 équilibrer travail et vie" },
+  };
+  const lk = LOOKING[lang] || LOOKING.en;
+  const meetPool = profiles.filter((p) => p.user_id && p.id !== myProfileId);
+  const meetPick = meetPool.length > 0 ? meetPool[Math.floor(Math.random() * meetPool.length)] : null;
+
   return (
     <main className="relative min-h-screen bg-[#ff5d3b] text-[#1c1410] flex justify-center px-4 py-8 overflow-hidden">
       <style>{`
@@ -510,7 +522,22 @@ export default function HomeShell({
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 items-start">
+              <>
+              {mode === "member" && !myDest && (
+                <div className="rise max-w-[560px] mx-auto mb-6 bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-3xl p-5 shadow-[7px_7px_0_rgba(28,20,16,0.9)]" style={{ animationDelay: "150ms" }}>
+                  <p className="font-[Syne] font-extrabold text-[18px] mb-3">{lk.q}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Link href="/f" className="px-3.5 py-2 rounded-full border-2 border-[#1c1410] bg-white text-[13px] font-bold hover:bg-[#c8f000]">{lk.explore}</Link>
+                    <Link href="/create" className="px-3.5 py-2 rounded-full border-2 border-[#1c1410] bg-white text-[13px] font-bold hover:bg-[#c8f000]">{lk.gotIn}</Link>
+                    {meetPick && (
+                      <Link href={"/p/" + meetPick.id} className="px-3.5 py-2 rounded-full border-2 border-[#1c1410] bg-white text-[13px] font-bold hover:bg-[#c8f000]">{lk.meet}</Link>
+                    )}
+                    <Link href="/plan" className="px-3.5 py-2 rounded-full border-2 border-[#1c1410] bg-white text-[13px] font-bold hover:bg-[#c8f000]">{lk.work}</Link>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-5 items-start max-w-[560px] mx-auto">
                 {ordered.map((p, idx) => {
                   const workImage = p.artifacts?.find((a) => a.image)?.image;
                   const accent = p.accent || "#6b4eff";
@@ -588,15 +615,18 @@ export default function HomeShell({
                       style={{ animationDelay: `${idx * 90}ms` }}
                     >
                       <div style={{ background: accent }} className="h-2 w-full" />
+                      {p.photo && (
+                        <div className="relative border-b-[3px] border-[#1c1410]">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={p.photo} alt={p.name} className="w-full aspect-square object-cover" />
+                          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#1c1410]/70 to-transparent pointer-events-none" />
+                          <p className="absolute left-4 bottom-3 font-[Syne] font-extrabold text-[26px] leading-none text-[#fff6ec] drop-shadow-[0_2px_8px_rgba(28,20,16,0.6)]">
+                            {p.name.split(" ")[0]}
+                          </p>
+                        </div>
+                      )}
                       <div className="p-5 flex items-center gap-4">
-                        {p.photo ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={p.photo}
-                            alt={p.name}
-                            className="w-16 h-16 rounded-full object-cover border-[3px] flex-none" style={{ borderColor: accent }}
-                          />
-                        ) : (
+                        {!p.photo && (
                           <div className="w-16 h-16 rounded-full text-[#fff6ec] flex items-center justify-center font-[Syne] font-extrabold text-2xl flex-none" style={{ background: accent }}>
                             {p.name?.[0] ?? "?"}
                           </div>
@@ -661,6 +691,7 @@ export default function HomeShell({
                   );
                 })}
               </div>
+              </>
             )}
 
             {mode === "guest" ? (
