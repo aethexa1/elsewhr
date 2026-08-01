@@ -39,6 +39,9 @@ export default function PlanPage() {
   const { lang } = useLang();
   const s = S[lang] || S.en;
   const [school, setSchool] = useState("");
+  const [schoolName, setSchoolName] = useState("");
+  const [sugs, setSugs] = useState<{ name: string; city: string | null; state: string | null }[]>([]);
+  const [sugsOpen, setSugsOpen] = useState(false);
   const [work, setWork] = useState("");
   const [sleep, setSleep] = useState("");
   const [acts, setActs] = useState("");
@@ -70,6 +73,20 @@ export default function PlanPage() {
     })();
   }, []);
 
+  // the standing rule: every lookup input suggests — the shared matcher serves here too
+  useEffect(() => {
+    const t = schoolName.trim();
+    if (t.length < 2) { setSugs([]); setSugsOpen(false); return; }
+    const timer = setTimeout(async () => {
+      try {
+        const r = await fetch("/api/school?suggest=" + encodeURIComponent(t));
+        const d = await r.json();
+        if (Array.isArray(d.suggestions)) { setSugs(d.suggestions); setSugsOpen(d.suggestions.length > 0); }
+      } catch { /* typing still works */ }
+    }, 220);
+    return () => clearTimeout(timer);
+  }, [schoolName]);
+
   async function make() {
     if (busy) return;
     setBusy(true); setErr(null);
@@ -77,7 +94,7 @@ export default function PlanPage() {
       const r = await fetch("/api/plan", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ school, work, sleep, activities: acts, notes, lang }),
+        body: JSON.stringify({ school: (schoolName.trim() ? schoolName.trim() + " · " : "") + school, work, sleep, activities: acts, notes, lang }),
       });
       const d = await r.json();
       if (d.ok && d.plan) {
@@ -102,6 +119,23 @@ export default function PlanPage() {
         <p className="mt-2 mb-6 text-[14px] text-[#fff6ec]/90 leading-snug">{s.sub}</p>
 
         <div className="flex flex-col gap-3 mb-4">
+          <div className="relative">
+            <input className={inputCls} value={schoolName} onChange={(e) => setSchoolName(e.target.value)}
+              onBlur={() => setTimeout(() => setSugsOpen(false), 150)}
+              onFocus={() => sugs.length > 0 && setSugsOpen(true)}
+              placeholder="your school (start typing — chaffey, csudh, cal state…)" maxLength={90} />
+            {sugsOpen && (
+              <div className="absolute z-10 left-0 right-0 mt-1 bg-white border-2 border-[#1c1410] rounded-xl overflow-hidden shadow-[4px_4px_0_rgba(28,20,16,0.5)]">
+                {sugs.map((sg) => (
+                  <button key={sg.name} type="button" onMouseDown={() => { setSchoolName(sg.name); setSugsOpen(false); }}
+                    className="w-full text-left px-3 py-2 text-[13px] text-[#1c1410] hover:bg-[#c8f000]/40"
+                  >
+                    🎓 {sg.name}<span className="text-[#6b5e52]"> · {[sg.city, sg.state].filter(Boolean).join(", ")}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <input className={inputCls} value={school} onChange={(e) => setSchool(e.target.value)} placeholder={s.school} maxLength={140} />
           <input className={inputCls} value={work} onChange={(e) => setWork(e.target.value)} placeholder={s.work} maxLength={140} />
           <div className="flex gap-3">
