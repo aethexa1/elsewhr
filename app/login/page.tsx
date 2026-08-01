@@ -191,6 +191,9 @@ export default function LoginPage() {
           free · you own your profile · no data sold, ever
         </p>
       </div>
+      <p className="mt-6 text-center font-mono text-[10.5px] leading-relaxed tracking-wide text-[#fff6ec]/70 max-w-[340px] mx-auto">
+        elsewhr is for people 16+ · real people, real names · be kind — report and block are one tap away, and the founder reads every help message 🐦
+      </p>
     </main>
   );
 }
