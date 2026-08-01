@@ -149,17 +149,19 @@ const LEARN_SPECIALS: Record<string, { label: string; url: string }[]> = {
 };
 function learnLinks(field: string, cip?: string): { label: string; url: string }[] {
   const f = field.toLowerCase();
-  const q = encodeURIComponent(f);
+  // long catalog names choke search engines — strip the bureaucratic words, keep the subject
+  const core = f.replace(/\b(residency program|residency|program|general|other|and related studies|studies|sciences?)\b/g, " ").replace(/[,/].*$/, "").replace(/\s+/g, " ").trim() || f;
+  const q = encodeURIComponent(core);
   const fam = (cip || "").slice(0, 2);
   const out: { label: string; url: string }[] = [...(LEARN_SPECIALS[f] ?? [])];
 
   // the base: works for every field on earth
   out.push(
-    { label: "YouTube: full course", url: "https://www.youtube.com/results?search_query=" + encodeURIComponent(f + " full course") },
+    { label: "YouTube: full course", url: "https://www.youtube.com/results?search_query=" + encodeURIComponent(core + " full course") },
     { label: "Class Central (all free courses)", url: "https://www.classcentral.com/search?q=" + q + "&free=true" },
     { label: "edX (free to audit)", url: "https://www.edx.org/search?q=" + q },
     { label: "Coursera (audit free)", url: "https://www.coursera.org/search?query=" + q },
-    { label: "GitHub: open resources", url: "https://github.com/search?q=" + encodeURIComponent("awesome " + f) + "&type=repositories" }
+    { label: "GitHub: open resources", url: "https://github.com/search?q=" + encodeURIComponent("awesome " + core) + "&type=repositories" }
   );
 
   const STEM_FAMS = ["11", "14", "15", "26", "27", "40", "41"];
@@ -199,7 +201,14 @@ function learnLinks(field: string, cip?: string): { label: string; url: string }
       { label: "roadmap.sh", url: "https://roadmap.sh" }
     );
   }
-  return out.slice(0, 12);
+  // the never-empty shelf: these always have something
+  out.push(
+    { label: "Wikipedia: the field", url: "https://en.wikipedia.org/w/index.php?search=" + q },
+    { label: "OpenLearn (free courses)", url: "https://www.open.edu/openlearn/search?query=" + q },
+    { label: "LibreTexts (free textbooks)", url: "https://libretexts.org/search?q=" + q },
+    { label: "Google: learn it free", url: "https://www.google.com/search?q=" + encodeURIComponent("learn " + core + " free course") }
+  );
+    return out.slice(0, 14);
 }
 
 function FieldPageInner() {
