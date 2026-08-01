@@ -93,10 +93,36 @@ export default function GlobePage() {
     })();
   }, []);
 
+  const [schoolCities, setSchoolCities] = useState<Record<string, string>>({});
+
+  // destinations are school names — hop through our own API to their cities
+  useEffect(() => {
+    const dests = [...new Set(rows.map((r) => (r.dest_place || "").trim()).filter((d) => d.length > 2))];
+    if (dests.length === 0) return;
+    let alive = true;
+    (async () => {
+      const out: Record<string, string> = {};
+      await Promise.all(
+        dests.slice(0, 20).map(async (d) => {
+          try {
+            const r = await fetch("/api/school?q=" + encodeURIComponent(d));
+            const j = await r.json();
+            const city = j?.school?.city;
+            const state = j?.school?.state;
+            if (city) out[d] = city + (state ? ", " + state : "");
+          } catch { /* unknown places stay unpinned */ }
+        })
+      );
+      if (alive) setSchoolCities(out);
+    })();
+    return () => { alive = false; };
+  }, [rows]);
+
   const pins = useMemo<GlobePin[]>(() => {
     const byCity: Record<string, GlobePin> = {};
     for (const r of rows) {
-      for (const text of [r.location, r.dest_place]) {
+      const destResolved = r.dest_place ? schoolCities[r.dest_place.trim()] || r.dest_place : null;
+      for (const text of [r.location, destResolved]) {
         const hit = findCity(text);
         if (!hit) continue;
         if (!byCity[hit.key]) byCity[hit.key] = { city: hit.key, lat: hit.lat, lon: hit.lon, count: 0 };
@@ -104,7 +130,7 @@ export default function GlobePage() {
       }
     }
     return Object.values(byCity);
-  }, [rows]);
+  }, [rows, schoolCities]);
 
   return (
     <main className="min-h-screen bg-[#ff5d3b] text-[#1c1410] flex flex-col px-4 py-6">
@@ -116,9 +142,24 @@ export default function GlobePage() {
         <h1 className="font-[Syne] font-extrabold text-3xl text-[#fff6ec] lowercase">🌐 {s.title}</h1>
         <p className="mt-1.5 text-[14px] text-[#fff6ec]/90 leading-snug">{s.sub}</p>
       </div>
-      <div className="flex-1 w-full max-w-[900px] mx-auto mt-2" style={{ minHeight: "62vh" }}>
+      <div className="relative flex-1 w-full max-w-[1000px] mx-auto" style={{ minHeight: "72vh" }}>
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: "radial-gradient(circle at 50% 46%, rgba(255,246,236,0.22) 0%, rgba(200,240,0,0.10) 30%, rgba(255,93,59,0) 62%)" }}
+        />
         <GlobeScene pins={pins} />
       </div>
+      {pins.length > 0 && (
+        <div className="w-full max-w-[900px] mx-auto -mt-2 pb-4 flex flex-wrap justify-center gap-2">
+          {pins.map((p) => (
+            <Link key={p.city} href={"/w?place=" + encodeURIComponent(p.city)}
+              className="px-3.5 py-1.5 rounded-full border-2 border-[#1c1410] bg-[#fff6ec] text-[#1c1410] text-[12.5px] font-bold shadow-[3px_3px_0_rgba(28,20,16,0.9)] hover:bg-[#c8f000] transition-colors"
+            >
+              📍 {p.city}{p.count > 1 ? " · " + p.count : ""}
+            </Link>
+          ))}
+        </div>
+      )}
       {pins.length === 0 && (
         <p className="text-center font-mono text-[11px] text-[#fff6ec]/70 pb-4">{s.empty}</p>
       )}
