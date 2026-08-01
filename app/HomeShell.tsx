@@ -11,7 +11,6 @@ import WelcomeHero from "./WelcomeHero";
 import LangPicker from "./LangPicker";
 import CurvedMarquee from "./CurvedMarquee";
 import ProfileCoverflow from "./ProfileCoverflow";
-import ProfileOrbit from "./ProfileOrbit";
 import { useRouter } from "next/navigation";
 import { useLang, t } from "@/lib/i18n";
 
@@ -241,6 +240,20 @@ export default function HomeShell({
   };
   const lk = LOOKING[lang] || LOOKING.en;
   const meetPool = profiles.filter((p) => p.user_id && p.id !== myProfileId);
+  const memberSlides = ordered
+    .filter((p) => p.user_id)
+    .map((p) => ({
+      photo: p.photo,
+      accent: p.accent,
+      name: p.name.split(" ")[0],
+      line:
+        p.dest_place && p.dest_place.trim()
+          ? "→ " + p.dest_place.trim() + (p.dest_term ? " · " + p.dest_term.trim() : "")
+          : p.location && p.location.trim()
+          ? "📍 " + p.location.trim()
+          : (p.headline || "").slice(0, 44),
+      href: "/p/" + p.id,
+    }));
   const meetPick = meetPool.length > 0 ? meetPool[Math.floor(Math.random() * meetPool.length)] : null;
 
   return (
@@ -524,12 +537,6 @@ export default function HomeShell({
               </div>
             ) : (
               <>
-              {mode === "member" && (
-                <div className="rise -mt-2 mb-2" style={{ animationDelay: "120ms" }}>
-                  <ProfileOrbit people={profiles.filter((p) => p.user_id).map((p) => ({ id: p.id, name: p.name, photo: p.photo, accent: p.accent }))} />
-                </div>
-              )}
-
               {mode === "member" && !myDest && (
                 <div className="rise max-w-[560px] mx-auto mb-6 bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-3xl p-5 shadow-[7px_7px_0_rgba(28,20,16,0.9)]" style={{ animationDelay: "150ms" }}>
                   <p className="font-[Syne] font-extrabold text-[18px] mb-3">{lk.q}</p>
@@ -544,7 +551,16 @@ export default function HomeShell({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 gap-5 items-start max-w-[560px] mx-auto">
+              {mode === "member" && universe === "connect" && memberSlides.length > 0 && (
+                <div className="rise -mx-4" style={{ animationDelay: "150ms" }}>
+                  <ProfileCoverflow slides={memberSlides} cardWidth={250} cardHeight={320} autoplay={true} holdSeconds={3.2} />
+                  <p className="text-center font-mono text-[10.5px] tracking-wide text-[#fff6ec]/70 -mt-2">
+                    tap a face to bring it close · tap again to visit
+                  </p>
+                </div>
+              )}
+
+              <div className={mode === "member" && universe === "connect" ? "hidden" : "grid grid-cols-1 gap-5 items-start max-w-[560px] mx-auto"}>
                 {ordered.map((p, idx) => {
                   const workImage = p.artifacts?.find((a) => a.image)?.image;
                   const accent = p.accent || "#6b4eff";
