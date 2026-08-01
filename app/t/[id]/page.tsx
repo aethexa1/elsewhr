@@ -25,6 +25,15 @@ type Msg = { id: number; sender_user_id: string; body: string; created_at: strin
 
 type Mini = { id: number; name: string; photo?: string | null; accent?: string | null };
 
+const SAFE: Record<string, { block: string; confirm: string; report: string }> = {
+  en: { block: "block", confirm: "block this person? they vanish from your elsewhr, and can never message you again.", report: "report" },
+  es: { block: "bloquear", confirm: "¿bloquear a esta persona? desaparece de tu elsewhr y no podrá escribirte nunca más.", report: "reportar" },
+  pt: { block: "bloquear", confirm: "bloquear esta pessoa? ela some do seu elsewhr e nunca mais pode te escrever.", report: "denunciar" },
+  hi: { block: "block", confirm: "इस व्यक्ति को block करें? वो आपके elsewhr से गायब हो जाएगा और कभी message नहीं कर पाएगा।", report: "report" },
+  pl: { block: "zablokuj", confirm: "zablokować tę osobę? zniknie z twojego elsewhr i nigdy więcej nie napisze.", report: "zgłoś" },
+  fr: { block: "bloquer", confirm: "bloquer cette personne ? elle disparaît de ton elsewhr et ne pourra plus jamais t'écrire.", report: "signaler" },
+};
+
 const STRINGS: Record<string, { ph: string; send: string; notFound: string; back: string; loading: string }> = {
   en: { ph: "say something…", send: "send", notFound: "this thread isn't yours or isn't open yet.", back: "← back to knocks", loading: "opening the thread…" },
   es: { ph: "di algo…", send: "enviar", notFound: "este hilo no es tuyo o aún no está abierto.", back: "← volver a knocks", loading: "abriendo el hilo…" },
@@ -39,6 +48,7 @@ function ThreadInner() {
   const router = useRouter();
   const { lang } = useLang();
   const s = STRINGS[lang] || STRINGS.en;
+  const sf = SAFE[lang] || SAFE.en;
   const requestId = Number(params?.id);
 
   const [me, setMe] = useState<string | null>(null);
@@ -161,6 +171,22 @@ function ThreadInner() {
             {s.back}
           </Link>
           {other && (
+            <div className="flex items-center gap-3">
+              <Link href={"/p/" + other.id} className="font-mono text-[10.5px] text-[#fff6ec]/70 underline underline-offset-2 hover:text-[#fff6ec]">
+                ⚑ {sf.report}
+              </Link>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!me || !other) return;
+                  if (!window.confirm(sf.confirm)) return;
+                  await supabase.from("blocks").insert({ blocker_user_id: me, blocked_profile_id: other.id });
+                  router.push("/");
+                }}
+                className="font-mono text-[10.5px] font-bold text-[#fff6ec]/70 underline underline-offset-2 hover:text-[#fff6ec]"
+              >
+                🚫 {sf.block}
+              </button>
             <Link href={"/p/" + other.id} className="flex items-center gap-2">
               {other.photo ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -172,6 +198,7 @@ function ThreadInner() {
               )}
               <span className="font-[Syne] font-extrabold text-[16px] text-[#fff6ec]">{other.name}</span>
             </Link>
+            </div>
           )}
         </div>
 
