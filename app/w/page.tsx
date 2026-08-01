@@ -111,13 +111,14 @@ type Person = {
   seeking?: string | null;
   learning?: string | null;
   livesHere?: boolean;
+  isMe?: boolean;
 };
 
 const STRINGS: Record<string, {
   about: string; official: string; arriving: string; already: string;
   nobody: string; youFirst: string; sayHi: string; back: string; loading: string;
   events: string; noEvents: string; addEvent: string; evTitle: string; evWhen: string; evLink: string; evPost: string;
-  alumni: string; notable: string; curious: string; research: string;
+  alumni: string; notable: string; curious: string; research: string; you: string; around: string; jobs: string; housing: string; transit: string;
   inState: string; outState: string; students: string; admit: string; earn: string; moreLike: string;
   wikiNote: string;
 }> = {
@@ -140,6 +141,11 @@ const STRINGS: Record<string, {
     notable: "notable alumni",
     curious: "curious about this place",
     research: "researchers here",
+    you: "you",
+    around: "around campus",
+    jobs: "part-time jobs nearby",
+    housing: "student housing nearby",
+    transit: "getting around",
     inState: "in-state",
     outState: "out-of-state",
     students: "students",
@@ -169,6 +175,11 @@ const STRINGS: Record<string, {
     notable: "exalumnos destacados",
     curious: "curioseando este lugar",
     research: "investigadores aquí",
+    you: "tú",
+    around: "alrededor del campus",
+    jobs: "trabajos de medio tiempo cerca",
+    housing: "vivienda estudiantil cerca",
+    transit: "cómo moverse",
     inState: "estatal",
     outState: "fuera del estado",
     students: "estudiantes",
@@ -198,6 +209,11 @@ const STRINGS: Record<string, {
     notable: "ex-alunos notáveis",
     curious: "de olho neste lugar",
     research: "pesquisadores aqui",
+    you: "você",
+    around: "ao redor do campus",
+    jobs: "empregos de meio período perto",
+    housing: "moradia estudantil perto",
+    transit: "como se locomover",
     inState: "no estado",
     outState: "fora do estado",
     students: "estudantes",
@@ -227,6 +243,11 @@ const STRINGS: Record<string, {
     notable: "प्रसिद्ध पूर्व छात्र",
     curious: "à¤à¤¸ à¤à¤à¤¹ à¤®à¥à¤ à¤¦à¤¿à¤²à¤à¤¸à¥à¤ªà¥",
     research: "à¤¯à¤¹à¤¾à¤ à¤à¥ à¤¶à¥à¤§à¤à¤°à¥à¤¤à¤¾",
+    you: "आप",
+    around: "कैंपस के आस-पास",
+    jobs: "पास में पार्ट-टाइम काम",
+    housing: "पास में छात्र आवास",
+    transit: "आना-जाना",
     inState: "राज्य फ़ीस",
     outState: "बाहरी फ़ीस",
     students: "छात्र",
@@ -256,6 +277,11 @@ const STRINGS: Record<string, {
     notable: "znani absolwenci",
     curious: "ciekawi tego miejsca",
     research: "badacze tutaj",
+    you: "ty",
+    around: "wokół kampusu",
+    jobs: "praca dorywcza w pobliżu",
+    housing: "mieszkania studenckie w pobliżu",
+    transit: "jak się poruszać",
     inState: "w stanie",
     outState: "poza stanem",
     students: "studenci",
@@ -285,6 +311,11 @@ const STRINGS: Record<string, {
     notable: "anciens célèbres",
     curious: "curieux de cet endroit",
     research: "chercheurs ici",
+    you: "toi",
+    around: "autour du campus",
+    jobs: "petits boulots à proximité",
+    housing: "logement étudiant à proximité",
+    transit: "se déplacer",
     inState: "résident",
     outState: "non-résident",
     students: "étudiants",
@@ -381,6 +412,8 @@ function WorldPageInner() {
     (async () => {
       const { data: authData } = await supabase.auth.getUser();
       const myUid = authData?.user?.id ?? null;
+      const { data: authData } = await supabase.auth.getUser();
+      const myUid = authData?.user?.id ?? null;
       const cols = "id, user_id, name, photo, headline, location, accent, mindset, seeking, learning, dest_term, dest_program, dest_status";
       const [dst, liv] = await Promise.all([
         supabase.from("profiles").select(cols).ilike("dest_place", place).order("id", { ascending: false }).limit(60),
@@ -393,7 +426,7 @@ function WorldPageInner() {
           if (!row.user_id || seen.has(row.id)) continue;
           if (myUid && row.user_id === myUid) continue; // you know yourself already
           seen.add(row.id);
-          merged.push({ ...row, livesHere: (row.location || "").toLowerCase().includes(place.toLowerCase()) });
+          merged.push({ ...row, isMe: !!myUid && row.user_id === myUid, livesHere: (row.location || "").toLowerCase().includes(place.toLowerCase()) });
         }
         setPeople(merged);
         setLoading(false);
@@ -575,6 +608,17 @@ function WorldPageInner() {
         )}
 
         {/* the elsewhr layer: the campus's real activity is its people */}
+        {!loading && (
+          <div className="mt-6 bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-3xl p-5 shadow-[7px_7px_0_rgba(28,20,16,0.9)]">
+            <p className="font-mono text-[10.5px] uppercase tracking-widest text-[#6b5e52] mb-2.5">🧭 {s.around}</p>
+            <div className="flex flex-wrap gap-1.5">
+              <a href={"https://www.google.com/search?q=" + encodeURIComponent("part time jobs near " + place)} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12px] font-bold hover:bg-[#c8f000]">💼 {s.jobs} ↗</a>
+              <a href={"https://www.google.com/search?q=" + encodeURIComponent("student housing near " + place)} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12px] font-bold hover:bg-[#c8f000]">🏠 {s.housing} ↗</a>
+              <a href={"https://www.google.com/maps/search/" + encodeURIComponent("transit near " + place)} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12px] font-bold hover:bg-[#c8f000]">🚌 {s.transit} ↗</a>
+            </div>
+          </div>
+        )}
+
         {/* ASK THE BIRD: grounded in exactly what this page knows */}
         {!loading && (
           <AskBird
@@ -682,26 +726,26 @@ function WorldPageInner() {
         )}
 
         {!loading && already.length > 0 && (
-          <PeopleBlock title={`${s.already} · ${already.length}`} people={already} sayHi={s.sayHi} />
+          <PeopleBlock title={`${s.already} · ${already.length}`} people={already} sayHi={s.sayHi} youLabel={s.you} />
         )}
 
         {!loading && alumni.length > 0 && (
-          <PeopleBlock title={`🎓 ${s.alumni} · ${alumni.length}`} people={alumni} sayHi={s.sayHi} />
+          <PeopleBlock title={`🎓 ${s.alumni} · ${alumni.length}`} people={alumni} sayHi={s.sayHi} youLabel={s.you} />
         )}
 
         {!loading && curious.length > 0 && (
-          <PeopleBlock title={`👀 ${s.curious} · ${curious.length}`} people={curious} sayHi={s.sayHi} />
+          <PeopleBlock title={`👀 ${s.curious} · ${curious.length}`} people={curious} sayHi={s.sayHi} youLabel={s.you} />
         )}
 
         {!loading && byTerm.map(([term, group]) => (
-          <PeopleBlock key={term} title={`${s.arriving}${term !== "—" ? " · " + term : ""} · ${group.length}`} people={group} sayHi={s.sayHi} />
+          <PeopleBlock key={term} title={`${s.arriving}${term !== "—" ? " · " + term : ""} · ${group.length}`} people={group} sayHi={s.sayHi} youLabel={s.you} />
         ))}
       </div>
     </main>
   );
 }
 
-function PeopleBlock({ title, people, sayHi }: { title: string; people: Person[]; sayHi: string }) {
+function PeopleBlock({ title, people, sayHi, youLabel }: { title: string; people: Person[]; sayHi: string; youLabel: string }) {
   return (
     <div className="mt-6">
       <p className="font-mono text-[11px] uppercase tracking-widest text-[#fff6ec] font-bold mb-3">{title}</p>
@@ -734,7 +778,9 @@ function PeopleBlock({ title, people, sayHi }: { title: string; people: Person[]
                     </div>
                   )}
                 </div>
-                <span className="font-mono text-[11px] font-bold text-[#6b4eff] flex-none">{sayHi}</span>
+                <span className="font-mono text-[11px] font-bold flex-none">
+                  {p.isMe ? <span className="px-2.5 py-1 rounded-full border-2 border-[#1c1410] bg-[#c8f000] text-[#1c1410]">🐦 {youLabel}</span> : <span className="text-[#6b4eff]">{sayHi}</span>}
+                </span>
               </div>
             </Link>
           );
