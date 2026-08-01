@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
-        max_tokens: 1400,
+        max_tokens: 2200,
         system:
           "You are the elsewhr bird 🐦, planning a balanced week for a student/part-timer. " +
           "Respond ONLY with JSON, no markdown fences, matching exactly: " +
@@ -44,8 +44,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "the bird is resting — try again" }, { status: 502 });
     }
     const data = (await r.json()) as { content?: { type: string; text?: string }[] };
-    const text = (data.content ?? []).filter((c) => c.type === "text" && c.text).map((c) => c.text).join("").trim()
-      .replace(/^```json/i, "").replace(/^```/, "").replace(/```$/, "").trim();
+    const raw = (data.content ?? []).filter((c) => c.type === "text" && c.text).map((c) => c.text).join("").trim();
+    const st = raw.indexOf("{"); const en = raw.lastIndexOf("}");
+    const text = st >= 0 && en > st ? raw.slice(st, en + 1) : raw;
     try {
       const plan = JSON.parse(text);
       return NextResponse.json({ ok: true, plan });
