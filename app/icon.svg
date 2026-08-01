@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#c8f000"/>
+  <!-- the elsewhr bird: plump body, tail flick, tiny beak — ink on lime -->
+  <g fill="#e91e8c">
+    <ellipse cx="34" cy="36" rx="14" ry="12"/>
+    <circle cx="42" cy="26" r="8"/>
+    <path d="M20 40 L10 46 L22 46 Z"/>
+    <path d="M49 24 L56 26 L49 29 Z"/>
+  </g>
+  <circle cx="44.5" cy="24.5" r="1.8" fill="#1c1410"/>
+  <path d="M30 47 L30 52 M38 47 L38 52" stroke="#1c1410" stroke-width="2.5" stroke-linecap="round"/>
+</svg>
