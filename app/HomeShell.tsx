@@ -11,6 +11,7 @@ import WelcomeHero from "./WelcomeHero";
 import LangPicker from "./LangPicker";
 import CurvedMarquee from "./CurvedMarquee";
 import ProfileCoverflow from "./ProfileCoverflow";
+import ProfileOrbit from "./ProfileOrbit";
 import { useRouter } from "next/navigation";
 import { useLang, t } from "@/lib/i18n";
 
@@ -523,6 +524,12 @@ export default function HomeShell({
               </div>
             ) : (
               <>
+              {mode === "member" && (
+                <div className="rise -mt-2 mb-2" style={{ animationDelay: "120ms" }}>
+                  <ProfileOrbit people={profiles.filter((p) => p.user_id).map((p) => ({ id: p.id, name: p.name, photo: p.photo, accent: p.accent }))} />
+                </div>
+              )}
+
               {mode === "member" && !myDest && (
                 <div className="rise max-w-[560px] mx-auto mb-6 bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-3xl p-5 shadow-[7px_7px_0_rgba(28,20,16,0.9)]" style={{ animationDelay: "150ms" }}>
                   <p className="font-[Syne] font-extrabold text-[18px] mb-3">{lk.q}</p>
