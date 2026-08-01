@@ -1,19 +1,17 @@
 "use client";
 
-// elsewhr — 🌐 the globe: spin the planet, find the people.
-// New file: app/globe/page.tsx  ·  door on the home rack.
-// Pins light wherever elsewhr people live or are heading. Click a pin → that world.
+// elsewhr — 🌐 the globe v6: the real engine.
+// Replace: app/globe/page.tsx  ·  MapLibre GL, globe projection, free open tiles.
+// Every city on Earth labeled by the map itself; lime sonar marks OUR people.
+// Zoom from space to street. Tap a sonar → walk into that city's world.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useLang } from "@/lib/i18n";
-import type { GlobePin } from "./GlobeScene";
+import "maplibre-gl/dist/maplibre-gl.css";
 
-const GlobeScene = dynamic(() => import("./GlobeScene"), { ssr: false });
-
-// a small atlas of the cities that matter to us — grows as the network does
 const ATLAS: Record<string, { lat: number; lon: number }> = {
   "rancho cucamonga": { lat: 34.106, lon: -117.593 },
   "fontana": { lat: 34.092, lon: -117.435 },
@@ -68,19 +66,26 @@ function findCity(text: string | null | undefined): { key: string; lat: number; 
   return null;
 }
 
+type Pin = { city: string; lat: number; lon: number; count: number };
+
 const S: Record<string, { title: string; sub: string; back: string; empty: string }> = {
-  en: { title: "the globe", sub: "spin the planet — lime pins are cities with elsewhr people. tap one to walk in.", back: "← back to elsewhr", empty: "pins light up as people join" },
-  es: { title: "el globo", sub: "gira el planeta — los pines lima son ciudades con gente de elsewhr. toca uno para entrar.", back: "← volver a elsewhr", empty: "los pines se encienden cuando la gente se une" },
-  pt: { title: "o globo", sub: "gire o planeta — pinos verdes são cidades com gente do elsewhr. toque para entrar.", back: "← voltar ao elsewhr", empty: "os pinos acendem conforme as pessoas chegam" },
-  hi: { title: "ग्लोब", sub: "ग्रह घुमाओ — हरे पिन वो शहर हैं जहाँ elsewhr के लोग हैं। एक पर टैप करके अंदर जाओ।", back: "← elsewhr पर वापस", empty: "लोग जुड़ते हैं तो पिन जलते हैं" },
-  pl: { title: "globus", sub: "zakręć planetą — limonkowe pinezki to miasta z ludźmi elsewhr. stuknij, by wejść.", back: "← wróć do elsewhr", empty: "pinezki zapalają się, gdy dołączają ludzie" },
-  fr: { title: "le globe", sub: "fais tourner la planète — les épingles lime sont des villes avec des gens d'elsewhr. touche pour entrer.", back: "← retour à elsewhr", empty: "les épingles s'allument quand les gens arrivent" },
+  en: { title: "the globe", sub: "the real one — spin it, zoom it. lime sonar = cities with elsewhr people. tap to walk in.", back: "← back to elsewhr", empty: "sonar lights up as people join" },
+  es: { title: "el globo", sub: "el de verdad — gíralo, acércate. sonar lima = ciudades con gente de elsewhr. toca para entrar.", back: "← volver a elsewhr", empty: "el sonar se enciende cuando la gente se une" },
+  pt: { title: "o globo", sub: "o de verdade — gire, aproxime. sonar verde = cidades com gente do elsewhr. toque para entrar.", back: "← voltar ao elsewhr", empty: "o sonar acende conforme as pessoas chegam" },
+  hi: { title: "ग्लोब", sub: "असली वाला — घुमाओ, ज़ूम करो। हरा सोनार = elsewhr के लोगों वाले शहर। टैप करके अंदर जाओ।", back: "← elsewhr पर वापस", empty: "लोग जुड़ते हैं तो सोनार जलता है" },
+  pl: { title: "globus", sub: "ten prawdziwy — zakręć, przybliż. limonkowy sonar = miasta z ludźmi elsewhr. stuknij, by wejść.", back: "← wróć do elsewhr", empty: "sonar zapala się, gdy dołączają ludzie" },
+  fr: { title: "le globe", sub: "le vrai — fais-le tourner, zoome. sonar lime = villes avec des gens d'elsewhr. touche pour entrer.", back: "← retour à elsewhr", empty: "le sonar s'allume quand les gens arrivent" },
 };
 
 export default function GlobePage() {
   const { lang } = useLang();
   const s = S[lang] || S.en;
+  const router = useRouter();
+  const mapDiv = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<{ remove: () => void } | null>(null);
+  const markersRef = useRef<{ remove: () => void }[]>([]);
   const [rows, setRows] = useState<{ location: string | null; dest_place: string | null }[]>([]);
+  const [schoolCities, setSchoolCities] = useState<Record<string, string>>({});
 
   useEffect(() => {
     (async () => {
@@ -92,8 +97,6 @@ export default function GlobePage() {
       if (data) setRows(data as { location: string | null; dest_place: string | null }[]);
     })();
   }, []);
-
-  const [schoolCities, setSchoolCities] = useState<Record<string, string>>({});
 
   // destinations are school names — hop through our own API to their cities
   useEffect(() => {
@@ -107,10 +110,8 @@ export default function GlobePage() {
           try {
             const r = await fetch("/api/school?q=" + encodeURIComponent(d));
             const j = await r.json();
-            const city = j?.school?.city;
-            const state = j?.school?.state;
-            if (city) out[d] = city + (state ? ", " + state : "");
-          } catch { /* unknown places stay unpinned */ }
+            if (j?.school?.city) out[d] = j.school.city + (j.school.state ? ", " + j.school.state : "");
+          } catch { /* unpinned then */ }
         })
       );
       if (alive) setSchoolCities(out);
@@ -118,8 +119,8 @@ export default function GlobePage() {
     return () => { alive = false; };
   }, [rows]);
 
-  const pins = useMemo<GlobePin[]>(() => {
-    const byCity: Record<string, GlobePin> = {};
+  const pins = useMemo<Pin[]>(() => {
+    const byCity: Record<string, Pin> = {};
     for (const r of rows) {
       const destResolved = r.dest_place ? schoolCities[r.dest_place.trim()] || r.dest_place : null;
       for (const text of [r.location, destResolved]) {
@@ -132,37 +133,83 @@ export default function GlobePage() {
     return Object.values(byCity);
   }, [rows, schoolCities]);
 
+  // the real engine: MapLibre globe, open tiles, the whole labeled world
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!mapDiv.current || mapRef.current) return;
+      const maplibregl = (await import("maplibre-gl")).default;
+      if (cancelled || !mapDiv.current) return;
+      const map = new maplibregl.Map({
+        container: mapDiv.current,
+        style: "https://tiles.openfreemap.org/styles/liberty",
+        center: [40, 24],
+        zoom: 1.6,
+        attributionControl: { compact: true },
+      });
+      map.on("style.load", () => {
+        try { map.setProjection({ type: "globe" }); } catch { /* flat is still the world */ }
+      });
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+      mapRef.current = map;
+    })();
+    return () => {
+      cancelled = true;
+      markersRef.current.forEach((m) => m.remove());
+      markersRef.current = [];
+      mapRef.current?.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  // lime sonar where our people are
+  useEffect(() => {
+    (async () => {
+      const map = mapRef.current as import("maplibre-gl").Map | null;
+      if (!map || pins.length === 0) return;
+      const maplibregl = (await import("maplibre-gl")).default;
+      markersRef.current.forEach((m) => m.remove());
+      markersRef.current = pins.map((p) => {
+        const el = document.createElement("button");
+        el.className = "ew-sonar";
+        el.title = p.city;
+        el.onclick = () => router.push("/w?place=" + encodeURIComponent(p.city));
+        return new maplibregl.Marker({ element: el }).setLngLat([p.lon, p.lat]).addTo(map);
+      });
+    })();
+  }, [pins, router]);
+
   return (
     <main className="min-h-screen bg-[#ff5d3b] text-[#1c1410] flex flex-col px-4 py-6">
-      <div className="w-full max-w-[900px] mx-auto flex items-center justify-between">
+      <style>{`
+        .ew-sonar { position: relative; width: 18px; height: 18px; border-radius: 50%; background: #c8f000; border: 3px solid #1c1410; cursor: pointer; padding: 0; }
+        .ew-sonar::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; border: 3px solid #c8f000; animation: ew-ping 1.6s ease-out infinite; }
+        @keyframes ew-ping { 0% { transform: scale(1); opacity: 0.9; } 100% { transform: scale(3); opacity: 0; } }
+      `}</style>
+      <div className="w-full max-w-[1100px] mx-auto flex items-center justify-between">
         <Link href="/" className="font-[Syne] font-extrabold text-2xl tracking-tight text-[#fff6ec]">elsewhr<span className="text-[#c8f000]">.</span></Link>
         <Link href="/" className="font-mono text-[11px] text-[#fff6ec]/80 underline underline-offset-4 hover:text-[#fff6ec]">{s.back}</Link>
       </div>
-      <div className="w-full max-w-[900px] mx-auto mt-4">
+      <div className="w-full max-w-[1100px] mx-auto mt-4 mb-3">
         <h1 className="font-[Syne] font-extrabold text-3xl text-[#fff6ec] lowercase">🌐 {s.title}</h1>
         <p className="mt-1.5 text-[14px] text-[#fff6ec]/90 leading-snug">{s.sub}</p>
       </div>
-      <div className="relative w-full max-w-[1000px] mx-auto" style={{ height: "72vh" }}>
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: "radial-gradient(circle at 50% 46%, rgba(255,246,236,0.22) 0%, rgba(200,240,0,0.10) 30%, rgba(255,93,59,0) 62%)" }}
-        />
-        <GlobeScene pins={pins} />
+      <div className="w-full max-w-[1100px] mx-auto rounded-3xl border-[3px] border-[#1c1410] overflow-hidden shadow-[8px_8px_0_rgba(28,20,16,0.9)]" style={{ height: "70vh" }}>
+        <div ref={mapDiv} style={{ width: "100%", height: "100%" }} />
       </div>
-      {pins.length > 0 && (
-        <div className="w-full max-w-[900px] mx-auto -mt-2 pb-4 flex flex-wrap justify-center gap-2">
-          {pins.map((p) => (
+      <div className="w-full max-w-[1100px] mx-auto mt-3 pb-2 flex flex-wrap justify-center gap-2">
+        {pins.length === 0 ? (
+          <p className="font-mono text-[11px] text-[#fff6ec]/70">{s.empty}</p>
+        ) : (
+          pins.map((p) => (
             <Link key={p.city} href={"/w?place=" + encodeURIComponent(p.city)}
               className="px-3.5 py-1.5 rounded-full border-2 border-[#1c1410] bg-[#fff6ec] text-[#1c1410] text-[12.5px] font-bold shadow-[3px_3px_0_rgba(28,20,16,0.9)] hover:bg-[#c8f000] transition-colors"
             >
               📍 {p.city}{p.count > 1 ? " · " + p.count : ""}
             </Link>
-          ))}
-        </div>
-      )}
-      {pins.length === 0 && (
-        <p className="text-center font-mono text-[11px] text-[#fff6ec]/70 pb-4">{s.empty}</p>
-      )}
+          ))
+        )}
+      </div>
     </main>
   );
 }
