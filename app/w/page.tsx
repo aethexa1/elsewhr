@@ -412,8 +412,6 @@ function WorldPageInner() {
     (async () => {
       const { data: authData } = await supabase.auth.getUser();
       const myUid = authData?.user?.id ?? null;
-      const { data: authData } = await supabase.auth.getUser();
-      const myUid = authData?.user?.id ?? null;
       const cols = "id, user_id, name, photo, headline, location, accent, mindset, seeking, learning, dest_term, dest_program, dest_status";
       const [dst, liv] = await Promise.all([
         supabase.from("profiles").select(cols).ilike("dest_place", place).order("id", { ascending: false }).limit(60),
@@ -424,7 +422,6 @@ function WorldPageInner() {
         const merged: Person[] = [];
         for (const row of [...(dst.data ?? []), ...(liv.data ?? [])] as Person[]) {
           if (!row.user_id || seen.has(row.id)) continue;
-          if (myUid && row.user_id === myUid) continue; // you know yourself already
           seen.add(row.id);
           merged.push({ ...row, isMe: !!myUid && row.user_id === myUid, livesHere: (row.location || "").toLowerCase().includes(place.toLowerCase()) });
         }
