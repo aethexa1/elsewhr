@@ -155,8 +155,8 @@ export async function GET(req: Request) {
           }
         } catch { /* next net */ }
       }
-      // net 2: Wikidata — what is LOCATED in this place (server can send a User-Agent)
-      if (world.length === 0) {
+      // net 2: Wikidata — merges in whenever the map's catch is thin
+      if (world.length < 5) {
         try {
           const rq = await fetch(
             "https://www.wikidata.org/w/api.php?action=wbsearchentities&format=json&language=en&limit=1&search=" + encodeURIComponent(wq),
@@ -174,21 +174,26 @@ export async function GET(req: Request) {
             });
             if (rs.ok) {
               const js = (await rs.json()) as { results?: { bindings?: { uLabel?: { value: string }; cLabel?: { value: string } }[] } };
-              world = (js.results?.bindings ?? [])
+              const seen = new Set(world.map((w) => w.name.toLowerCase()));
+              const extra = (js.results?.bindings ?? [])
                 .map((b) => ({ name: b.uLabel?.value || "", country: b.cLabel?.value || "" }))
-                .filter((u) => u.name && !/^Q\d+$/.test(u.name))
-                .slice(0, 30);
+                .filter((u) => u.name && !/^Q\d+$/.test(u.name) && !seen.has(u.name.toLowerCase()));
+              world = [...world, ...extra].slice(0, 40);
             }
           }
         } catch { /* next net */ }
       }
-      // net 3: the name-match floor
-      if (world.length === 0) {
+      // net 3: the name-match floor — joins whenever the roster is still small
+      if (world.length < 3) {
         try {
           const rw = await fetch("http://universities.hipolabs.com/search?name=" + encodeURIComponent(wq), { signal: AbortSignal.timeout(4000) });
           if (rw.ok) {
             const jw = (await rw.json()) as { name: string; country: string }[];
-            world = (Array.isArray(jw) ? jw : []).slice(0, 25).map((u) => ({ name: u.name, country: u.country }));
+            const seen = new Set(world.map((w) => w.name.toLowerCase()));
+            const extra = (Array.isArray(jw) ? jw : [])
+              .map((u) => ({ name: u.name, country: u.country }))
+              .filter((u) => u.name && !seen.has(u.name.toLowerCase()));
+            world = [...world, ...extra].slice(0, 40);
           }
         } catch { /* the bird remains */ }
       }
