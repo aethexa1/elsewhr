@@ -7,6 +7,7 @@ import OwnerBar from "./OwnerBar";
 import VouchSection from "./VouchSection";
 import ReachOut from "./ReachOut";
 import SimilarPeople from "./SimilarPeople";
+import LiquidPhoto from "@/app/LiquidPhoto";
 import ReportBlockActions from "@/app/ReportBlockActions";
 import DayOneBlock from "./DayOneBlock";
 import {
@@ -194,6 +195,12 @@ export default async function ProfilePage({
         {/* day one: zero work history, displayed with pride */}
         {(!profile.artifacts || profile.artifacts.length === 0) && profile.day_one && (
           <DayOneBlock firstStep={profile.day_one} />
+        )}
+
+        {profile.photo && (
+          <div className="mt-6 h-[300px] rounded-3xl border-[3px] border-[#1c1410] overflow-hidden shadow-[7px_7px_0_rgba(28,20,16,0.9)] bg-[#1c1410]/5">
+            <LiquidPhoto src={profile.photo} />
+          </div>
         )}
 
         {/* the work */}
