@@ -127,6 +127,16 @@ export async function GET(req: Request) {
       return NextResponse.json({ ok: true, similar: peers });
     }
 
+    // ?city= -> every institution we know in that city: universities, colleges, all of it
+    const cq = (url.searchParams.get("city") || "").trim().toLowerCase();
+    if (cq) {
+      const rows = SCHOOLS.filter((r) => (r.c || "").toLowerCase() === cq || (r.c || "").toLowerCase().startsWith(cq))
+        .sort((a, b) => (b.z || 0) - (a.z || 0))
+        .slice(0, 40)
+        .map((r) => ({ name: r.n, city: r.c, state: r.s, ownership: r.o, tuitionIn: r.ti, size: r.z }));
+      return NextResponse.json({ city: cq, schools: rows });
+    }
+
     // ?list=1 -> the whole catalog for type-ahead: nice names first, then every official field of study
     if (url.searchParams.get("list")) {
       const known = [...new Set([...Object.keys(FIELD_CIP), ...CATALOG.map((e) => e.t)])];
