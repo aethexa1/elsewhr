@@ -142,6 +142,7 @@ export async function GET(req: Request) {
             method: "POST",
             headers: { "content-type": "application/x-www-form-urlencoded" },
             body: "data=" + encodeURIComponent(oq),
+            signal: AbortSignal.timeout(5000),
           });
           if (ro.ok) {
             const jo = (await ro.json()) as { elements?: { tags?: Record<string, string> }[] };
@@ -159,7 +160,7 @@ export async function GET(req: Request) {
         try {
           const rq = await fetch(
             "https://www.wikidata.org/w/api.php?action=wbsearchentities&format=json&language=en&limit=1&search=" + encodeURIComponent(wq),
-            { headers: { "user-agent": "elsewhr/1.0 (student guide; contact via site)" } }
+            { headers: { "user-agent": "elsewhr/1.0 (student guide; contact via site)" }, signal: AbortSignal.timeout(4000) }
           );
           const jq = (await rq.json()) as { search?: { id: string }[] };
           const qid = jq.search?.[0]?.id;
@@ -169,6 +170,7 @@ export async function GET(req: Request) {
               ' . OPTIONAL { ?u wdt:P17 ?c . } SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } } LIMIT 40';
             const rs = await fetch("https://query.wikidata.org/sparql?format=json&query=" + encodeURIComponent(sparql), {
               headers: { accept: "application/sparql-results+json", "user-agent": "elsewhr/1.0 (student guide; contact via site)" },
+              signal: AbortSignal.timeout(6000),
             });
             if (rs.ok) {
               const js = (await rs.json()) as { results?: { bindings?: { uLabel?: { value: string }; cLabel?: { value: string } }[] } };
@@ -183,7 +185,7 @@ export async function GET(req: Request) {
       // net 3: the name-match floor
       if (world.length === 0) {
         try {
-          const rw = await fetch("http://universities.hipolabs.com/search?name=" + encodeURIComponent(wq));
+          const rw = await fetch("http://universities.hipolabs.com/search?name=" + encodeURIComponent(wq), { signal: AbortSignal.timeout(4000) });
           if (rw.ok) {
             const jw = (await rw.json()) as { name: string; country: string }[];
             world = (Array.isArray(jw) ? jw : []).slice(0, 25).map((u) => ({ name: u.name, country: u.country }));
