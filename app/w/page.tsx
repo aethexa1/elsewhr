@@ -119,7 +119,7 @@ const STRINGS: Record<string, {
   about: string; official: string; arriving: string; already: string;
   nobody: string; youFirst: string; sayHi: string; back: string; loading: string;
   events: string; noEvents: string; addEvent: string; evTitle: string; evWhen: string; evLink: string; evPost: string;
-  alumni: string; notable: string; curious: string; research: string; you: string; around: string; jobs: string; housing: string; transit: string; roomies: string; talk: string; say: string;
+  alumni: string; notable: string; curious: string; research: string; you: string; around: string; jobs: string; housing: string; transit: string; roomies: string; roomiesEmpty: string; talk: string; say: string;
   inState: string; outState: string; students: string; admit: string; earn: string; moreLike: string;
   wikiNote: string;
 }> = {
@@ -148,6 +148,7 @@ const STRINGS: Record<string, {
     housing: "student housing nearby",
     transit: "getting around",
     roomies: "looking for roommates",
+    roomiesEmpty: "no one has raised a hand yet — flip 🏠 on in your profile (edit → journey step) and be the first.",
     talk: "talk",
     say: "add a comment…",
     inState: "in-state",
@@ -156,7 +157,7 @@ const STRINGS: Record<string, {
     admit: "admit rate",
     earn: "median earnings (10y)",
     moreLike: "more schools like this",
-    back: "← back to elsewhr",
+    back: "← back",
     loading: "finding this place…",
     wikiNote: "from Wikipedia",
   },
@@ -185,6 +186,7 @@ const STRINGS: Record<string, {
     housing: "vivienda estudiantil cerca",
     transit: "cómo moverse",
     roomies: "buscando roommates",
+    roomiesEmpty: "nadie ha levantado la mano — activa 🏠 en tu perfil (editar → destino) y sé el primero.",
     talk: "hablar",
     say: "comenta algo…",
     inState: "estatal",
@@ -222,6 +224,7 @@ const STRINGS: Record<string, {
     housing: "moradia estudantil perto",
     transit: "como se locomover",
     roomies: "procurando colegas de quarto",
+    roomiesEmpty: "ninguém levantou a mão ainda — ative 🏠 no seu perfil (editar → destino) e seja o primeiro.",
     talk: "conversar",
     say: "comente algo…",
     inState: "no estado",
@@ -259,6 +262,7 @@ const STRINGS: Record<string, {
     housing: "पास में छात्र आवास",
     transit: "आना-जाना",
     roomies: "रूममेट खोज रहे हैं",
+    roomiesEmpty: "अभी तक किसी ने हाथ नहीं उठाया — अपनी profile में 🏠 on करो और पहले बनो।",
     talk: "बात करो",
     say: "कुछ लिखो…",
     inState: "राज्य फ़ीस",
@@ -296,6 +300,7 @@ const STRINGS: Record<string, {
     housing: "mieszkania studenckie w pobliżu",
     transit: "jak się poruszać",
     roomies: "szukają współlokatorów",
+    roomiesEmpty: "nikt jeszcze się nie zgłosił — włącz 🏠 w profilu i bądź pierwszy.",
     talk: "rozmowa",
     say: "dodaj komentarz…",
     inState: "w stanie",
@@ -333,6 +338,7 @@ const STRINGS: Record<string, {
     housing: "logement étudiant à proximité",
     transit: "se déplacer",
     roomies: "cherchent des colocs",
+    roomiesEmpty: "personne ne s’est encore signalé — active 🏠 dans ton profil et sois le premier.",
     talk: "parler",
     say: "ajoute un commentaire…",
     inState: "résident",
@@ -501,9 +507,13 @@ function WorldPageInner() {
           <Link href="/" className="font-[Syne] font-extrabold text-2xl tracking-tight text-[#fff6ec]">
             elsewhr<span className="text-[#c8f000]">.</span>
           </Link>
-          <Link href="/" className="font-mono text-[11px] text-[#fff6ec]/80 underline underline-offset-4 hover:text-[#fff6ec]">
+          <button
+            type="button"
+            onClick={() => { if (window.history.length > 1) window.history.back(); else window.location.href = "/"; }}
+            className="font-mono text-[11px] text-[#fff6ec]/80 underline underline-offset-4 hover:text-[#fff6ec]"
+          >
             {s.back}
-          </Link>
+          </button>
         </div>
 
         <h1 className="font-[Syne] font-extrabold text-3xl text-[#fff6ec] leading-tight">{place || "…"}</h1>
@@ -702,7 +712,17 @@ function WorldPageInner() {
               </div>
             )}
             {events.length === 0 && !evOpen && (
-              <p className="mt-2 text-[13px] text-[#6b5e52] leading-snug">{s.noEvents}</p>
+              <>
+                <p className="mt-2 text-[13px] text-[#6b5e52] leading-snug">{s.noEvents}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <a href={"https://www.google.com/search?q=" + encodeURIComponent("events in " + place + " this week")} target="_blank" rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12px] font-bold hover:bg-[#c8f000]">🎪 events nearby ↗</a>
+                  <a href={"https://www.meetup.com/find/?keywords=" + encodeURIComponent(place)} target="_blank" rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12px] font-bold hover:bg-[#c8f000]">👥 meetup ↗</a>
+                  <a href={"https://allevents.in/" + encodeURIComponent(place.split(",")[0].trim().toLowerCase().replace(/\s+/g, "-"))} target="_blank" rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12px] font-bold hover:bg-[#c8f000]">🎫 allevents ↗</a>
+                </div>
+              </>
             )}
             {events.length > 0 && (
               <div className="mt-3 flex flex-col divide-y-2 divide-[#1c1410]/10">
@@ -740,6 +760,11 @@ function WorldPageInner() {
           <div className="mt-6 bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-3xl p-7 text-center shadow-[7px_7px_0_#1c1410]">
             <p className="font-bold text-[15px]">{s.nobody} 🐦</p>
             <p className="mt-2 text-[13px] text-[#6b5e52]">{s.youFirst}</p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              <Link href="/globe" className="px-3.5 py-2 rounded-full border-2 border-[#1c1410] bg-white text-[13px] font-bold hover:bg-[#c8f000]">🌐 globe</Link>
+              <Link href="/f" className="px-3.5 py-2 rounded-full border-2 border-[#1c1410] bg-white text-[13px] font-bold hover:bg-[#c8f000]">🧭 explore fields</Link>
+              <Link href="/" className="px-3.5 py-2 rounded-full border-2 border-[#1c1410] bg-white text-[13px] font-bold hover:bg-[#c8f000]">🫶 meet people</Link>
+            </div>
           </div>
         )}
 
@@ -755,6 +780,13 @@ function WorldPageInner() {
           <PeopleBlock title={`👀 ${s.curious} · ${curious.length}`} people={curious} sayHi={s.sayHi} youLabel={s.you} />
         )}
 
+
+        {!loading && roomies.length === 0 && people.length > 0 && (
+          <div className="mt-6 bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-3xl p-5 shadow-[7px_7px_0_rgba(28,20,16,0.9)]">
+            <p className="font-mono text-[11px] uppercase tracking-widest text-[#6b5e52]">🏠 {s.roomies} · 0</p>
+            <p className="mt-2 text-[13px] text-[#6b5e52] leading-snug">{s.roomiesEmpty}</p>
+          </div>
+        )}
 
         {!loading && roomies.length > 0 && (
 
