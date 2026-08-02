@@ -127,6 +127,72 @@ export async function GET(req: Request) {
       return NextResponse.json({ ok: true, similar: peers });
     }
 
+    // ?world=<place>&lat=&lon= -> global discovery, server-side: OSM around the point,
+    // then Wikidata located-in, then name-match. The browser only ever talks to us.
+    const wq = (url.searchParams.get("world") || "").trim();
+    if (wq) {
+      const lat = parseFloat(url.searchParams.get("lat") || "");
+      const lon = parseFloat(url.searchParams.get("lon") || "");
+      let world: { name: string; country: string }[] = [];
+      // net 1: the map itself — campuses physically around the tap
+      if (Number.isFinite(lat) && Number.isFinite(lon)) {
+        try {
+          const oq = '[out:json][timeout:8];(node["amenity"~"university|college"](around:25000,' + lat + "," + lon + ');way["amenity"~"university|college"](around:25000,' + lat + "," + lon + ');relation["amenity"~"university|college"](around:25000,' + lat + "," + lon + "););out center 60;";
+          const ro = await fetch("https://overpass-api.de/api/interpreter", {
+            method: "POST",
+            headers: { "content-type": "application/x-www-form-urlencoded" },
+            body: "data=" + encodeURIComponent(oq),
+          });
+          if (ro.ok) {
+            const jo = (await ro.json()) as { elements?: { tags?: Record<string, string> }[] };
+            const seen = new Set<string>();
+            world = (jo.elements ?? [])
+              .map((el) => (el.tags?.["name:en"] || el.tags?.name || "").trim())
+              .filter((n) => { if (!n || seen.has(n.toLowerCase())) return false; seen.add(n.toLowerCase()); return true; })
+              .slice(0, 30)
+              .map((n) => ({ name: n, country: "on the map here" }));
+          }
+        } catch { /* next net */ }
+      }
+      // net 2: Wikidata — what is LOCATED in this place (server can send a User-Agent)
+      if (world.length === 0) {
+        try {
+          const rq = await fetch(
+            "https://www.wikidata.org/w/api.php?action=wbsearchentities&format=json&language=en&limit=1&search=" + encodeURIComponent(wq),
+            { headers: { "user-agent": "elsewhr/1.0 (student guide; contact via site)" } }
+          );
+          const jq = (await rq.json()) as { search?: { id: string }[] };
+          const qid = jq.search?.[0]?.id;
+          if (qid) {
+            const sparql =
+              "SELECT DISTINCT ?uLabel ?cLabel WHERE { ?u wdt:P31/wdt:P279* wd:Q38723 ; wdt:P131* wd:" + qid +
+              ' . OPTIONAL { ?u wdt:P17 ?c . } SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } } LIMIT 40';
+            const rs = await fetch("https://query.wikidata.org/sparql?format=json&query=" + encodeURIComponent(sparql), {
+              headers: { accept: "application/sparql-results+json", "user-agent": "elsewhr/1.0 (student guide; contact via site)" },
+            });
+            if (rs.ok) {
+              const js = (await rs.json()) as { results?: { bindings?: { uLabel?: { value: string }; cLabel?: { value: string } }[] } };
+              world = (js.results?.bindings ?? [])
+                .map((b) => ({ name: b.uLabel?.value || "", country: b.cLabel?.value || "" }))
+                .filter((u) => u.name && !/^Q\d+$/.test(u.name))
+                .slice(0, 30);
+            }
+          }
+        } catch { /* next net */ }
+      }
+      // net 3: the name-match floor
+      if (world.length === 0) {
+        try {
+          const rw = await fetch("http://universities.hipolabs.com/search?name=" + encodeURIComponent(wq));
+          if (rw.ok) {
+            const jw = (await rw.json()) as { name: string; country: string }[];
+            world = (Array.isArray(jw) ? jw : []).slice(0, 25).map((u) => ({ name: u.name, country: u.country }));
+          }
+        } catch { /* the bird remains */ }
+      }
+      return NextResponse.json({ place: wq, world });
+    }
+
     // ?city= -> every institution we know in that city: universities, colleges, all of it
     const cq = (url.searchParams.get("city") || "").trim().toLowerCase();
     if (cq) {
