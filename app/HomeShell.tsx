@@ -68,12 +68,12 @@ const WORLD_STRINGS: Record<string, { everywhere: string; also: string; early: s
 };
 
 const PEEK_STRINGS: Record<string, { cta: string; reveal: string; stats: string; youd: string; lock: string; joinAll: string }> = {
-  en: { cta: "show me the proof", reveal: "the proof, so far —", stats: "real people: {n} · résumés: 0", youd: "you'd be", lock: "join to see their proof", joinAll: "see it all — it's free" },
-  es: { cta: "muéstrame las pruebas", reveal: "las pruebas, hasta ahora —", stats: "personas reales: {n} · currículums: 0", youd: "serías", lock: "únete para ver sus pruebas", joinAll: "míralo todo — es gratis" },
-  pt: { cta: "me mostra as provas", reveal: "as provas, até agora —", stats: "pessoas reais: {n} · currículos: 0", youd: "você seria", lock: "entre para ver as provas", joinAll: "veja tudo — é grátis" },
-  hi: { cta: "मुझे सबूत दिखाओ", reveal: "अब तक के सबूत —", stats: "असली लोग: {n} · रिज़्यूमे: 0", youd: "आप होंगे", lock: "सबूत देखने के लिए जुड़ें", joinAll: "सब देखें — मुफ़्त है" },
-  pl: { cta: "pokaż mi dowody", reveal: "dowody, jak dotąd —", stats: "prawdziwi ludzie: {n} · CV: 0", youd: "będziesz", lock: "dołącz, by zobaczyć dowody", joinAll: "zobacz wszystko — za darmo" },
-  fr: { cta: "montre-moi les preuves", reveal: "les preuves, jusqu'ici —", stats: "vraies personnes : {n} · CV : 0", youd: "tu serais", lock: "rejoins pour voir les preuves", joinAll: "vois tout — c'est gratuit" },
+  en: { cta: "show me the proof", reveal: "the proof, so far —", stats: "real people: {n} · alone on day one: 0", youd: "you'd be", lock: "join to see their proof", joinAll: "see it all — it's free" },
+  es: { cta: "muéstrame las pruebas", reveal: "las pruebas, hasta ahora —", stats: "personas reales: {n} · solos el primer día: 0", youd: "serías", lock: "únete para ver sus pruebas", joinAll: "míralo todo — es gratis" },
+  pt: { cta: "me mostra as provas", reveal: "as provas, até agora —", stats: "pessoas reais: {n} · sozinhos no primeiro dia: 0", youd: "você seria", lock: "entre para ver as provas", joinAll: "veja tudo — é grátis" },
+  hi: { cta: "मुझे सबूत दिखाओ", reveal: "अब तक के सबूत —", stats: "असली लोग: {n} · पहले दिन अकेले: 0", youd: "आप होंगे", lock: "सबूत देखने के लिए जुड़ें", joinAll: "सब देखें — मुफ़्त है" },
+  pl: { cta: "pokaż mi dowody", reveal: "dowody, jak dotąd —", stats: "prawdziwi ludzie: {n} · samotnych pierwszego dnia: 0", youd: "będziesz", lock: "dołącz, by zobaczyć dowody", joinAll: "zobacz wszystko — za darmo" },
+  fr: { cta: "montre-moi les preuves", reveal: "les preuves, jusqu'ici —", stats: "vraies personnes : {n} · seuls le premier jour : 0", youd: "tu serais", lock: "rejoins pour voir les preuves", joinAll: "vois tout — c'est gratuit" },
 };
 
 export default function HomeShell({
