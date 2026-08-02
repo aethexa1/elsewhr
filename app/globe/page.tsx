@@ -69,7 +69,7 @@ function findCity(text: string | null | undefined): { key: string; lat: number; 
 type Pin = { city: string; lat: number; lon: number; count: number };
 
 const S: Record<string, { title: string; sub: string; back: string; empty: string }> = {
-  en: { title: "the globe", sub: "the real one — spin it, zoom it. lime sonar = cities with elsewhr people. tap to walk in.", back: "← back to elsewhr", empty: "sonar lights up as people join" },
+  en: { title: "the globe", sub: "the real one — spin it, zoom it. tap any city for its schools · lime sonar = elsewhr people.", back: "← back to elsewhr", empty: "sonar lights up as people join" },
   es: { title: "el globo", sub: "el de verdad — gíralo, acércate. sonar lima = ciudades con gente de elsewhr. toca para entrar.", back: "← volver a elsewhr", empty: "el sonar se enciende cuando la gente se une" },
   pt: { title: "o globo", sub: "o de verdade — gire, aproxime. sonar verde = cidades com gente do elsewhr. toque para entrar.", back: "← voltar ao elsewhr", empty: "o sonar acende conforme as pessoas chegam" },
   hi: { title: "ग्लोब", sub: "असली वाला — घुमाओ, ज़ूम करो। हरा सोनार = elsewhr के लोगों वाले शहर। टैप करके अंदर जाओ।", back: "← elsewhr पर वापस", empty: "लोग जुड़ते हैं तो सोनार जलता है" },
@@ -86,6 +86,7 @@ export default function GlobePage() {
   const markersRef = useRef<{ remove: () => void }[]>([]);
   const [rows, setRows] = useState<{ location: string | null; dest_place: string | null }[]>([]);
   const [schoolCities, setSchoolCities] = useState<Record<string, string>>({});
+  const [panel, setPanel] = useState<{ city: string; loading: boolean; schools: { name: string; ownership: number | null; tuitionIn: number | null }[] } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -151,6 +152,24 @@ export default function GlobePage() {
         try { map.setProjection({ type: "globe" }); } catch { /* flat is still the world */ }
       });
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+      map.on("click", async (e) => {
+        const fts = map.queryRenderedFeatures(e.point);
+        const placeFt = fts.find((f) => {
+          const layer = (f.layer && f.layer.id) || "";
+          const nm = f.properties && (f.properties["name:latin"] || f.properties.name);
+          return nm && /place|city|town|village|state|country/i.test(layer);
+        });
+        const nm = placeFt && placeFt.properties ? String(placeFt.properties["name:latin"] || placeFt.properties.name) : null;
+        if (!nm) return;
+        setPanel({ city: nm, loading: true, schools: [] });
+        try {
+          const r = await fetch("/api/school?city=" + encodeURIComponent(nm));
+          const j = await r.json();
+          setPanel({ city: nm, loading: false, schools: Array.isArray(j.schools) ? j.schools : [] });
+        } catch {
+          setPanel({ city: nm, loading: false, schools: [] });
+        }
+      });
       mapRef.current = map;
     })();
     return () => {
@@ -196,6 +215,43 @@ export default function GlobePage() {
       </div>
       <div className="w-full max-w-[1100px] mx-auto rounded-3xl border-[3px] border-[#1c1410] overflow-hidden shadow-[8px_8px_0_rgba(28,20,16,0.9)]" style={{ height: "70vh" }}>
         <div ref={mapDiv} style={{ width: "100%", height: "100%" }} />
+        {panel && (
+          <div className="absolute top-3 left-3 bottom-3 w-[290px] max-w-[82vw] bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-2xl shadow-[6px_6px_0_rgba(28,20,16,0.9)] p-4 overflow-y-auto z-10">
+            <div className="flex items-start justify-between gap-2">
+              <p className="font-[Syne] font-extrabold text-[19px] leading-tight lowercase">📍 {panel.city}</p>
+              <button type="button" onClick={() => setPanel(null)} className="font-bold text-[16px] leading-none px-1.5 py-0.5 rounded-md border-2 border-[#1c1410] bg-white hover:bg-[#c8f000]">×</button>
+            </div>
+            {panel.loading && <p className="mt-3 font-mono text-[11px] text-[#6b5e52]">looking up schools…</p>}
+            {!panel.loading && panel.schools.length > 0 && (
+              <div className="mt-3 flex flex-col gap-2">
+                {panel.schools.map((sc) => (
+                  <Link key={sc.name} href={"/w?place=" + encodeURIComponent(sc.name)}
+                    className="block px-3 py-2 rounded-xl border-2 border-[#1c1410] bg-white hover:bg-[#c8f000]/40 transition-colors">
+                    <p className="text-[12.5px] font-bold leading-snug">{sc.name}</p>
+                    <p className="mt-0.5 text-[11px] text-[#6b5e52]">
+                      {sc.ownership === 1 ? "🏛 public" : sc.ownership === 2 ? "🎓 private" : sc.ownership === 3 ? "💼 for-profit" : "🏫 college"}
+                      {sc.tuitionIn ? " · $" + sc.tuitionIn.toLocaleString() : ""}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            )}
+            {!panel.loading && panel.schools.length === 0 && (
+              <p className="mt-3 text-[12.5px] text-[#6b5e52] leading-snug">no US schools on file here — the bird still knows the place:</p>
+            )}
+            <div className="mt-3 flex flex-col gap-2">
+              <Link href={"/w?place=" + encodeURIComponent(panel.city)}
+                className="block text-center px-3 py-2 rounded-xl border-2 border-[#1c1410] bg-[#c8f000] font-bold text-[12.5px]">
+                🐦 open {panel.city} — ask the bird
+              </Link>
+              <a href={"https://www.google.com/search?q=" + encodeURIComponent("universities and colleges in " + panel.city)}
+                target="_blank" rel="noopener noreferrer"
+                className="block text-center px-3 py-2 rounded-xl border-2 border-[#1c1410] bg-white font-bold text-[12.5px] hover:bg-[#c8f000]/40">
+                🌍 all schools here ↗
+              </a>
+            </div>
+          </div>
+        )}
       </div>
       <div className="w-full max-w-[1100px] mx-auto mt-3 pb-2 flex flex-wrap justify-center gap-2">
         {pins.length === 0 ? (
