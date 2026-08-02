@@ -470,6 +470,8 @@ function WorldPageInner() {
   const alumni = useMemo(() => visible.filter((p) => p.dest_status === "graduated"), [visible]);
   const curious = useMemo(() => visible.filter((p) => p.dest_status === "curious"), [visible]);
   const roomies = useMemo(() => visible.filter((p) => !!p.roommate), [visible]);
+  // a place is a city when Wikipedia says so — then school-only furniture stays in the closet
+  const isCity = /\b(city|town|municipality|metropolis|capital|village|suburb|district of|state of|region of|country)\b/i.test(wiki?.description || "");
   const already = useMemo(() => visible.filter((p) => p.dest_status !== "graduated" && (p.dest_status === "current" || p.livesHere)), [visible]);
   const arriving = useMemo(() => visible.filter((p) => p.dest_status !== "graduated" && p.dest_status !== "curious" && p.dest_status !== "current" && !p.livesHere), [visible]);
 
@@ -579,7 +581,7 @@ function WorldPageInner() {
                   </div>
                 </div>
               )}
-              {stats && (stats.tuitionIn != null || stats.size != null) && (
+              {!isCity && stats && (stats.tuitionIn != null || stats.size != null) && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {stats.tuitionIn != null && (
                     <span className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-[#c8f000]/60 text-[12px] font-bold">💵 ${stats.tuitionIn.toLocaleString()} {s.inState}</span>
@@ -598,7 +600,7 @@ function WorldPageInner() {
                   )}
                 </div>
               )}
-              {similar.length > 0 && (
+              {!isCity && similar.length > 0 && (
                 <div className="mt-3">
                   <p className="font-mono text-[10px] uppercase tracking-widest text-[#6b5e52] mb-1.5">🏫 {s.moreLike}</p>
                   <div className="flex flex-wrap gap-1.5">
@@ -612,11 +614,13 @@ function WorldPageInner() {
                   </div>
                 </div>
               )}
-              <p className="mt-3">
-                <Link href={"/compare?a=" + encodeURIComponent(place)} className="font-mono text-[12px] font-bold text-[#6b4eff] underline underline-offset-4">
-                  ⚖️ compare this school →
-                </Link>
-              </p>
+              {!isCity && (
+                <p className="mt-3">
+                  <Link href={"/compare?a=" + encodeURIComponent(place)} className="font-mono text-[12px] font-bold text-[#6b4eff] underline underline-offset-4">
+                    ⚖️ compare this school →
+                  </Link>
+                </p>
+              )}
               <div className="flex flex-wrap items-center gap-4 mt-4">
                 {site && (
                   <a href={site} target="_blank" rel="noopener noreferrer" className="font-mono text-[12px] font-bold text-[#6b4eff] underline underline-offset-4">
@@ -655,7 +659,7 @@ function WorldPageInner() {
               facts.students ? "STUDENTS: " + facts.students : "",
               facts.staff ? "STAFF: " + facts.staff : "",
               facts.founded ? "FOUNDED: " + facts.founded : "",
-              stats ? "STATS: " +
+              stats && !isCity ? "STATS: " +
                 [
                   stats.tuitionIn != null ? "in-state tuition $" + stats.tuitionIn : "",
                   stats.tuitionOut != null ? "out-of-state $" + stats.tuitionOut : "",
@@ -665,7 +669,7 @@ function WorldPageInner() {
                 ].filter(Boolean).join(", ") : "",
               notable.length > 0 ? "NOTABLE ALUMNI: " + notable.map((n) => n.name).join(", ") : "",
               scholars.length > 0 ? "RESEARCHERS: " + scholars.map((n) => n.name).join(", ") : "",
-              similar.length > 0 ? "SIMILAR SCHOOLS: " + similar.map((n) => n.name).join(", ") : "",
+              similar.length > 0 && !isCity ? "SIMILAR SCHOOLS: " + similar.map((n) => n.name).join(", ") : "",
               events.length > 0
                 ? "HAPPENINGS BOARD (community posts, may include job/part-time posts): " +
                   events.map((ev) => ev.title + (ev.when_text ? " (" + ev.when_text + ")" : "")).join(" | ")
