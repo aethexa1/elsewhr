@@ -605,6 +605,24 @@ export default function CreatePage() {
             rows={8}
             className="w-full px-4 py-3.5 rounded-xl border-2 border-[#1c1410] bg-white outline-none focus:border-[#6b4eff] text-[14px] leading-relaxed resize-y"
           />
+          <div className="mt-2 flex items-center gap-3 flex-wrap">
+            <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border-2 border-[#1c1410] bg-white text-[13px] font-bold cursor-pointer hover:bg-[#c8f000]/50">
+              📎 attach a file
+              <input
+                type="file"
+                accept=".txt,.md,text/plain"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  const reader = new FileReader();
+                  reader.onload = () => setResume(typeof reader.result === "string" ? reader.result : "");
+                  reader.readAsText(f);
+                }}
+              />
+            </label>
+            <span className="font-mono text-[10.5px] text-[#6b5e52]">.txt / .md · PDF? open it, select all, copy, paste 🐦</span>
+          </div>
           <button
             type="button"
             onClick={parseResume}
