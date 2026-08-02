@@ -86,7 +86,7 @@ export default function GlobePage() {
   const markersRef = useRef<{ remove: () => void }[]>([]);
   const [rows, setRows] = useState<{ location: string | null; dest_place: string | null }[]>([]);
   const [schoolCities, setSchoolCities] = useState<Record<string, string>>({});
-  const [panel, setPanel] = useState<{ city: string; loading: boolean; schools: { name: string; ownership: number | null; tuitionIn: number | null }[] } | null>(null);
+  const [panel, setPanel] = useState<{ city: string; loading: boolean; schools: { name: string; ownership: number | null; tuitionIn: number | null }[]; world: { name: string; country: string }[] } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -161,13 +161,28 @@ export default function GlobePage() {
         });
         const nm = placeFt && placeFt.properties ? String(placeFt.properties["name:latin"] || placeFt.properties.name) : null;
         if (!nm) return;
-        setPanel({ city: nm, loading: true, schools: [] });
+        setPanel({ city: nm, loading: true, schools: [], world: [] });
         try {
           const r = await fetch("/api/school?city=" + encodeURIComponent(nm));
           const j = await r.json();
-          setPanel({ city: nm, loading: false, schools: Array.isArray(j.schools) ? j.schools : [] });
+          const us = Array.isArray(j.schools) ? j.schools : [];
+          if (us.length > 0) {
+            setPanel({ city: nm, loading: false, schools: us, world: [] });
+          } else {
+            // beyond the US file: elsewhr fetches the world itself, in the background
+            try {
+              const rw = await fetch("https://universities.hipolabs.com/search?name=" + encodeURIComponent(nm));
+              const jw = await rw.json();
+              const world = (Array.isArray(jw) ? jw : [])
+                .slice(0, 25)
+                .map((u: { name: string; country: string }) => ({ name: u.name, country: u.country }));
+              setPanel({ city: nm, loading: false, schools: [], world });
+            } catch {
+              setPanel({ city: nm, loading: false, schools: [], world: [] });
+            }
+          }
         } catch {
-          setPanel({ city: nm, loading: false, schools: [] });
+          setPanel({ city: nm, loading: false, schools: [], world: [] });
         }
       });
       mapRef.current = map;
@@ -236,8 +251,19 @@ export default function GlobePage() {
                 ))}
               </div>
             )}
-            {!panel.loading && panel.schools.length === 0 && (
-              <p className="mt-3 text-[12.5px] text-[#6b5e52] leading-snug">no US schools on file here — the bird still knows the place:</p>
+            {!panel.loading && panel.schools.length === 0 && panel.world.length > 0 && (
+              <div className="mt-3 flex flex-col gap-2">
+                {panel.world.map((u) => (
+                  <Link key={u.name} href={"/w?place=" + encodeURIComponent(u.name)}
+                    className="block px-3 py-2 rounded-xl border-2 border-[#1c1410] bg-white hover:bg-[#c8f000]/40 transition-colors">
+                    <p className="text-[12.5px] font-bold leading-snug">{u.name}</p>
+                    <p className="mt-0.5 text-[11px] text-[#6b5e52]">🌍 university · {u.country}</p>
+                  </Link>
+                ))}
+              </div>
+            )}
+            {!panel.loading && panel.schools.length === 0 && panel.world.length === 0 && (
+              <p className="mt-3 text-[12.5px] text-[#6b5e52] leading-snug">nothing on file for this exact name — the bird still knows the place:</p>
             )}
             <div className="mt-3 flex flex-col gap-2">
               <Link href={"/w?place=" + encodeURIComponent(panel.city)}
