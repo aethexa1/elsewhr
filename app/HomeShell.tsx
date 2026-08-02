@@ -577,7 +577,7 @@ export default function HomeShell({
                       <Link
                         key={p.id}
                         href="/login"
-                        className="chapter block bg-[#fff6ec] rounded-3xl border-[3px] border-[#1c1410] shadow-[7px_7px_0_#1c1410,0_22px_44px_rgba(28,20,16,0.25)] overflow-hidden hover:translate-y-[-5px] hover:rotate-[-0.4deg] hover:shadow-[10px_13px_0_#1c1410,0_30px_60px_rgba(28,20,16,0.3)] active:translate-y-0 active:shadow-[4px_4px_0_#1c1410] transition-all duration-200"
+                        className="chapter group block bg-[#fff6ec] rounded-3xl border-[3px] border-[#1c1410] shadow-[7px_7px_0_#1c1410,0_22px_44px_rgba(28,20,16,0.25)] overflow-hidden hover:translate-y-[-5px] hover:rotate-[-0.4deg] hover:shadow-[10px_13px_0_#1c1410,0_30px_60px_rgba(28,20,16,0.3)] active:translate-y-0 active:shadow-[4px_4px_0_#1c1410] transition-all duration-200"
                         style={{ animationDelay: `${idx * 90}ms` }}
                       >
                         <div style={{ background: accent }} className="h-2 w-full" />
@@ -639,7 +639,7 @@ export default function HomeShell({
                     <Link
                       key={p.id}
                       href={`/p/${p.id}`}
-                      className="chapter block bg-[#fff6ec] rounded-3xl border-[3px] border-[#1c1410] shadow-[7px_7px_0_#1c1410,0_22px_44px_rgba(28,20,16,0.25)] overflow-hidden hover:translate-y-[-5px] hover:rotate-[-0.4deg] hover:shadow-[10px_13px_0_#1c1410,0_30px_60px_rgba(28,20,16,0.3)] active:translate-y-0 active:shadow-[4px_4px_0_#1c1410] transition-all duration-200"
+                      className="chapter group block bg-[#fff6ec] rounded-3xl border-[3px] border-[#1c1410] shadow-[7px_7px_0_#1c1410,0_22px_44px_rgba(28,20,16,0.25)] overflow-hidden hover:translate-y-[-5px] hover:rotate-[-0.4deg] hover:shadow-[10px_13px_0_#1c1410,0_30px_60px_rgba(28,20,16,0.3)] active:translate-y-0 active:shadow-[4px_4px_0_#1c1410] transition-all duration-200"
                       style={{ animationDelay: `${idx * 90}ms` }}
                     >
                       <div style={{ background: accent }} className="h-2 w-full" />
@@ -712,8 +712,15 @@ export default function HomeShell({
                         </div>
                       </div>
                       {universe === "work" && workImage && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={workImage} alt="" className="w-full h-36 object-cover border-t-[3px] border-[#1c1410]" />
+                        <div className="relative border-t-[3px] border-[#1c1410] overflow-hidden">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={workImage}
+                            alt=""
+                            className="w-full h-36 object-cover transition-[clip-path,transform] duration-500 ease-out [clip-path:polygon(46%_0,54%_0,54%_100%,46%_100%)] group-hover:[clip-path:polygon(0_0,100%_0,100%_100%,0_100%)] group-hover:scale-[1.03]"
+                          />
+                          <div className="absolute inset-0 bg-[#1c1410]/10 opacity-100 group-hover:opacity-0 transition-opacity duration-500 pointer-events-none" />
+                        </div>
                       )}
                     </Link>
                   );
