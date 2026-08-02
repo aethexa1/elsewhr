@@ -439,7 +439,7 @@ function WorldPageInner() {
       const myUid = authData?.user?.id ?? null;
       const cols = "id, user_id, name, photo, headline, location, accent, mindset, seeking, learning, dest_term, dest_program, dest_status, roommate";
       const [dst, liv] = await Promise.all([
-        supabase.from("profiles").select(cols).ilike("dest_place", place).order("id", { ascending: false }).limit(60),
+        supabase.from("profiles").select(cols).ilike("dest_place", "%" + place + "%").order("id", { ascending: false }).limit(60),
         supabase.from("profiles").select(cols).ilike("location", "%" + place + "%").order("id", { ascending: false }).limit(60),
       ]);
       if (alive) {
