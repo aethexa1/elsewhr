@@ -170,60 +170,14 @@ export default function GlobePage() {
           if (us.length > 0) {
             setPanel({ city: nm, loading: false, schools: us, world: [] });
           } else {
-            // beyond the US file, net ②: the map itself — OpenStreetMap campuses around the tap
-            let world: { name: string; country: string }[] = [];
+            // beyond the US file: our own server casts the global nets (OSM, Wikidata, name-match)
             try {
-              const oq = "[out:json][timeout:8];(node[\"amenity\"~\"university|college\"](around:25000," + clat + "," + clng + ");way[\"amenity\"~\"university|college\"](around:25000," + clat + "," + clng + ");relation[\"amenity\"~\"university|college\"](around:25000," + clat + "," + clng + "););out center 60;";
-              const ro = await fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(oq));
-              const jo = await ro.json();
-              const seen = new Set<string>();
-              world = (jo?.elements ?? [])
-                .map((el: { tags?: { name?: string; ["name:en"]?: string } }) => (el.tags?.["name:en"] || el.tags?.name || "").trim())
-                .filter((n: string) => {
-                  if (!n || seen.has(n.toLowerCase())) return false;
-                  seen.add(n.toLowerCase());
-                  return true;
-                })
-                .slice(0, 30)
-                .map((n: string) => ({ name: n, country: "on the map here" }));
-            } catch { /* net ③ below */ }
-            if (world.length === 0) try {
-              const rq = await fetch(
-                "https://www.wikidata.org/w/api.php?action=wbsearchentities&format=json&language=en&origin=*&limit=1&search=" +
-                  encodeURIComponent(nm)
-              );
-              const jq = await rq.json();
-              const qid = jq?.search?.[0]?.id as string | undefined;
-              if (qid) {
-                const sparql =
-                  "SELECT DISTINCT ?uLabel ?cLabel WHERE { " +
-                  "?u wdt:P31/wdt:P279* wd:Q38723 ; wdt:P131* wd:" + qid + " . " +
-                  "OPTIONAL { ?u wdt:P17 ?c . } " +
-                  "SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". } } LIMIT 40";
-                const rs = await fetch(
-                  "https://query.wikidata.org/sparql?format=json&query=" + encodeURIComponent(sparql),
-                  { headers: { Accept: "application/sparql-results+json" } }
-                );
-                const js = await rs.json();
-                const rows = js?.results?.bindings ?? [];
-                world = rows
-                  .map((b: { uLabel?: { value: string }; cLabel?: { value: string } }) => ({
-                    name: b.uLabel?.value || "",
-                    country: b.cLabel?.value || "",
-                  }))
-                  .filter((u: { name: string }) => u.name && !/^Q\d+$/.test(u.name));
-              }
-            } catch { /* the name-match net below still exists */ }
-            if (world.length === 0) {
-              try {
-                const rw = await fetch("https://universities.hipolabs.com/search?name=" + encodeURIComponent(nm));
-                const jw = await rw.json();
-                world = (Array.isArray(jw) ? jw : [])
-                  .slice(0, 25)
-                  .map((u: { name: string; country: string }) => ({ name: u.name, country: u.country }));
-              } catch { /* both nets missed; the bird chips remain */ }
+              const rw = await fetch("/api/school?world=" + encodeURIComponent(nm) + "&lat=" + clat + "&lon=" + clng);
+              const jw = await rw.json();
+              setPanel({ city: nm, loading: false, schools: [], world: Array.isArray(jw.world) ? jw.world : [] });
+            } catch {
+              setPanel({ city: nm, loading: false, schools: [], world: [] });
             }
-            setPanel({ city: nm, loading: false, schools: [], world: world.slice(0, 30) });
           }
         } catch {
           setPanel({ city: nm, loading: false, schools: [], world: [] });
