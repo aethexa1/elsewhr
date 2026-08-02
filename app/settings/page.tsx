@@ -7,8 +7,25 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import { useLang } from "@/lib/i18n";
+
+const T: Record<string, {
+  emailTitle: string; newEmail: string; emailPh: string; sendBtn: string; sending: string;
+  badEmail: string; sameEmail: string; emailSent: string;
+  pwTitle: string; newPw: string; pwPh: string; confirmPw: string; confirmPh: string;
+  saveBtn: string; saving: string; shortPw: string; mismatch: string; pwDone: string;
+}> = {
+  en: { emailTitle: "Change email", newEmail: "New email", emailPh: "new@example.com", sendBtn: "Update email →", sending: "Sending…", badEmail: "Enter a valid new email address.", sameEmail: "That's already your email.", emailSent: "Confirmation links sent. Check BOTH inboxes — your current email and the new one — and click both links to complete the change.", pwTitle: "Change password", newPw: "New password", pwPh: "At least 8 characters", confirmPw: "Confirm new password", confirmPh: "Same password again", saveBtn: "Update password →", saving: "Saving…", shortPw: "Password needs at least 8 characters.", mismatch: "Passwords don't match.", pwDone: "Password updated." },
+  es: { emailTitle: "Cambiar email", newEmail: "Nuevo email", emailPh: "nuevo@ejemplo.com", sendBtn: "Actualizar email →", sending: "Enviando…", badEmail: "Escribe un email nuevo válido.", sameEmail: "Ese ya es tu email.", emailSent: "Enlaces de confirmación enviados. Revisa AMBAS bandejas — tu email actual y el nuevo — y haz clic en ambos enlaces.", pwTitle: "Cambiar contraseña", newPw: "Nueva contraseña", pwPh: "Mínimo 8 caracteres", confirmPw: "Confirma la contraseña", confirmPh: "La misma otra vez", saveBtn: "Actualizar contraseña →", saving: "Guardando…", shortPw: "La contraseña necesita al menos 8 caracteres.", mismatch: "Las contraseñas no coinciden.", pwDone: "Contraseña actualizada." },
+  pt: { emailTitle: "Mudar email", newEmail: "Novo email", emailPh: "novo@exemplo.com", sendBtn: "Atualizar email →", sending: "Enviando…", badEmail: "Digite um email novo válido.", sameEmail: "Esse já é o seu email.", emailSent: "Links de confirmação enviados. Verifique AS DUAS caixas — o email atual e o novo — e clique nos dois links.", pwTitle: "Mudar senha", newPw: "Nova senha", pwPh: "Pelo menos 8 caracteres", confirmPw: "Confirme a nova senha", confirmPh: "A mesma senha de novo", saveBtn: "Atualizar senha →", saving: "Salvando…", shortPw: "A senha precisa de pelo menos 8 caracteres.", mismatch: "As senhas não coincidem.", pwDone: "Senha atualizada." },
+  hi: { emailTitle: "Email बदलो", newEmail: "नया email", emailPh: "naya@example.com", sendBtn: "Email अपडेट करो →", sending: "भेज रहे हैं…", badEmail: "सही नया email लिखो।", sameEmail: "यह तो पहले से आपका email है।", emailSent: "Confirmation links भेज दिए। दोनों inbox देखो — पुराना और नया — और दोनों links पर क्लिक करो।", pwTitle: "Password बदलो", newPw: "नया password", pwPh: "कम से कम 8 अक्षर", confirmPw: "नया password फिर से", confirmPh: "वही password दोबारा", saveBtn: "Password अपडेट करो →", saving: "सेव हो रहा है…", shortPw: "Password कम से कम 8 अक्षर का हो।", mismatch: "Passwords मेल नहीं खाते।", pwDone: "Password बदल गया।" },
+  pl: { emailTitle: "Zmień email", newEmail: "Nowy email", emailPh: "nowy@przyklad.com", sendBtn: "Zaktualizuj email →", sending: "Wysyłanie…", badEmail: "Wpisz poprawny nowy email.", sameEmail: "To już jest twój email.", emailSent: "Linki potwierdzające wysłane. Sprawdź OBIE skrzynki — obecny i nowy email — i kliknij oba linki.", pwTitle: "Zmień hasło", newPw: "Nowe hasło", pwPh: "Co najmniej 8 znaków", confirmPw: "Potwierdź nowe hasło", confirmPh: "To samo hasło jeszcze raz", saveBtn: "Zaktualizuj hasło →", saving: "Zapisywanie…", shortPw: "Hasło musi mieć co najmniej 8 znaków.", mismatch: "Hasła się nie zgadzają.", pwDone: "Hasło zmienione." },
+  fr: { emailTitle: "Changer l'email", newEmail: "Nouvel email", emailPh: "nouveau@exemple.com", sendBtn: "Mettre à jour l'email →", sending: "Envoi…", badEmail: "Entre un nouvel email valide.", sameEmail: "C'est déjà ton email.", emailSent: "Liens de confirmation envoyés. Vérifie LES DEUX boîtes — l'actuel et le nouveau — et clique sur les deux liens.", pwTitle: "Changer le mot de passe", newPw: "Nouveau mot de passe", pwPh: "Au moins 8 caractères", confirmPw: "Confirme le mot de passe", confirmPh: "Le même encore une fois", saveBtn: "Mettre à jour →", saving: "Enregistrement…", shortPw: "Au moins 8 caractères pour le mot de passe.", mismatch: "Les mots de passe ne correspondent pas.", pwDone: "Mot de passe mis à jour." },
+};
 
 export default function SettingsPage() {
+  const { lang } = useLang();
+  const t = T[lang] || T.en;
   const router = useRouter();
   const [currentEmail, setCurrentEmail] = useState<string | null>(null);
   const [newEmail, setNewEmail] = useState("");
@@ -36,11 +53,11 @@ export default function SettingsPage() {
     setEmailMsg(null);
     const target = newEmail.trim();
     if (!target || !target.includes("@")) {
-      setEmailErr("Enter a valid new email address.");
+      setEmailErr(t.badEmail);
       return;
     }
     if (target === currentEmail) {
-      setEmailErr("That's already your email.");
+      setEmailErr(t.sameEmail);
       return;
     }
     setBusyEmail(true);
@@ -49,9 +66,7 @@ export default function SettingsPage() {
     if (error) {
       setEmailErr(error.message);
     } else {
-      setEmailMsg(
-        "Confirmation links sent. Check BOTH inboxes — your current email and the new one — and click both links to complete the change."
-      );
+      setEmailMsg(t.emailSent);
       setNewEmail("");
     }
   }
@@ -60,11 +75,11 @@ export default function SettingsPage() {
     setPwErr(null);
     setPwMsg(null);
     if (newPassword.length < 8) {
-      setPwErr("Password needs at least 8 characters.");
+      setPwErr(t.shortPw);
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPwErr("Passwords don't match.");
+      setPwErr(t.mismatch);
       return;
     }
     setBusyPw(true);
@@ -73,7 +88,7 @@ export default function SettingsPage() {
     if (error) {
       setPwErr(error.message);
     } else {
-      setPwMsg("Password updated.");
+      setPwMsg(t.pwDone);
       setNewPassword("");
       setConfirmPassword("");
     }
@@ -104,22 +119,22 @@ export default function SettingsPage() {
 
         {/* Change email */}
         <div className={cardCls}>
-          <h2 className="font-[Syne] font-extrabold text-xl mb-1">Change email</h2>
+          <h2 className="font-[Syne] font-extrabold text-xl mb-1">{t.emailTitle}</h2>
           {currentEmail && (
             <p className="font-mono text-[11px] text-[#6b5e52] mb-4">
               current: {currentEmail}
             </p>
           )}
-          <label className={labelCls}>New email</label>
+          <label className={labelCls}>{t.newEmail}</label>
           <input
             type="email"
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
-            placeholder="new@example.com"
+            placeholder={t.emailPh}
             className={`${inputCls} mb-4`}
           />
           <button onClick={changeEmail} disabled={busyEmail} className={btnCls}>
-            {busyEmail ? "Sending…" : "Update email →"}
+            {busyEmail ? t.sending : t.sendBtn}
           </button>
           {emailMsg && (
             <p className="mt-3 text-sm font-medium text-[#2e7d32]">{emailMsg}</p>
@@ -131,27 +146,27 @@ export default function SettingsPage() {
 
         {/* Change password */}
         <div className={`${cardCls} mt-6`}>
-          <h2 className="font-[Syne] font-extrabold text-xl mb-4">Change password</h2>
-          <label className={labelCls}>New password</label>
+          <h2 className="font-[Syne] font-extrabold text-xl mb-4">{t.pwTitle}</h2>
+          <label className={labelCls}>{t.newPw}</label>
           <input
             type="password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="At least 8 characters"
+            placeholder={t.pwPh}
             className={`${inputCls} mb-3`}
             autoComplete="new-password"
           />
-          <label className={labelCls}>Confirm new password</label>
+          <label className={labelCls}>{t.confirmPw}</label>
           <input
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Same password again"
+            placeholder={t.confirmPh}
             className={`${inputCls} mb-4`}
             autoComplete="new-password"
           />
           <button onClick={changePassword} disabled={busyPw} className={btnCls}>
-            {busyPw ? "Saving…" : "Update password →"}
+            {busyPw ? t.saving : t.saveBtn}
           </button>
           {pwMsg && <p className="mt-3 text-sm font-medium text-[#2e7d32]">{pwMsg}</p>}
           {pwErr && <p className="mt-3 text-sm font-medium text-[#b03a3a]">{pwErr}</p>}
