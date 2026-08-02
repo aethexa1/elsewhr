@@ -203,12 +203,14 @@ function learnLinks(field: string, cip?: string): { label: string; url: string }
   }
   // the never-empty shelf: these always have something
   out.push(
+    { label: "🎓 find US schools for this (College Scorecard)", url: "https://collegescorecard.ed.gov/search/?search=" + q },
+    { label: "🌍 schools worldwide for this", url: "https://www.google.com/search?q=" + encodeURIComponent("best universities for " + core + " programs") },
     { label: "Wikipedia: the field", url: "https://en.wikipedia.org/w/index.php?search=" + q },
     { label: "OpenLearn (free courses)", url: "https://www.open.edu/openlearn/search?query=" + q },
     { label: "LibreTexts (free textbooks)", url: "https://libretexts.org/search?q=" + q },
     { label: "Google: learn it free", url: "https://www.google.com/search?q=" + encodeURIComponent("learn " + core + " free course") }
   );
-    return out.slice(0, 14);
+    return out.slice(0, 16);
 }
 
 function FieldPageInner() {
