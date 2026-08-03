@@ -4,6 +4,7 @@
 import type { Metadata } from "next";
 import { Syne, Space_Grotesk, Noto_Sans_Devanagari } from "next/font/google";
 import "./globals.css";
+import "./design.css";
 import LangProvider from "./LangProvider";
 import HelpBird from "./HelpBird";
 
