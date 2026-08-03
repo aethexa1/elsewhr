@@ -455,12 +455,12 @@ export default function HomeShell({
           <div className="rise flex justify-center mb-6" style={{ animationDelay: "90ms" }}>
             <div className="inline-flex rounded-full border-[3px] border-[#1c1410] bg-[#fff6ec] p-1 shadow-[4px_4px_0_#1c1410]">
               <button type="button" onClick={() => pickUniverse("connect")}
-                className={`px-5 py-2 rounded-full font-bold text-[13.5px] transition-all duration-150 ${universe === "connect" ? "bg-[#c8f000] border-2 border-[#1c1410]" : "border-2 border-transparent hover:bg-[#1c1410]/5"}`}
+                className={`px-5 py-2 rounded-full font-bold text-[14px] transition-all duration-150 ${universe === "connect" ? "bg-[#c8f000] border-2 border-[#1c1410]" : "border-2 border-transparent hover:bg-[#1c1410]/5"}`}
               >
                 🤝 {uv.connect}
               </button>
               <button type="button" onClick={() => pickUniverse("work")}
-                className={`px-5 py-2 rounded-full font-bold text-[13.5px] transition-all duration-150 ${universe === "work" ? "bg-[#c8f000] border-2 border-[#1c1410]" : "border-2 border-transparent hover:bg-[#1c1410]/5"}`}
+                className={`px-5 py-2 rounded-full font-bold text-[14px] transition-all duration-150 ${universe === "work" ? "bg-[#c8f000] border-2 border-[#1c1410]" : "border-2 border-transparent hover:bg-[#1c1410]/5"}`}
               >
                 💼 {uv.work}
               </button>
@@ -564,7 +564,7 @@ export default function HomeShell({
               {mode === "member" && universe === "connect" && memberSlides.length > 0 && (
                 <div className="rise -mx-4" style={{ animationDelay: "150ms" }}>
                   <ProfileCoverflow slides={memberSlides} cardWidth={250} cardHeight={320} autoplay={true} holdSeconds={3.2} />
-                  <p className="text-center font-mono text-[10.5px] tracking-wide text-[#fff6ec]/70 -mt-2">
+                  <p className="text-center font-mono text-[11px] tracking-wide text-[#fff6ec]/70 -mt-2">
                     tap a face to bring it close · tap again to visit
                   </p>
                 </div>
@@ -608,7 +608,7 @@ export default function HomeShell({
                             <p className="font-[Syne] font-extrabold text-xl leading-tight truncate tracking-[-0.01em]">
                               {p.name.split(" ")[0]}
                             </p>
-                            <p className="text-[13.5px] leading-snug text-[#3a2c20] line-clamp-2">
+                            <p className="text-[14px] leading-snug text-[#3a2c20] line-clamp-2">
                               {p.headline}
                             </p>
                             {p.mindset && p.mindset.length > 0 && (
@@ -616,7 +616,7 @@ export default function HomeShell({
                                 {p.mindset.slice(0, 3).map((tag) => (
                                   <span
                                     key={tag}
-                                    className="px-2 py-0.5 rounded-full text-[#fff6ec] text-[10.5px] font-medium" style={{ background: accent }}
+                                    className="px-2 py-0.5 rounded-full text-[#fff6ec] text-[11px] font-medium" style={{ background: accent }}
                                   >
                                     {tag}
                                   </span>
@@ -674,20 +674,20 @@ export default function HomeShell({
                             {p.name}
                           </p>
                           {universe === "connect" && p.dest_place && p.dest_place.trim() ? (
-                            <p className="text-[13.5px] leading-snug font-bold text-[#6b4eff] truncate">
+                            <p className="text-[14px] leading-snug font-bold text-[#6b4eff] truncate">
                               <span role="link" tabIndex={0} onClick={(e) => goPlace(e, p.dest_place!.trim())} className="underline decoration-2 underline-offset-2 hover:text-[#1c1410] cursor-pointer">
                                 {uv.headedTo}{p.dest_place.trim()}
                               </span>
                               {p.dest_term && p.dest_term.trim() ? " · " + p.dest_term.trim() : ""}
                             </p>
                           ) : universe === "connect" && p.location && p.location.trim() ? (
-                            <p className="text-[13.5px] leading-snug truncate">
+                            <p className="text-[14px] leading-snug truncate">
                               <span role="link" tabIndex={0} onClick={(e) => goPlace(e, p.location.trim())} className="font-bold text-[#6b4eff] underline decoration-2 underline-offset-2 hover:text-[#1c1410] cursor-pointer">
                                 📍 {p.location.trim()}
                               </span>
                             </p>
                           ) : (
-                            <p className="text-[13.5px] leading-snug text-[#3a2c20] line-clamp-2">
+                            <p className="text-[14px] leading-snug text-[#3a2c20] line-clamp-2">
                               {p.headline}
                             </p>
                           )}
@@ -696,7 +696,7 @@ export default function HomeShell({
                               {p.mindset.slice(0, 3).map((tag) => (
                                 <span
                                   key={tag}
-                                  className="px-2 py-0.5 rounded-full text-[#fff6ec] text-[10.5px] font-medium" style={{ background: accent }}
+                                  className="px-2 py-0.5 rounded-full text-[#fff6ec] text-[11px] font-medium" style={{ background: accent }}
                                 >
                                   {tag}
                                 </span>
@@ -704,13 +704,13 @@ export default function HomeShell({
                             </div>
                           )}
                           {scoping && inCohort(p) && (
-                            <p className="mt-1.5 font-mono text-[10.5px] font-bold text-[#6b4eff]">
+                            <p className="mt-1.5 font-mono text-[11px] font-bold text-[#6b4eff]">
                               {wd.also.replace("{place}", p.dest_place ? p.dest_place.trim() : myDest)}
                               {p.dest_term && p.dest_term.trim() ? " · " + p.dest_term.trim() : ""}
                             </p>
                           )}
                           {both.length > 0 && (
-                            <p className="mt-1.5 font-mono text-[10.5px] text-[#6b5e52]">
+                            <p className="mt-1.5 font-mono text-[11px] text-[#6b5e52]">
                               {t(lang, "home.youBoth")} {both.slice(0, 3).join(" · ")}
                             </p>
                           )}
