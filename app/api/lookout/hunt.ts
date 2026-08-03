@@ -1,257 +1,215 @@
-// elsewhr — the lookout's hunting engine, v2: wider nets, kinds, more catch.
-// Replace: app/api/lookout/hunt.ts
-// Six nets in parallel — Remotive, Jobicy, Arbeitnow, The Muse (location-aware!),
-// RemoteOK, HN hiring — plus Adzuna auto-joining when its free keys exist.
-// Every job tagged by KIND. Notes carry up to eight grouped finds.
+"use client";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+// elsewhr — 🔭 the lookout: your private agent.
+// New file: app/lookout/page.tsx  ·  door on the home rack.
+// Tell it what to watch — your job, your search, or nothing at all — and it
+// checks your place daily, leaving quiet notes only you can read.
 
-export type Lookout = { user_id: string; watch: string | null; place: string | null; last_run: string | null };
-export type Job = { title: string; company: string; url: string; source: string; kind: string };
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { supabase } from "@/lib/supabaseClient";
+import { useLang } from "@/lib/i18n";
 
-const STOP = new Set(["a","an","the","or","and","for","in","at","my","me","of","to","work","job","jobs","near","around","looking","keeping","eye","on","current","field","want","any"]);
+const S: Record<string, {
+  title: string; sub: string; back: string;
+  watchLabel: string; watchPh: string; placeLabel: string; placePh: string;
+  activeOn: string; activeOff: string; save: string; saved: string;
+  notesTitle: string; noNotes: string; loginFirst: string; tapAdd: string; sweepNow: string; sweeping: string; cooled: string;
+}> = {
+  en: { title: "the lookout", sub: "your private agent. tell it what to watch — your job, your search, or nothing — and it checks your place every day. notes land here, for your eyes only.", back: "← back", watchLabel: "what should it watch?", watchPh: "e.g. part-time warehouse or barista work · or: keeping an eye on my current job's field", placeLabel: "around where?", placePh: "your city or school (start typing…)", activeOn: "🔭 watching", activeOff: "😴 paused", save: "save my lookout →", saved: "saved — first note arrives after the next daily sweep 🐦", notesTitle: "notes from your lookout", noNotes: "no notes yet — the lookout sweeps once a day.", loginFirst: "log in to set your lookout →", tapAdd: "or tap to build it (english works best for the hunt):", sweepNow: "🔍 sweep now", sweeping: "hunting…", cooled: "the lookout just swept — give it 10 minutes 🐦" },
+  es: { title: "el vigía", sub: "tu agente privado. dile qué vigilar — tu trabajo, tu búsqueda, o nada — y revisa tu zona cada día. las notas llegan aquí, solo para tus ojos.", back: "← volver", watchLabel: "¿qué debe vigilar?", watchPh: "ej. trabajo de medio tiempo en almacén o café", placeLabel: "¿por dónde?", placePh: "tu ciudad o escuela (escribe…)", activeOn: "🔭 vigilando", activeOff: "😴 en pausa", save: "guardar mi vigía →", saved: "guardado — la primera nota llega tras el próximo barrido diario 🐦", notesTitle: "notas de tu vigía", noNotes: "sin notas aún — el vigía pasa una vez al día.", loginFirst: "inicia sesión para tu vigía →", tapAdd: "o toca para armarlo (el inglés funciona mejor para la búsqueda):", sweepNow: "🔍 buscar ahora", sweeping: "cazando…", cooled: "el vigía acaba de barrer — dale 10 minutos 🐦" },
+  pt: { title: "o vigia", sub: "seu agente privado. diga o que vigiar — seu trabalho, sua busca, ou nada — e ele confere sua área todo dia. as notas chegam aqui, só para você.", back: "← voltar", watchLabel: "o que ele deve vigiar?", watchPh: "ex. trabalho de meio período em armazém ou café", placeLabel: "por onde?", placePh: "sua cidade ou escola (digite…)", activeOn: "🔭 vigiando", activeOff: "😴 pausado", save: "salvar meu vigia →", saved: "salvo — a primeira nota chega após a próxima ronda diária 🐦", notesTitle: "notas do seu vigia", noNotes: "sem notas ainda — o vigia passa uma vez por dia.", loginFirst: "entre para configurar seu vigia →", tapAdd: "ou toque para montar (inglês funciona melhor na busca):", sweepNow: "🔍 varrer agora", sweeping: "caçando…", cooled: "o vigia acabou de varrer — dê 10 minutos 🐦" },
+  hi: { title: "पहरेदार", sub: "आपका निजी agent। बताओ क्या देखना है — आपकी job, आपकी खोज, या कुछ नहीं — और यह रोज़ आपकी जगह देखता है। notes यहाँ आते हैं, सिर्फ़ आपके लिए।", back: "← वापस", watchLabel: "यह क्या देखे?", watchPh: "जैसे: part-time warehouse या barista काम", placeLabel: "किसके आस-पास?", placePh: "आपका शहर या school (लिखना शुरू करो…)", activeOn: "🔭 देख रहा है", activeOff: "😴 रुका है", save: "मेरा पहरेदार सेव करो →", saved: "सेव हो गया — पहला note अगली रोज़ाना जांच के बाद 🐦", notesTitle: "आपके पहरेदार के notes", noNotes: "अभी कोई note नहीं — पहरेदार दिन में एक बार देखता है।", loginFirst: "पहरेदार के लिए log in करो →", tapAdd: "या टैप करके बनाओ (खोज के लिए english सबसे अच्छा है):", sweepNow: "🔍 अभी खोजो", sweeping: "खोज रहा है…", cooled: "अभी-अभी खोजा है — 10 मिनट दो 🐦" },
+  pl: { title: "czatownik", sub: "twój prywatny agent. powiedz mu, co obserwować — pracę, poszukiwania, albo nic — a on codziennie sprawdza twoją okolicę. notatki lądują tu, tylko dla ciebie.", back: "← wróć", watchLabel: "co ma obserwować?", watchPh: "np. praca dorywcza w magazynie lub kawiarni", placeLabel: "w okolicy czego?", placePh: "twoje miasto lub szkoła (zacznij pisać…)", activeOn: "🔭 obserwuje", activeOff: "😴 wstrzymany", save: "zapisz czatownika →", saved: "zapisano — pierwsza notatka po najbliższym dziennym obchodzie 🐦", notesTitle: "notatki od czatownika", noNotes: "brak notatek — czatownik robi obchód raz dziennie.", loginFirst: "zaloguj się, by ustawić czatownika →", tapAdd: "albo stuknij, by złożyć (angielski działa najlepiej):", sweepNow: "🔍 przeszukaj teraz", sweeping: "poluje…", cooled: "czatownik dopiero co skanował — daj mu 10 minut 🐦" },
+  fr: { title: "la vigie", sub: "ton agent privé. dis-lui quoi surveiller — ton boulot, ta recherche, ou rien — et il vérifie ton coin chaque jour. les notes arrivent ici, pour tes yeux seulement.", back: "← retour", watchLabel: "que doit-il surveiller ?", watchPh: "ex. petit boulot en entrepôt ou en café", placeLabel: "autour d'où ?", placePh: "ta ville ou ton école (commence à écrire…)", activeOn: "🔭 en veille", activeOff: "😴 en pause", save: "enregistrer ma vigie →", saved: "enregistré — première note après la prochaine ronde 🐦", notesTitle: "notes de ta vigie", noNotes: "pas encore de note — la vigie passe une fois par jour.", loginFirst: "connecte-toi pour ta vigie →", tapAdd: "ou touche pour composer (l’anglais marche mieux) :", sweepNow: "🔍 balayer maintenant", sweeping: "en chasse…", cooled: "la vigie vient de balayer — laisse-lui 10 minutes 🐦" },
+};
 
-export function watchQuery(watch: string | null | undefined): string {
-  const words = (watch || "").toLowerCase().replace(/[^a-z0-9\s-]/g, " ").split(/\s+/).filter((w) => w && !STOP.has(w));
-  return words.slice(0, 4).join(" ") || "student assistant";
-}
+const WATCH_KINDS = ["part-time", "full-time", "internship", "entry-level", "remote", "on-site", "weekends"];
+const WATCH_FIELDS = ["warehouse", "barista / café", "retail", "customer service", "delivery", "tutoring", "campus job", "healthcare", "design", "coding", "data", "marketing"];
 
-export function classify(title: string, remote: boolean): string {
-  const t = title.toLowerCase();
-  if (/intern/.test(t)) return "internship";
-  if (/part[- ]?time/.test(t)) return "part-time";
-  if (/contract|freelance|temporary/.test(t)) return "contract";
-  if (/junior|entry|assistant|associate|trainee/.test(t)) return "entry-level";
-  if (/senior|lead|principal|head of|director|manager/.test(t)) return "senior";
-  return remote ? "remote" : "on-site";
-}
+type Note = { id: number; body: string; created_at: string; seen: boolean };
 
-async function jfetch(url: string, ms = 4500, headers: Record<string, string> = {}): Promise<unknown> {
-  const r = await fetch(url, { signal: AbortSignal.timeout(ms), headers: { accept: "application/json", ...headers } });
-  if (!r.ok) throw new Error(String(r.status));
-  return r.json();
-}
+export default function LookoutPage() {
+  const { lang } = useLang();
+  const s = S[lang] || S.en;
+  const [uid, setUid] = useState<string | null>(null);
+  const [checked, setChecked] = useState(false);
+  const [watch, setWatch] = useState("");
+  const [place, setPlace] = useState("");
+  const [active, setActive] = useState(true);
+  const [sugs, setSugs] = useState<{ name: string }[]>([]);
+  const [sugsOpen, setSugsOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [notes, setNotes] = useState<Note[]>([]);
+  const seenOnce = useRef(false);
 
-function parseRss(xml: string): { title: string; link: string }[] {
-  const items: { title: string; link: string }[] = [];
-  const chunks = xml.split("<item>").slice(1);
-  for (const c of chunks.slice(0, 12)) {
-    const t = /<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/.exec(c)?.[1]?.trim() || "";
-    const l = /<link>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/.exec(c)?.[1]?.trim() || "";
-    if (t && l) items.push({ title: t, link: l });
-  }
-  return items;
-}
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      const u = data?.user?.id ?? null;
+      setUid(u);
+      setChecked(true);
+      if (!u) return;
+      const [{ data: lk }, { data: ns }] = await Promise.all([
+        supabase.from("lookouts").select("watch, place, active").eq("user_id", u).maybeSingle(),
+        supabase.from("lookout_notes").select("id, body, created_at, seen").eq("user_id", u).order("id", { ascending: false }).limit(30),
+      ]);
+      if (lk) { setWatch(lk.watch || ""); setPlace(lk.place || ""); setActive(lk.active !== false); }
+      if (ns) setNotes(ns as Note[]);
+    })();
+  }, []);
 
-async function tfetch(url: string, ms = 4500, headers: Record<string, string> = {}): Promise<string> {
-  const r = await fetch(url, { signal: AbortSignal.timeout(ms), headers: { accept: "*/*", ...headers } });
-  if (!r.ok) throw new Error(String(r.status));
-  return r.text();
-}
+  // reading is seeing
+  useEffect(() => {
+    if (!uid || seenOnce.current || notes.every((n) => n.seen)) return;
+    seenOnce.current = true;
+    supabase.from("lookout_notes").update({ seen: true }).eq("user_id", uid).eq("seen", false).then(() => {});
+  }, [uid, notes]);
 
-function wwrCategory(q: string): string {
-  if (/design|graphic|ui|ux/.test(q)) return "remote-design-jobs";
-  if (/develop|engineer|program|code|cyber|data/.test(q)) return "remote-programming-jobs";
-  if (/market|content|social|seo/.test(q)) return "remote-marketing-jobs";
-  if (/support|service|customer/.test(q)) return "remote-customer-support-jobs";
-  return "remote-jobs";
-}
+  // the standing rule: the place suggests
+  useEffect(() => {
+    const t = place.trim();
+    if (t.length < 2) { setSugs([]); setSugsOpen(false); return; }
+    const timer = setTimeout(async () => {
+      try {
+        const r = await fetch("/api/school?suggest=" + encodeURIComponent(t));
+        const d = await r.json();
+        if (Array.isArray(d.suggestions)) { setSugs(d.suggestions); setSugsOpen(d.suggestions.length > 0); }
+      } catch { /* typing still works */ }
+    }, 220);
+    return () => clearTimeout(timer);
+  }, [place]);
 
-function kwMatch(title: string, q: string): boolean {
-  const t = title.toLowerCase();
-  return q.split(" ").some((w) => w.length > 2 && t.includes(w));
-}
-
-export async function huntJobs(watch: string | null | undefined, place: string): Promise<Job[]> {
-  const q = watchQuery(watch);
-  const enc = encodeURIComponent;
-  const nets: Promise<Job[]>[] = [
-    // Remotive — remote, searchable
-    jfetch("https://remotive.com/api/remote-jobs?search=" + enc(q) + "&limit=10").then((j) => {
-      const d = j as { jobs?: { title: string; company_name: string; url: string }[] };
-      return (d.jobs ?? []).slice(0, 8).map((x) => ({ title: x.title, company: x.company_name, url: x.url, source: "remotive", kind: classify(x.title, true) }));
-    }),
-    // Jobicy — remote, tagged
-    jfetch("https://jobicy.com/api/v2/remote-jobs?count=8&tag=" + enc(q.split(" ")[0] || "assistant")).then((j) => {
-      const d = j as { jobs?: { jobTitle: string; companyName: string; url: string }[] };
-      return (d.jobs ?? []).slice(0, 6).map((x) => ({ title: x.jobTitle, company: x.companyName, url: x.url, source: "jobicy", kind: classify(x.jobTitle, true) }));
-    }),
-    // Arbeitnow — on-site + remote, place-filtered when possible
-    jfetch("https://www.arbeitnow.com/api/job-board-api?search=" + enc(q)).then((j) => {
-      const d = j as { data?: { title: string; company_name: string; url: string; location: string; remote: boolean }[] };
-      const pl = place.toLowerCase();
-      const rows = d.data ?? [];
-      const local = rows.filter((x) => (x.location || "").toLowerCase().includes(pl));
-      return (local.length ? local : rows).slice(0, 6).map((x) => ({ title: x.title, company: x.company_name, url: x.url, source: "arbeitnow", kind: classify(x.title, !!x.remote) }));
-    }),
-    // The Muse — takes a LOCATION: the local net
-    jfetch("https://www.themuse.com/api/public/jobs?page=1&location=" + enc(place)).then((j) => {
-      const d = j as { results?: { name: string; company?: { name: string }; refs?: { landing_page: string } }[] };
-      return (d.results ?? [])
-        .filter((x) => kwMatch(x.name || "", q) || true)
-        .slice(0, 6)
-        .map((x) => ({ title: x.name, company: x.company?.name || "", url: x.refs?.landing_page || "", source: "themuse", kind: classify(x.name, false) }))
-        .filter((x) => x.url);
-    }),
-    // RemoteOK — high volume, keyword-filtered
-    jfetch("https://remoteok.com/api", 5000, { "user-agent": "elsewhr-lookout/1.0" }).then((j) => {
-      const rows = (Array.isArray(j) ? j : []) as { position?: string; company?: string; url?: string }[];
-      return rows
-        .filter((x) => x.position && kwMatch(x.position, q))
-        .slice(0, 6)
-        .map((x) => ({ title: x.position as string, company: x.company || "", url: x.url || "", source: "remoteok", kind: classify(x.position as string, true) }))
-        .filter((x) => x.url);
-    }),
-    // Google News — the NEWSPAPERS: local hiring headlines around their place
-    tfetch("https://news.google.com/rss/search?q=" + enc('"hiring" OR "jobs" ' + place) + "&hl=en").then((xml) => {
-      return parseRss(xml)
-        .filter((i) => /hiring|jobs|positions|recruit/i.test(i.title))
-        .slice(0, 4)
-        .map((i) => ({ title: i.title, company: "local news", url: i.link, source: "newspapers", kind: "hiring news" }));
-    }),
-    // WeWorkRemotely — the classic RSS board, category-guessed from the brief
-    tfetch("https://weworkremotely.com/categories/" + wwrCategory(q) + ".rss").then((xml) => {
-      return parseRss(xml)
-        .filter((i) => kwMatch(i.title, q) || true)
-        .slice(0, 5)
-        .map((i) => {
-          const parts = i.title.split(":");
-          const company = parts.length > 1 ? parts[0].trim() : "";
-          const title = (parts.length > 1 ? parts.slice(1).join(":") : i.title).trim();
-          return { title, company, url: i.link, source: "wwr", kind: classify(title, true) };
-        });
-    }),
-    // OPEN SOURCE — GitHub's living job registries, mined from the READMEs
-    Promise.all([
-      tfetch("https://raw.githubusercontent.com/SimplifyJobs/Summer2026-Internships/dev/README.md", 5000).catch(() =>
-        tfetch("https://raw.githubusercontent.com/SimplifyJobs/Summer2025-Internships/dev/README.md", 5000)
-      ),
-      tfetch("https://raw.githubusercontent.com/SimplifyJobs/New-Grad-Positions/dev/README.md", 5000).catch(() => ""),
-    ]).then(([interns, grads]) => {
-      const mine = (md: string, kind: string): Job[] => {
-        const out: Job[] = [];
-        for (const line of md.split("\n")) {
-          if (!line.startsWith("|") || out.length >= 5) continue;
-          const cells = line.split("|").map((c) => c.trim());
-          if (cells.length < 4) continue;
-          const company = cells[1].replace(/\*\*|\[|\]\(.*?\)/g, "").trim();
-          const role = cells[2].replace(/\*\*/g, "").trim();
-          const loc = (cells[3] || "").toLowerCase();
-          const urlM = /\((https?:\/\/[^)]+)\)/.exec(cells[4] || "") || /\((https?:\/\/[^)]+)\)/.exec(cells[1] || "");
-          if (!company || !role || /company|----/i.test(company)) continue;
-          const hit = kwMatch(role, q) || loc.includes(place.toLowerCase());
-          if (hit && urlM) out.push({ title: role, company, url: urlM[1], source: "github·open", kind });
-        }
-        return out;
-      };
-      return [...mine(interns, "internship"), ...mine(grads, "new-grad")];
-    }),
-    // HN hiring — fresh, technical
-    jfetch("https://hn.algolia.com/api/v1/search_by_date?tags=story&query=" + enc("hiring " + q) + "&hitsPerPage=4").then((j) => {
-      const d = j as { hits?: { title: string; url: string | null; objectID: string }[] };
-      return (d.hits ?? [])
-        .filter((h) => /hiring/i.test(h.title || ""))
-        .slice(0, 3)
-        .map((h) => ({ title: h.title, company: "via hacker news", url: h.url || "https://news.ycombinator.com/item?id=" + h.objectID, source: "hn", kind: "varies" }));
-    }),
-  ];
-  // Adzuna joins automatically when its free keys exist — LOCAL listings, worldwide:
-  // it sweeps several country indexes in parallel and keeps whichever answer.
-  // (country list editable — Adzuna also serves de, fr, br, pl, au, ca, sg, za…)
-  const aid = process.env.ADZUNA_APP_ID;
-  const akey = process.env.ADZUNA_APP_KEY;
-  if (aid && akey) {
-    for (const cc of ["us", "in", "gb"]) {
-      nets.push(
-        jfetch("https://api.adzuna.com/v1/api/jobs/" + cc + "/search/1?app_id=" + aid + "&app_key=" + akey + "&what=" + enc(q) + "&where=" + enc(place) + "&results_per_page=6").then((j) => {
-          const d = j as { results?: { title: string; company?: { display_name: string }; redirect_url: string }[] };
-          return (d.results ?? []).slice(0, 6).map((x) => ({ title: x.title, company: x.company?.display_name || "", url: x.redirect_url, source: "adzuna·" + cc, kind: classify(x.title, false) }));
-        })
-      );
-    }
-  }
-  const settled = await Promise.allSettled(nets);
-  const seen = new Set<string>();
-  const out: Job[] = [];
-  for (const s of settled) {
-    if (s.status !== "fulfilled") continue;
-    for (const job of s.value) {
-      const k = (job.title + job.company).toLowerCase();
-      if (!job.title || seen.has(k)) continue;
-      seen.add(k);
-      out.push(job);
-    }
-  }
-  // local sources first, then variety
-  const localish = (x: Job) => x.source.startsWith("adzuna") || x.source === "themuse" || x.source === "arbeitnow" ? -1 : 0;
-  out.sort((a, b) => localish(a) - localish(b));
-  return out.slice(0, 18);
-}
-
-export async function gatherSignals(db: SupabaseClient, place: string, since: string) {
-  const [ev, ppl] = await Promise.all([
-    db.from("events").select("title, when_text, created_at").ilike("place", "%" + place + "%").gt("created_at", since).limit(10),
-    db.from("profiles").select("name, dest_place, roommate, created_at").or(`dest_place.ilike.%${place}%,location.ilike.%${place}%`).gt("created_at", since).limit(10),
-  ]);
-  const events = ev.data ?? [];
-  const people = ppl.data ?? [];
-  return {
-    events,
-    people,
-    jobs: events.filter((e) => /hiring|job|part[- ]?time|shift|work/i.test(e.title || "")),
-    roomies: people.filter((p) => p.roommate),
-  };
-}
-
-export async function composeNote(
-  anthropicKey: string | undefined,
-  lk: Lookout,
-  webJobs: Job[],
-  sig: Awaited<ReturnType<typeof gatherSignals>>
-): Promise<string> {
-  const place = (lk.place || "").trim();
-  const jobLines = webJobs.map((j) => `[${j.kind}] ${j.title} — ${j.company} → ${j.url}`).join("\n");
-  const facts = [
-    webJobs.length ? "FRESH JOBS (with kind tags):\n" + jobLines : "",
-    sig.jobs.length ? "posts on elsewhr boards: " + sig.jobs.map((j) => j.title).join(" | ") : "",
-    sig.events.length ? "new happenings: " + sig.events.map((e) => e.title).join(" | ") : "",
-    sig.people.length ? "new people around " + place + ": " + sig.people.map((p) => p.name).join(", ") : "",
-    sig.roomies.length ? "looking for roommates: " + sig.roomies.map((p) => p.name).join(", ") : "",
-  ].filter(Boolean).join("\n");
-
-  if (anthropicKey && facts) {
+  async function sweepNow() {
+    if (!uid || busy) return;
+    setBusy(true);
+    setMsg(s.sweeping);
     try {
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-api-key": anthropicKey, "anthropic-version": "2023-06-01" },
-        body: JSON.stringify({
-          model: "claude-haiku-4-5-20251001",
-          max_tokens: 600,
-          messages: [{
-            role: "user",
-            content:
-              'You are a sharp personal job scout. Their brief: "' + (lk.watch || "no brief — student-friendly work") +
-              '". Their place: ' + place + ".\nThe sweep found:\n" + facts +
-              "\nWrite ONE note (max 220 words, lowercase, warm, efficient, no greetings). Structure: 'best fits' — the 4 strongest matches; 'also worth a look' — 3-4 more of DIFFERENT kinds; if any [hiring news] items exist, a final 'local hiring news' line or two with those headlines + links. Each item on its own line as: [kind] title — company → URL (URLs exactly as given). Close with one honest sentence about the mix. Mention only what's above.",
-          }],
-        }),
-        signal: AbortSignal.timeout(9000),
-      });
-      if (r.ok) {
-        const j = (await r.json()) as { content?: { text?: string }[] };
-        const text = (j.content?.[0]?.text || "").trim();
-        if (text) return text.slice(0, 1400);
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess?.session?.access_token;
+      const r = await fetch("/api/lookout/sweep", { method: "POST", headers: { Authorization: "Bearer " + (token || "") } });
+      if (r.status === 429) { setMsg(s.cooled); }
+      else {
+        const { data: ns } = await supabase.from("lookout_notes").select("id, body, created_at, seen").eq("user_id", uid).order("id", { ascending: false }).limit(30);
+        if (ns) setNotes(ns as Note[]);
+        setMsg("");
       }
-    } catch { /* fall through */ }
+    } catch { setMsg(""); }
+    setBusy(false);
   }
-  if (webJobs.length) {
-    return ("fresh finds:\n" + webJobs.slice(0, 8).map((j) => `[${j.kind}] ${j.title} — ${j.company} → ${j.url}`).join("\n")).slice(0, 1400);
+
+  function linkify(text: string) {
+    const parts = text.split(/(https?:\/\/[^\s]+)/g);
+    return parts.map((p, i) =>
+      /^https?:\/\//.test(p) ? (
+        <a key={i} href={p} target="_blank" rel="noopener noreferrer" className="font-bold text-[#6b4eff] underline underline-offset-2 break-all">
+          {p.replace(/^https?:\/\/(www\.)?/, "").slice(0, 40)}…
+        </a>
+      ) : (
+        <span key={i}>{p}</span>
+      )
+    );
   }
-  if (sig.events.length || sig.people.length) {
-    return ("around " + place + " — " +
-      (sig.jobs.length ? sig.jobs.length + " board post(s) · " : "") +
-      (sig.events.length ? sig.events.length + " new happening(s) · " : "") +
-      (sig.people.length ? sig.people.length + " new arrival(s)" : "")).slice(0, 500);
+
+  async function save() {
+    if (!uid || busy) return;
+    setBusy(true);
+    setMsg("");
+    await supabase.from("lookouts").upsert({ user_id: uid, watch: watch.trim().slice(0, 300), place: place.trim().slice(0, 120), active });
+    setMsg(s.saved);
+    setBusy(false);
   }
-  return "";
+
+  const inputCls = "w-full px-4 py-3 rounded-xl border-2 border-[#1c1410] bg-white text-[#1c1410] placeholder-[#6b5e52]/60 outline-none focus:border-[#6b4eff] text-[14px]";
+
+  return (
+    <main className="min-h-screen bg-[#ff5d3b] text-[#1c1410] px-4 py-6">
+      <div className="w-full max-w-[640px] mx-auto flex items-center justify-between">
+        <Link href="/" className="font-[Syne] font-extrabold text-2xl tracking-tight text-[#fff6ec]">elsewhr<span className="text-[#c8f000]">.</span></Link>
+        <button type="button" onClick={() => { if (window.history.length > 1) window.history.back(); else window.location.href = "/"; }}
+          className="font-mono text-[11px] text-[#fff6ec]/80 underline underline-offset-4 hover:text-[#fff6ec]">{s.back}</button>
+      </div>
+      <div className="w-full max-w-[640px] mx-auto mt-5">
+        <h1 className="font-[Syne] font-extrabold text-3xl text-[#fff6ec] lowercase">🔭 {s.title}</h1>
+        <p className="mt-2 text-[14px] text-[#fff6ec]/90 leading-snug">{s.sub}</p>
+
+        {checked && !uid && (
+          <Link href="/login" className="mt-6 inline-block px-6 py-3.5 rounded-2xl bg-[#c8f000] font-[Syne] font-extrabold border-[3px] border-[#1c1410] shadow-[5px_5px_0_#1c1410]">
+            {s.loginFirst}
+          </Link>
+        )}
+
+        {uid && (
+          <>
+            <div className="mt-6 bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-3xl p-5 shadow-[7px_7px_0_rgba(28,20,16,0.9)]">
+              <p className="font-mono text-[11px] uppercase tracking-widest text-[#6b5e52]">{s.watchLabel}</p>
+              <textarea value={watch} onChange={(e) => setWatch(e.target.value)} placeholder={s.watchPh} rows={2} maxLength={300}
+                className={inputCls + " mt-2 resize-y"} />
+              <p className="mt-2 font-mono text-[11px] text-[#6b5e52]">{s.tapAdd}</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {WATCH_KINDS.map((k) => (
+                  <button key={k} type="button"
+                    onClick={() => setWatch((cur) => cur.toLowerCase().includes(k) ? cur : (cur.trim() ? cur.trim() + ", " : "") + k)}
+                    className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-[#c8f000]/60 text-[12px] font-bold hover:bg-[#c8f000]">
+                    + {k}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {WATCH_FIELDS.map((k) => (
+                  <button key={k} type="button"
+                    onClick={() => setWatch((cur) => cur.toLowerCase().includes(k.split(" ")[0]) ? cur : (cur.trim() ? cur.trim() + ", " : "") + k)}
+                    className="px-3 py-1.5 rounded-full border-2 border-[#1c1410] bg-white text-[12px] font-bold hover:bg-[#c8f000]/50">
+                    + {k}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-4 font-mono text-[11px] uppercase tracking-widest text-[#6b5e52]">{s.placeLabel}</p>
+              <div className="relative mt-2">
+                <input value={place} onChange={(e) => setPlace(e.target.value)}
+                  onBlur={() => setTimeout(() => setSugsOpen(false), 150)}
+                  onFocus={() => sugs.length > 0 && setSugsOpen(true)}
+                  placeholder={s.placePh} maxLength={120} className={inputCls} />
+                {sugsOpen && (
+                  <div className="absolute z-10 left-0 right-0 mt-1 bg-white border-2 border-[#1c1410] rounded-xl overflow-hidden shadow-[4px_4px_0_rgba(28,20,16,0.5)]">
+                    {sugs.map((sg) => (
+                      <button key={sg.name} type="button" onMouseDown={() => { setPlace(sg.name); setSugsOpen(false); }}
+                        className="w-full text-left px-3 py-2 text-[13px] hover:bg-[#c8f000]/40">🎓 {sg.name}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
+                <button type="button" onClick={() => setActive(!active)}
+                  className={`px-4 py-2 rounded-full border-2 border-[#1c1410] text-[13px] font-bold ${active ? "bg-[#c8f000]" : "bg-white"}`}>
+                  {active ? s.activeOn : s.activeOff}
+                </button>
+                <button type="button" onClick={sweepNow} disabled={busy}
+                  className="px-4 py-2.5 rounded-2xl bg-[#c8f000] border-2 border-[#1c1410] font-[Syne] font-bold text-[14px] disabled:opacity-50">
+                  {busy ? s.sweeping : s.sweepNow}
+                </button>
+                <button type="button" onClick={save} disabled={busy}
+                  className="px-5 py-2.5 rounded-2xl bg-[#1c1410] text-[#fff6ec] font-[Syne] font-bold text-[14px] disabled:opacity-50">
+                  {s.save}
+                </button>
+              </div>
+              {msg && <p className="mt-3 text-[13px] font-bold text-[#1c1410]">{msg}</p>}
+            </div>
+
+            <p className="mt-8 font-mono text-[11px] uppercase tracking-widest text-[#fff6ec]/80">{s.notesTitle}</p>
+            <div className="mt-3 flex flex-col gap-3">
+              {notes.length === 0 && <p className="text-[13px] text-[#fff6ec]/80">{s.noNotes}</p>}
+              {notes.map((n) => (
+                <div key={n.id} className="bg-[#fff6ec] border-[3px] border-[#1c1410] rounded-2xl px-4 py-3 shadow-[5px_5px_0_rgba(28,20,16,0.9)]">
+                  <p className="text-[14px] leading-relaxed whitespace-pre-line">🔭 {linkify(n.body)}</p>
+                  <p className="mt-1.5 font-mono text-[10px] text-[#6b5e52]">{new Date(n.created_at).toLocaleDateString()}</p>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </main>
+  );
 }
