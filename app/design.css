@@ -1,0 +1,75 @@
+/* elsewhr — the design law.
+   New file: app/design.css  ·  imported once in layout.
+   One voice, no dialects. Every future component uses these; every sweep
+   converges existing pages onto them.
+
+   THE LAW
+   ─ Type scale (px):   11 meta · 12 mono-ui · 13 small · 14 body · 16 lead · 18 sub · 22 title · Syne display ≥28
+     (half-pixel sizes are banned: 10.5→11, 11.5→12, 12.5→13, 13.5→14)
+   ─ Borders:           3px ink on cards & primary buttons · 2px ink on chips, inputs, minor buttons
+   ─ Radius:            24px cards (rounded-3xl) · 16px panels (2xl) · 12px fields (xl) · full for chips
+   ─ Shadow (ink pop):  lg 7px · md 5px · sm 3px — always 0 blur, always rgba(28,20,16,.9)
+   ─ Hover:             translateY(-2px) + shadow grows one step · active: translateY(0) + shadow shrinks
+   ─ Motion:            150ms ease for interaction · 500ms ease-out for reveals · nothing else
+   ─ Ink on orange:     /95 headings · /90 body · /70 meta — no other opacities
+*/
+
+:root {
+  --ew-orange: #ff5d3b;
+  --ew-cream: #fff6ec;
+  --ew-ink: #1c1410;
+  --ew-lime: #c8f000;
+  --ew-pink: #e91e8c;
+  --ew-violet: #6b4eff;
+  --ew-teal: #00b3a4;
+  --ew-mud: #6b5e52;
+
+  --ew-pop-lg: 7px 7px 0 rgba(28, 20, 16, 0.9);
+  --ew-pop: 5px 5px 0 rgba(28, 20, 16, 0.9);
+  --ew-pop-sm: 3px 3px 0 rgba(28, 20, 16, 0.9);
+
+  --ew-fast: 150ms ease;
+  --ew-reveal: 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* the three canonical surfaces */
+.ew-card {
+  background: var(--ew-cream);
+  border: 3px solid var(--ew-ink);
+  border-radius: 24px;
+  box-shadow: var(--ew-pop-lg);
+}
+.ew-panel {
+  background: var(--ew-cream);
+  border: 3px solid var(--ew-ink);
+  border-radius: 16px;
+  box-shadow: var(--ew-pop);
+}
+.ew-chip {
+  border: 2px solid var(--ew-ink);
+  border-radius: 9999px;
+  box-shadow: var(--ew-pop-sm);
+  transition: transform var(--ew-fast), box-shadow var(--ew-fast), background var(--ew-fast);
+}
+.ew-chip:hover {
+  transform: translateY(-2px);
+}
+.ew-chip:active {
+  transform: translateY(0);
+  box-shadow: 1px 1px 0 rgba(28, 20, 16, 0.9);
+}
+
+/* the canonical press for big buttons */
+.ew-press {
+  border: 3px solid var(--ew-ink);
+  box-shadow: 6px 6px 0 var(--ew-ink);
+  transition: transform var(--ew-fast), box-shadow var(--ew-fast);
+}
+.ew-press:hover {
+  transform: translateY(-3px);
+  box-shadow: 8px 9px 0 var(--ew-ink);
+}
+.ew-press:active {
+  transform: translateY(0);
+  box-shadow: 3px 3px 0 var(--ew-ink);
+}
